@@ -12,6 +12,13 @@ const rootFiles = [
   "jsdata.json",
 ];
 
+const rootStaticExtensions = new Set([
+  ".html",
+  ".xml",
+  ".txt",
+  ".webmanifest",
+]);
+
 const rootDirs = [
   "assets",
   "styles",
@@ -28,6 +35,7 @@ const textExtensions = new Set([
   ".webmanifest",
   ".svg",
   ".txt",
+  ".xml",
 ]);
 
 function minifyCss(input) {
@@ -183,6 +191,14 @@ async function collectFilesFromDir(dirPath) {
 
 async function gatherInputFiles() {
   const files = [];
+
+  const rootEntries = await fs.readdir(rootDir, { withFileTypes: true });
+  for (const entry of rootEntries) {
+    if (!entry.isFile()) continue;
+    const ext = path.extname(entry.name).toLowerCase();
+    if (!rootStaticExtensions.has(ext)) continue;
+    files.push(entry.name);
+  }
 
   for (const file of rootFiles) {
     const abs = path.join(rootDir, file);

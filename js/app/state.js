@@ -19,7 +19,11 @@
     appliedFilters: [],
 
     typing: {
-      texts: ["Search & Filter Ads", "Try InstaRishta", "Daily 1000 Ads"],
+      texts: [
+        "Find Verified Muslim Rishta for Nikah",
+        "Trusted Muslim Matrimony Platform",
+        "Daily Verified Marriage Proposals",
+      ],
       textIndex: 0,
       charIndex: 0,
       direction: "forward",

@@ -18,9 +18,72 @@ const GZIP_EXTENSIONS = new Set([
   ".webmanifest",
   ".svg",
   ".txt",
+  ".xml",
 ]);
 
+const LONG_CACHE_EXTENSIONS = new Set([
+  ".css",
+  ".js",
+  ".mjs",
+  ".svg",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".avif",
+  ".ico",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".otf",
+]);
+
+const SHORT_CACHE_EXTENSIONS = new Set([
+  ".json",
+  ".xml",
+  ".txt",
+]);
+
+const NO_CACHE_EXTENSIONS = new Set([
+  ".html",
+  ".webmanifest",
+]);
+
+function setCacheHeaders(res, filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const fileName = path.basename(filePath).toLowerCase();
+
+  if (fileName === "service-worker.js" || NO_CACHE_EXTENSIONS.has(ext)) {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    return;
+  }
+
+  if (SHORT_CACHE_EXTENSIONS.has(ext)) {
+    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+    return;
+  }
+
+  if (LONG_CACHE_EXTENSIONS.has(ext)) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    return;
+  }
+
+  res.setHeader("Cache-Control", "public, max-age=3600");
+}
+
+app.disable("x-powered-by");
 app.use(cors());
+
+app.get("/", (req, res, next) => {
+  const indexPath = path.join(STATIC_ROOT, "index.html");
+  const fallbackPath = path.join(STATIC_ROOT, "4.html");
+  const landingPath = fs.existsSync(indexPath) ? indexPath : fallbackPath;
+  if (!fs.existsSync(landingPath)) return next();
+
+  setCacheHeaders(res, landingPath);
+  res.sendFile(landingPath);
+});
+
 app.use((req, res, next) => {
   if (req.method !== "GET") return next();
 
@@ -41,10 +104,15 @@ app.use((req, res, next) => {
 
   res.setHeader("Content-Encoding", "gzip");
   res.setHeader("Vary", "Accept-Encoding");
+  setCacheHeaders(res, absolute);
   res.type(ext);
   res.sendFile(gzPath);
 });
-app.use(express.static(STATIC_ROOT));
+app.use(express.static(STATIC_ROOT, {
+  setHeaders: (res, filePath) => {
+    setCacheHeaders(res, filePath);
+  },
+}));
 
 // simple health endpoint
 app.get("/ping", (req, res) => res.json({ ok: true, time: Date.now() }));

@@ -22,6 +22,7 @@ class InstaRishtaApp {
     this.latestFilterRequestId = 0;
     this.workerRequests = new Map();
     this.workerRequestTimeoutMs = 6000;
+    this.workerReady = false;
 
     this.storage = new StorageService();
     this.logger = new ActivityLogger(this.storage, config.activityLogKey);
@@ -210,10 +211,12 @@ class InstaRishtaApp {
         });
         this.filterWorker?.terminate();
         this.filterWorker = null;
+        this.workerReady = false;
         this.workerRequests.clear();
       };
     } catch {
       this.filterWorker = null;
+      this.workerReady = false;
     }
   }
 
@@ -257,15 +260,17 @@ class InstaRishtaApp {
       await this.postToWorker("setUsers", {
         users: this.state.allUsers,
       });
+      this.workerReady = true;
     } catch {
       this.filterWorker?.terminate();
       this.filterWorker = null;
+      this.workerReady = false;
       this.workerRequests.clear();
     }
   }
 
   async runFilterPipeline() {
-    if (!this.filterWorker) {
+    if (!this.filterWorker || !this.workerReady) {
       return applyFilters(this.state.allUsers, this.state.filters);
     }
 
@@ -279,6 +284,7 @@ class InstaRishtaApp {
     } catch {
       this.filterWorker?.terminate();
       this.filterWorker = null;
+      this.workerReady = false;
       this.workerRequests.clear();
       return applyFilters(this.state.allUsers, this.state.filters);
     }
@@ -407,10 +413,10 @@ class InstaRishtaApp {
     if (cached?.users?.length) {
       this.state.allUsers = cached.users;
       this.state.activeDataSource = `${cached.source} (cache)`;
-      await this.syncUsersToWorker();
       this.state.loading = false;
       this.renderer.hideLoading();
       await this.refreshFilters();
+      void this.syncUsersToWorker();
       hasRenderedCache = true;
     }
 
@@ -423,12 +429,12 @@ class InstaRishtaApp {
       this.state.allUsers = users;
       this.state.activeDataSource = source;
 
-      await this.syncUsersToWorker();
       if (shouldRefreshView) {
         this.state.loading = false;
         this.renderer.hideLoading();
         await this.refreshFilters();
       }
+      void this.syncUsersToWorker();
 
       console.info("InstaRishta data loaded from:", source, "records:", users.length);
     } catch (error) {

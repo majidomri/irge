@@ -16,7 +16,7 @@ export class DrawerController {
   }
 
   init() {
-    this.drawer?.setAttribute("aria-hidden", "true");
+    if (this.drawer) this.drawer.setAttribute("inert", "");
     this.openButton?.setAttribute("aria-controls", "mobileDrawer");
     this.openButton?.setAttribute("aria-expanded", "false");
 
@@ -41,7 +41,8 @@ export class DrawerController {
       removeClass(this.drawer, "closed");
       addClass(this.drawer, "open");
       addClass(this.overlay, "show");
-      this.drawer.setAttribute("aria-hidden", "false");
+      this.drawer.removeAttribute("inert");
+      this.drawer.setAttribute("aria-modal", "true");
       this.openButton?.setAttribute("aria-expanded", "true");
       document.body.style.overflow = "hidden";
       this.drawer.querySelector("input,select,button,a")?.focus();
@@ -51,7 +52,8 @@ export class DrawerController {
     removeClass(this.drawer, "open");
     addClass(this.drawer, "closed");
     removeClass(this.overlay, "show");
-    this.drawer.setAttribute("aria-hidden", "true");
+    this.drawer.setAttribute("inert", "");
+    this.drawer.removeAttribute("aria-modal");
     this.openButton?.setAttribute("aria-expanded", "false");
     document.body.style.overflow = "";
     this.openButton?.focus();

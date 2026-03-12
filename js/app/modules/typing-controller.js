@@ -6,6 +6,22 @@ export class TypingController {
   }
 
   start() {
+    const container = $("typingText");
+    const currentText = this.state.texts[this.state.textIndex] || "";
+    const staticText = container?.textContent?.trim() || "";
+
+    if (
+      container
+      && !this.state.timerId
+      && this.state.charIndex === 0
+      && staticText === currentText
+    ) {
+      this.state.charIndex = currentText.length;
+      this.state.direction = "backward";
+      this.state.timerId = setTimeout(() => this.tick(), this.state.pause);
+      return;
+    }
+
     this.tick();
   }
 

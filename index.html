@@ -4,27 +4,99 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Rishtey</title>
+    <title>InstaRishta - Trusted Muslim Matrimony &amp; Nikah Matchmaking Platform</title>
     <meta name="description"
-      content="Find your perfect match on Live Rishtey, the best matchmaking platform for matrimonial ads.">
-    <meta name="keywords" content="matchmaking, rishtey, matrimonial ads, find partner, marriage ads">
-    <meta property="og:title" content="Live Rishtey - Best Matchmaking Platform">
-    <meta property="og:description" content="Search and post matrimonial ads on Live Rishtey.">
+      content="Find verified Muslim marriage proposals on InstaRishta. Trusted nikah matchmaking platform for bride and groom profiles across India and worldwide.">
+    <meta name="keywords"
+      content="muslim matrimony, nikah matchmaking, online rishta, muslim marriage website, find muslim bride, find muslim groom, halal marriage, islamic matrimony, shaadi rishta, verified matrimony profiles, muslim matrimony india, serious marriage proposals, arranged marriage platform">
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+    <meta name="author" content="InstaRishta">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="geo.region" content="IN-TS">
+    <meta name="geo.placename" content="Hyderabad">
+    <meta name="geo.position" content="17.3850;78.4867">
+    <meta name="ICBM" content="17.3850,78.4867">
+    <link rel="canonical" href="https://www.instarishta.me/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="InstaRishta">
+    <meta property="og:title" content="InstaRishta - Trusted Muslim Matrimony &amp; Nikah Matchmaking Platform">
+    <meta property="og:description"
+      content="Search verified Muslim bride and groom profiles for nikah. Safe, trusted and family-friendly matrimony platform.">
+    <meta property="og:url" content="https://www.instarishta.me/">
+    <meta property="og:image" content="https://www.instarishta.me/assets/icon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="InstaRishta - Muslim Matrimony &amp; Nikah Matchmaking">
+    <meta name="twitter:description"
+      content="Find verified Muslim marriage proposals and nikah matches on InstaRishta.">
+    <meta name="twitter:image" content="https://www.instarishta.me/assets/icon.svg">
     <meta name="theme-color" content="#4f46e5">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
-      as="style">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "name": "InstaRishta",
+            "url": "https://www.instarishta.me/",
+            "logo": "https://www.instarishta.me/assets/icon.svg",
+            "sameAs": [
+              "https://github.com/majidomri/irge",
+              "https://telegram.me/liverishteyofficial"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "name": "InstaRishta",
+            "url": "https://www.instarishta.me/",
+            "description": "Trusted Muslim matrimony and nikah matchmaking platform.",
+            "inLanguage": "en",
+            "publisher": {
+              "@type": "Organization",
+              "name": "InstaRishta"
+            },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://www.instarishta.me/?search={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How to find a Muslim rishta online?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Use InstaRishta filters to search by education, location, and profile details to find verified Muslim rishta proposals."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is InstaRishta safe for marriage proposals?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "InstaRishta promotes verified profile discovery, controlled contact limits, and transparent profile details for safer matchmaking."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How does nikah matchmaking work on InstaRishta?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Browse profiles, apply filters, review biodata, and connect directly through provided contact options for serious nikah conversations."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+
     <link rel="preload" href="src/output.css" as="style">
     <link rel="preload" href="styles/instarishta.css" as="style">
-    <link rel="prefetch" href="jsdata.json" as="fetch" type="application/json" crossorigin="anonymous">
     <link rel="modulepreload" href="js/app/main.js">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400..700&display=swap"
-      rel="stylesheet">
-    <link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 
@@ -57,7 +129,7 @@
                   </svg>
                 </button>
 
-                <div id="themeDropdown" class="theme-dropdown">
+                <div id="themeDropdown" class="theme-dropdown" role="menu" aria-label="Theme options">
                   <div class="theme-option active" data-theme="system">
                     <div class="theme-icon">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -126,15 +198,13 @@
         </div>
       </header>
 
-      <div id="mainContent" class="max-w-7xl mx-auto p-4 md:p-4">
+      <main id="mainContent" class="max-w-7xl mx-auto p-4 md:p-4">
         <!-- Typing Animation -->
-        <div class="flex">
-          <div class="text-left">
-            <div class="relative h-6 m-3">
-              <h1 class="text-xl font-semibold  mb-4" id="typingText"></h1>
-            </div>
-          </div>
-        </div>
+        <section class="hero-banner" aria-label="Site introduction">
+          <img src="assets/icon.svg" width="340" height="340" alt="" class="hero-mark" fetchpriority="high" decoding="async">
+          <h1 class="text-xl font-semibold mb-4" id="typingText">Find Verified Muslim Rishta for Nikah</h1>
+          <p class="hero-subtitle">Trusted Muslim matrimony platform for verified bride and groom proposals across India and worldwide.</p>
+        </section>
 
         <!-- Desktop Filters - Single Row -->
         <div id="desktopFilters" class="hidden md:block mb-6 fade-in">
@@ -325,12 +395,36 @@
             Clear All Filters
           </button>
         </div>
-      </div>
+
+        <section class="seo-faq card p-4 rounded-md mt-8" aria-labelledby="seoFaqTitle">
+          <h2 id="seoFaqTitle" class="text-xl font-semibold mb-4">Frequently Asked Questions</h2>
+          <details>
+            <summary>How to find a Muslim rishta online?</summary>
+            <p>Use search, education, gender, and relevance filters to shortlist suitable verified proposals quickly.</p>
+          </details>
+          <details>
+            <summary>Is InstaRishta safe for marriage proposals?</summary>
+            <p>InstaRishta supports transparent profile browsing with controlled contact flow to encourage genuine and serious matches.</p>
+          </details>
+          <details>
+            <summary>How does Muslim nikah matchmaking work on InstaRishta?</summary>
+            <p>Browse profiles, review details, connect with interested families, and proceed with your preferred verified communication channel.</p>
+          </details>
+          <div class="seo-link-grid mt-4">
+            <a href="/what-is-instarishta.html">What is InstaRishta</a>
+            <a href="/how-instarishta-works.html">How InstaRishta Works</a>
+            <a href="/muslim-marriage-guide.html">Muslim Marriage Guide</a>
+            <a href="/muslim-matrimony-hyderabad.html">Muslim Matrimony Hyderabad</a>
+            <a href="/muslim-matrimony-delhi.html">Muslim Matrimony Delhi</a>
+            <a href="/muslim-matrimony-mumbai.html">Muslim Matrimony Mumbai</a>
+          </div>
+        </section>
+      </main>
 
       <!-- Mobile Drawer (Bottom) -->
       <div id="mobileDrawer"
         class="fixed inset-x-0 bottom-0 shadow-lg transform transition-transform duration-300 ease-in-out md:hidden drawer closed"
-        style="height: 60vh;">
+        style="height: 60vh;" role="dialog" aria-label="Filters" inert>
         <div class="p-4 h-full flex flex-col">
           <div class="drawer-handle"></div>
 
@@ -401,7 +495,7 @@
       <div id="drawerOverlay" class="drawer-overlay"></div>
 
       <!-- Floating Action Button -->
-      <button id="openDrawer" class="fab md:hidden" aria-label="Open filters">&#9881;</button>
+      <button id="openDrawer" class="fab md:hidden" aria-label="Open filters" type="button">&#9881;</button>
     </div>
 
     <script>
@@ -431,28 +525,36 @@
           : new Map();
         window.__INSTA_DATA_PREFETCH = store;
 
-        const sourceUrl = new URL(primaryLocalSource, window.location.href).href;
-        if (store.has(sourceUrl)) return;
+        const runPrefetch = () => {
+          const sourceUrl = new URL(primaryLocalSource, window.location.href).href;
+          if (store.has(sourceUrl)) return;
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        const preloadPromise = fetch(primaryLocalSource, {
-          method: "GET",
-          cache: "default",
-          credentials: "same-origin",
-          signal: controller.signal,
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}`);
-            }
-            return response.json();
+          const preloadPromise = fetch(primaryLocalSource, {
+            method: "GET",
+            cache: "default",
+            credentials: "same-origin",
+            signal: controller.signal,
           })
-          .catch(() => null)
-          .finally(() => clearTimeout(timeoutId));
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+              return response.json();
+            })
+            .catch(() => null)
+            .finally(() => clearTimeout(timeoutId));
 
-        store.set(sourceUrl, preloadPromise);
+          store.set(sourceUrl, preloadPromise);
+        };
+
+        if ("requestIdleCallback" in window) {
+          window.requestIdleCallback(runPrefetch, { timeout: 5000 });
+        } else {
+          window.setTimeout(runPrefetch, 2000);
+        }
       }());
     </script>
     <script type="module" src="js/app/main.js"></script>
@@ -472,6 +574,8 @@
           <a href="https://InstaRishta.me/terms">Terms & Conditions</a>
           <div class="h-4 w-px bg-slate-500/20"></div>
           <a href="https://InstaRishta.me/refund-policy">Refund Policy</a>
+          <div class="h-4 w-px bg-slate-500/20"></div>
+          <a href="/about-instarishta.html">About InstaRishta</a>
         </div>
       </div>
     </footer>
