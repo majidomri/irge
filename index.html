@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Rishtey</title>
+    <meta name="description"
+      content="Find your perfect match on Live Rishtey, the best matchmaking platform for matrimonial ads.">
+    <meta name="keywords" content="matchmaking, rishtey, matrimonial ads, find partner, marriage ads">
+    <meta property="og:title" content="Live Rishtey - Best Matchmaking Platform">
+    <meta property="og:description" content="Search and post matrimonial ads on Live Rishtey.">
+    <meta property="og:url" content="https://liverishtey.com">
+    <meta property="og:image" content="https://liverishtey.com/og-image.jpg">
+
+    <link rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      as="style">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400..700&display=swap"
+      rel="stylesheet">
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap">
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
+
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* Theme tokens (light + dark) */
+      :root {
+        --bg: #f3f7fb;
+        --surface: #ffffff;
+        --muted: #64748b;
+        --accent: #6d28d9;
+        --accent-2: #4f46e5;
+        --urgent: #ffb020;
+        --glass: rgba(255, 255, 255, 0.6);
+        --text: #0f172a;
+        --card-shadow: 0 12px 32px rgba(2, 6, 23, 0.06);
+        --ease-quick: cubic-bezier(.2, .9, .3, 1);
+      }
+
+      [data-theme="dark"] {
+        --bg: #0b1020;
+        --surface: #0f1724;
+        --muted: #9aa6bf;
+        --accent: #8b5cf6;
+        --accent-2: #7c3aed;
+        --urgent: #ffaa18;
+        --glass: rgba(255, 255, 255, 0.04);
+        --text: #e6eef8;
+        --card-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+      }
+
+      /* Enhanced header / navbar styles */
+      .site-header {
+        background: transparent;
+        padding: 20px 0;
+      }
+
+      .site-logo {
+        font-size: 1.6rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: var(--text);
+        transition: background .18s ease, transform .12s ease;
+      }
+
+      .icon-btn:hover {
+        transform: translateY(-2px);
+        background: rgba(2, 6, 23, 0.03);
+      }
+
+      .post-icon {
+        width: 20px;
+        height: 20px;
+        display: inline-block;
+      }
+
+      /* Make common gray text utilities respect theme token where appropriate */
+      .text-gray-700,
+      .text-gray-800,
+      .text-slate-700 {
+        color: var(--text) !important;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg);
+        /* softer background */
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      .font-urdu {
+        font-family: 'Noto Nastaliq Urdu', 'Arial', 'serif';
+        direction: rtl;
+      }
+
+      .gradient-bg {
+        background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent) 100%);
+      }
+
+      .card-hover {
+        transition: transform 0.28s cubic-bezier(.2, .9, .3, 1), box-shadow 0.28s ease;
+        border-radius: 10px;
+        box-shadow: var(--card-shadow);
+        background: var(--surface);
+        height: 100%;
+        padding-bottom: 4.5rem;
+        /* space for action buttons */
+      }
+
+      /* Ensure card content uses theme text color */
+      .card,
+      .card-hover {
+        color: var(--text);
+      }
+
+      /* Ensure default cards have no outline/border unless marked urgent */
+      .card {
+        border: none;
+        background: var(--surface);
+        /* make cards use column flex so we can pin actions to the bottom */
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Card spacing and typography tuned to match screenshot */
+      .card {
+        /* override utility padding to match screenshot spacing */
+        padding: 13px;
+        padding-bottom: 40px;
+        /* extra space for action buttons area */
+        line-height: 2;
+        /* increased line height for improved Urdu readability */
+      }
+
+      /* Right-align Urdu content inside cards and increase paragraph spacing */
+      .card .font-urdu {
+        text-align: right;
+        direction: rtl;
+        line-height: 2.2;
+        margin-bottom: 14px;
+        font-size: 1rem;
+      }
+
+      .card .font-urdu.text-lg,
+      .card h2.font-urdu {
+        text-align: right;
+        margin-bottom: 6px;
+        line-height: 1.2;
+      }
+
+      /* Action area spacing - pin to bottom of card */
+      .card .card-actions {
+        margin-top: auto;
+        /* pushes actions to bottom */
+        gap: 12px;
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      /* Card meta spacing (LR ID and Date) */
+      .card-meta {
+        margin-top: 14px;
+        display: flex;
+        flex-direction: row;
+        gap: 25px;
+        justify-content: center;
+      }
+
+      .card-meta small {
+        font-size: 0.85rem;
+      }
+
+      .card-hover:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 18px 40px rgba(2, 6, 23, 0.08);
+      }
+
+      .filter-button {
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      .filter-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+      }
+
+      /* Polished search and filter controls */
+      #desktopFilters input[type="search"] {
+        border-radius: 10px;
+        box-shadow: 0 6px 18px rgba(13, 22, 60, 0.06);
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        padding-left: 16px;
+        padding-right: 40px;
+        height: 48px;
+      }
+
+      /* Ensure the search icon aligns nicely inside the search-wrap */
+      .search-wrap svg {
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(99, 102, 241, 0.9);
+      }
+
+      /* Make selects visually consistent */
+      #desktopFilters select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: linear-gradient(45deg, transparent 50%, var(--muted, #94a3b8) 50%), linear-gradient(135deg, var(--muted, #94a3b8) 50%, transparent 50%);
+        background-position: calc(100% - 14px) calc(1em + 2px), calc(100% - 9px) calc(1em + 2px);
+        background-size: 8px 8px, 8px 8px;
+        background-repeat: no-repeat;
+        padding-right: 36px;
+      }
+
+      #desktopFilters input[type="number"],
+      #desktopFilters select,
+      #desktopFilters .p-3 {
+        border-radius: 10px;
+        height: 44px;
+        padding: 0 12px;
+        background: var(--surface);
+        box-shadow: 0 4px 12px rgba(2, 6, 23, 0.03);
+      }
+
+      /* Gender tabs as pill buttons */
+      .tab-list a {
+        padding: 8px 24px;
+        border-radius: 14px;
+        font-weight: 600;
+        box-shadow: none;
+        transition: all 180ms ease-in-out;
+      }
+
+      .tab-list a.active {
+        background: linear-gradient(90deg, var(--accent-2), var(--accent));
+        color: #fff;
+        box-shadow: 0 8px 26px rgba(79, 70, 229, 0.14);
+      }
+
+      .tab-list a:hover:not(.active) {
+        transform: translateY(-2px);
+        background: rgba(15, 23, 42, 0.03);
+      }
+
+      /* Statistics cards polish */
+      .grid .card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(2, 6, 23, 0.04);
+      }
+
+      .grid .card p:first-child {
+        font-size: 1.6rem;
+        letter-spacing: 0.6px;
+      }
+
+      .grid .card p:last-child {
+        margin-top: 6px;
+        color: var(--muted, #64748b);
+      }
+
+      .drawer {
+        transition: transform 0.26s cubic-bezier(.2, .9, .3, 1);
+        will-change: transform;
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+        overflow: hidden;
+        backdrop-filter: blur(4px);
+      }
+
+      /* Drawer entrance/exit polish */
+      .drawer.closed {
+        transform: translateY(100%);
+      }
+
+      .drawer.open {
+        transform: translateY(0%);
+      }
+
+      /* Overlay ease */
+      .drawer-overlay {
+        transition: opacity 0.28s ease, backdrop-filter 0.28s ease;
+      }
+
+      /* Respect reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+
+        .drawer,
+        .drawer-overlay {
+          transition: none !important;
+        }
+      }
+
+      .drawer.open {
+        transform: translateY(0);
+      }
+
+      .drawer.closed {
+        transform: translateY(100%);
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+      .fade-in {
+        animation: fadeIn 0.2s ease-in-out;
+      }
+
+      body::-webkit-scrollbar {
+        width: 0;
+      }
+
+      .glossy-effect {
+        background: linear-gradient(135deg, #2f55ff 0%, #7919da 100%);
+        box-shadow:
+          inset 0 0 10px rgba(255, 255, 255, 0.2),
+          0 4px 8px rgba(0, 0, 0, 0.2);
+        position: relative;
+      }
+
+      .glossy-effect::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      /* Floating Action Button (FAB) */
+      .fab {
+        position: fixed;
+        right: 16px;
+        bottom: 50%;
+        transform: translateY(50%);
+        width: 56px;
+        height: 56px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.18);
+        border: none;
+        cursor: pointer;
+        /* ensure FAB is above drawer and overlay */
+        z-index: 1200;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+        opacity: 0.98;
+      }
+
+      .fab:hover {
+        transform: translateY(50%) scale(1.06);
+        box-shadow: 0 18px 40px rgba(67, 56, 202, 0.22);
+      }
+
+      @keyframes fabPulse {
+        0% {
+          box-shadow: 0 6px 18px rgba(102, 126, 234, 0.18);
+        }
+
+        50% {
+          box-shadow: 0 10px 26px rgba(102, 126, 234, 0.22);
+        }
+
+        100% {
+          box-shadow: 0 6px 18px rgba(102, 126, 234, 0.18);
+        }
+      }
+
+      /* Overlay behind drawer: sits under the drawer but above page content */
+      .drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 23, 0.42);
+        /* lower than drawer but higher than content */
+        z-index: 900;
+        opacity: 0;
+        transition: opacity 0.28s ease, backdrop-filter 0.28s ease;
+        /* disable pointer-events by default so it doesn't block drawer UI when closed */
+        pointer-events: none;
+        backdrop-filter: blur(2px);
+      }
+
+      /* Small helpers to ensure readable text colors */
+      .muted {
+        color: var(--muted) !important;
+      }
+
+      /* Urgent card and badge */
+      .urgent-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        /* richer gradient like the screenshot */
+        background: linear-gradient(180deg, #f1cc7a 0%, #ffb020 100%);
+        color: #111;
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 12px;
+        line-height: 1;
+        box-shadow: 0 10px 28px rgba(255, 176, 32, 0.12), 0 6px 18px rgba(2, 6, 23, 0.06);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+      }
+
+      /* Highlight the entire card lightly for urgent ads. Non-urgent cards will have default surface with no outline. */
+      .card.urgent {
+        background-color: oklch(99.107% 0.01432 106.786);
+        /* warmer base to match screenshot */
+        border: 2px solid rgba(248, 180, 53, 0.28);
+        box-shadow: 0 18px 42px rgba(255, 176, 32, 0.06), var(--card-shadow);
+        transform-origin: center center;
+      }
+
+      /* Alternative pulse: soft glow + gentle scale for a warmer attention cue */
+      @keyframes urgentPulse {
+        0% {
+          box-shadow: 0 12px 30px rgba(255, 176, 32, 0.05), var(--card-shadow);
+          transform: scale(1);
+          filter: drop-shadow(0 0 0 rgba(255, 176, 32, 0));
+        }
+
+        40% {
+          box-shadow: 0 22px 46px rgba(255, 176, 32, 0.09), var(--card-shadow);
+          transform: scale(1.01);
+          filter: drop-shadow(0 6px 18px rgba(255, 176, 32, 0.08));
+        }
+
+        100% {
+          box-shadow: 0 12px 30px rgba(255, 176, 32, 0.05), var(--card-shadow);
+          transform: scale(1);
+          filter: drop-shadow(0 0 0 rgba(255, 176, 32, 0));
+        }
+      }
+
+      /* Badge / title pulse (badge will glow, title will slightly scale) */
+      .urgent-badge.pulse {
+        animation: urgentPulse 1600ms cubic-bezier(.22, .9, .25, 1) infinite;
+      }
+
+      h2.urgent-title.pulse {
+        display: inline-block;
+        transform-origin: center right;
+        animation: urgentTitlePulse 1600ms cubic-bezier(.22, .9, .25, 1) infinite;
+      }
+
+      @keyframes urgentTitlePulse {
+        0% {
+          transform: scale(1);
+        }
+
+        50% {
+          transform: scale(1.02);
+        }
+
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+
+        .urgent-badge.pulse,
+        h2.urgent-title.pulse {
+          animation: none !important;
+        }
+      }
+
+      /* Slightly stronger treatment for dark theme */
+      [data-theme="dark"] .card.urgent {
+        background-color: rgba(139, 92, 246, 0.06);
+        /* use accent tint in dark to avoid loud yellow */
+        border: 1px solid rgba(255, 176, 32, 0.12);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+      }
+
+      /* Toast / non-blocking notification */
+      .toast-wrap {
+        position: fixed;
+        right: 16px;
+        bottom: 90px;
+        z-index: 1600;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+        pointer-events: none;
+      }
+
+      .toast {
+        pointer-events: auto;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.65));
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(2, 6, 23, 0.35);
+        font-size: 13px;
+        max-width: 320px;
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+        transition: opacity 240ms var(--ease-quick), transform 240ms var(--ease-quick);
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      /* Filter chips (applied filters) — match enhanced prototype */
+      .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent) 100%);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+      }
+
+      .filter-chip .chip-label {
+        white-space: nowrap;
+      }
+
+      .filter-chip .chip-close {
+        appearance: none;
+        -webkit-appearance: none;
+        border: none;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 13px;
+        line-height: 1;
+        padding: 0;
+      }
+
+      .filter-chip .chip-close:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      /* Muted/neutral chip (for example when showing available filters) */
+      .filter-chip.muted {
+        background: rgba(99, 102, 241, 0.06);
+        color: var(--text);
+        box-shadow: none;
+      }
+
+      .surface-text {
+        color: var(--text) !important;
+      }
+
+      .drawer-overlay.show {
+        opacity: 1;
+        /* allow clicks to close the drawer but keep the drawer above it */
+        pointer-events: auto;
+      }
+
+      /* Layout Classes */
+      .min-h-screen {
+        min-height: 100vh;
+        background-image: linear-gradient(180deg, rgba(124, 58, 237, 0.02), rgba(99, 102, 241, 0.01));
+      }
+
+      .font-sans {
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      }
+
+      .antialiased {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .relative {
+        position: relative;
+      }
+
+      .absolute {
+        position: absolute;
+      }
+
+      .fixed {
+        position: fixed;
+      }
+
+      .inset-x-0 {
+        left: 0;
+        right: 0;
+      }
+
+      .bottom-0 {
+        bottom: 0;
+      }
+
+      .top-0 {
+        top: 0;
+      }
+
+      .left-0 {
+        left: 0;
+      }
+
+      .right-0 {
+        right: 0;
+      }
+
+      .z-30 {
+        z-index: 30;
+      }
+
+      /* Flexbox */
+      .flex {
+        display: flex;
+      }
+
+      .flex-col {
+        flex-direction: column;
+      }
+
+      .flex-wrap {
+        flex-wrap: wrap;
+      }
+
+      .flex-auto {
+        flex: 1 1 auto;
+      }
+
+      .flex-1 {
+        flex: 1 1 0%;
+      }
+
+      .flex-grow {
+        flex-grow: 1;
+      }
+
+      .flex-shrink-0 {
+        flex-shrink: 0;
+      }
+
+      .items-center {
+        align-items: center;
+      }
+
+      .items-start {
+        align-items: flex-start;
+      }
+
+      .justify-center {
+        justify-content: center;
+      }
+
+      .justify-between {
+        justify-content: space-between;
+      }
+
+      /* Grid */
+      .grid {
+        display: grid;
+      }
+
+      .grid-cols-1 {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+      }
+
+      .grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      /* Spacing */
+      .p-2 {
+        padding: 0.5rem;
+      }
+
+      .p-3 {
+        padding: 0.75rem;
+      }
+
+      .p-4 {
+        padding: 1rem;
+      }
+
+      .p-6 {
+        padding: 1.5rem;
+      }
+
+      .p-9 {
+        padding: 2.25rem;
+      }
+
+      .px-0 {
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .px-1 {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+      }
+
+      .px-3 {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+
+      .px-4 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .py-1 {
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+      }
+
+      .py-2 {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+      }
+
+      .py-3 {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+
+      .px-1\.5 {
+        padding-left: 0.375rem;
+        padding-right: 0.375rem;
+      }
+
+      .py-1\.5 {
+        padding-top: 0.375rem;
+        padding-bottom: 0.375rem;
+      }
+
+      .pr-10 {
+        padding-right: 2.5rem;
+      }
+
+      .m-1 {
+        margin: 0.25rem;
+      }
+
+      .mb-2 {
+        margin-bottom: 0.5rem;
+      }
+
+      .mb-3 {
+        margin-bottom: 0.75rem;
+      }
+
+      .mb-6 {
+        margin-bottom: 1.5rem;
+      }
+
+      .mt-2 {
+        margin-top: 0.5rem;
+      }
+
+      .mt-3 {
+        margin-top: 0.75rem;
+      }
+
+      .mt-8 {
+        margin-top: 2rem;
+      }
+
+      .mx-auto {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .mx-2 {
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+      }
+
+      /* Width & Height */
+      .w-full {
+        width: 100%;
+      }
+
+      .w-96 {
+        width: 24rem;
+      }
+
+      .w-6 {
+        width: 1.5rem;
+      }
+
+      .h-6 {
+        height: 1.5rem;
+      }
+
+      .h-12 {
+        height: 3rem;
+      }
+
+      .h-16 {
+        height: 4rem;
+      }
+
+      .h-8 {
+        width: 2rem;
+        height: 2rem;
+      }
+
+      .max-w-7xl {
+        max-width: 80rem;
+      }
+
+      /* Text */
+      .text-xs {
+        font-size: 0.75rem;
+        line-height: 1rem;
+      }
+
+      .text-sm {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+      }
+
+      .text-lg {
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+      }
+
+      .text-xl {
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+
+      .text-2xl {
+        font-size: 1.5rem;
+        line-height: 2rem;
+      }
+
+      .font-bold {
+        font-weight: 700;
+      }
+
+      .font-medium {
+        font-weight: 500;
+      }
+
+      .font-semibold {
+        font-weight: 600;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+
+      .text-left {
+        text-align: left;
+      }
+
+      /* Colors */
+      .text-white {
+        color: rgb(255 255 255);
+      }
+
+      .text-black {
+        color: rgb(0 0 0);
+      }
+
+      .text-gray-400 {
+        color: rgb(156 163 175);
+      }
+
+      .text-gray-600 {
+        color: rgb(75 85 99);
+      }
+
+      .text-gray-700 {
+        color: rgb(55 65 81);
+      }
+
+      .text-gray-800 {
+        color: rgb(31 41 55);
+      }
+
+      .text-indigo-600 {
+        color: rgb(79 70 229);
+      }
+
+      .text-green-600 {
+        color: rgb(5 150 105);
+      }
+
+      .text-pink-600 {
+        color: rgb(219 39 119);
+      }
+
+      .text-yellow-600 {
+        color: rgb(217 119 6);
+      }
+
+      /* Use theme token for urgent counts & labels */
+      .text-urgent {
+        color: var(--urgent) !important;
+      }
+
+      .text-red-600 {
+        color: rgb(220 38 38);
+      }
+
+      .text-slate-700 {
+        color: rgb(51 65 85);
+      }
+
+      /* Backgrounds */
+      .bg-white {
+        background-color: rgb(255 255 255);
+      }
+
+      .bg-gray-200 {
+        background-color: rgb(229 231 235);
+      }
+
+      .bg-gray-300 {
+        background-color: rgb(209 213 219);
+      }
+
+      .bg-slate-100 {
+        background-color: rgb(241 245 249);
+      }
+
+      .bg-indigo-50 {
+        background-color: rgb(238 242 255);
+      }
+
+      .bg-indigo-600 {
+        background-color: rgb(79 70 229);
+      }
+
+      .bg-yellow-400 {
+        background-color: rgb(250 204 21);
+      }
+
+      .bg-red-600 {
+        background-color: rgb(220 38 38);
+      }
+
+      .bg-inherit {
+        background-color: inherit;
+      }
+
+      /* Borders */
+      .border {
+        border-width: 1px;
+      }
+
+      .border-0 {
+        border-width: 0px;
+      }
+
+      .border-transparent {
+        border-color: transparent;
+      }
+
+      .border-gray-300 {
+        border-color: rgb(209 213 219);
+      }
+
+      .rounded-sm {
+        border-radius: 0.125rem;
+      }
+
+      .rounded-md {
+        border-radius: 0.375rem;
+      }
+
+      .rounded-lg {
+        border-radius: 0.5rem;
+      }
+
+      .rounded-full {
+        border-radius: 9999px;
+      }
+
+      .rounded-xs {
+        border-radius: 0.25rem;
+      }
+
+      /* Shadows */
+      .shadow-sm {
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+
+      .shadow-md {
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      }
+
+      .shadow-lg {
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+
+      /* Display */
+      .hidden {
+        display: none !important;
+      }
+
+      .block {
+        display: block !important;
+      }
+
+      .inline-block {
+        display: inline-block;
+      }
+
+      .inline-flex {
+        display: inline-flex;
+      }
+
+      .list-none {
+        list-style-type: none;
+      }
+
+      /* Transitions */
+      .transition-all {
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+      }
+
+      .transition-colors {
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+      }
+
+      .transition-transform {
+        transition-property: transform;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+      }
+
+      .ease-in-out {
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .duration-200 {
+        transition-duration: 200ms;
+      }
+
+      .duration-300 {
+        transition-duration: 300ms;
+      }
+
+      /* Hover effects */
+      .hover\:bg-indigo-50:hover {
+        background-color: rgb(238 242 255);
+      }
+
+      .hover\:from-indigo-600:hover {
+        --tw-gradient-from: #4f46e5;
+      }
+
+      .hover\:to-blue-600:hover {
+        --tw-gradient-to: #2563eb;
+      }
+
+      .hover\:scale-110:hover {
+        transform: scale(1.1);
+      }
+
+      /* Focus */
+      .focus\:outline-none:focus {
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+      }
+
+      .focus\:border-indigo-500:focus {
+        border-color: rgb(99 102 241);
+      }
+
+      .focus\:ring-2:focus {
+        box-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+      }
+
+      .focus\:ring-indigo-500:focus {
+        --tw-ring-color: rgb(99 102 241);
+      }
+
+      /* Gradients */
+      .bg-gradient-to-r {
+        background-image: linear-gradient(to right, var(--tw-gradient-stops));
+      }
+
+      .from-indigo-500 {
+        --tw-gradient-from: #6366f1;
+        --tw-gradient-to: rgb(99 102 241 / 0);
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+      }
+
+      .to-blue-500 {
+        --tw-gradient-to: #3b82f6;
+      }
+
+      .from-gray-700 {
+        --tw-gradient-from: #374151;
+        --tw-gradient-to: rgb(55 65 81 / 0);
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+      }
+
+      /* Primary action styles that should remain readable in dark mode */
+      .btn-primary {
+        color: #fff !important;
+        background: linear-gradient(90deg, var(--accent-2), var(--accent));
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.12);
+      }
+
+      .btn-secondary {
+        color: #fff !important;
+        background: linear-gradient(90deg, #374151, #000000);
+      }
+
+      .to-black {
+        --tw-gradient-to: #000;
+      }
+
+      /* Gaps */
+      .gap-2 {
+        gap: 0.5rem;
+      }
+
+      .gap-6 {
+        gap: 1.5rem;
+      }
+
+      .space-x-1> :not([hidden])~ :not([hidden]) {
+        margin-left: 0.25rem;
+      }
+
+      .space-x-4> :not([hidden])~ :not([hidden]) {
+        margin-left: 1rem;
+      }
+
+      .space-y-3> :not([hidden])~ :not([hidden]) {
+        margin-top: 0.75rem;
+      }
+
+      /* Cursor */
+      .cursor-pointer {
+        cursor: pointer;
+      }
+
+      /* Animation */
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Responsive */
+      @media (min-width: 768px) {
+        .md\:block {
+          display: block !important;
+        }
+
+        .md\:hidden {
+          display: none !important;
+        }
+
+        .md\:grid-cols-2 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .md\:grid-cols-4 {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .md\:p-8 {
+          padding: 2rem;
+        }
+
+        .sm\:px-6 {
+          padding-left: 1.5rem;
+          padding-right: 1.5rem;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .lg\:px-8 {
+          padding-left: 2rem;
+          padding-right: 2rem;
+        }
+
+        .lg\:grid-cols-3 {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      /* Custom form styles */
+      input,
+      select {
+        appearance: none;
+        background-color: #ffffff;
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        padding: 0.6rem 0.9rem;
+        border-radius: 8px;
+        transition: box-shadow 0.16s ease, border-color 0.16s ease;
+      }
+
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #6d28d9;
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.12);
+      }
+
+      /* Dark mode adjustments for form controls and tabs */
+      [data-theme="dark"] input,
+      [data-theme="dark"] select {
+        background-color: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        box-shadow: none;
+      }
+
+      .tab-list {
+        background: linear-gradient(90deg, rgba(15, 23, 42, 0.02), rgba(255, 255, 255, 0.02));
+      }
+
+      [data-theme="dark"] .tab-list {
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+      }
+
+      /* Mobile drawer specific */
+      .h-3\/5 {
+        height: 60%;
+        max-height: 78vh;
+      }
+
+      /* Tab list styles */
+      .tab-list a.active {
+        background-color: rgb(79 70 229);
+        color: white;
+        box-shadow: 0 6px 18px rgba(99, 102, 241, 0.12);
+      }
+
+      /* Floating action button */
+      .fab {
+        position: fixed;
+        bottom: 22%;
+        /* slightly above mid to sit between bottom and center */
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: 0 18px 40px rgba(67, 56, 202, 0.12);
+        /* keep this consistent and on top */
+        z-index: 1300;
+        transition: transform 0.28s cubic-bezier(.2, .9, .3, 1), box-shadow 0.28s ease;
+      }
+
+      .fab:hover {
+        transform: scale(1.1);
+      }
+
+      @media (min-width: 768px) {
+        .fab {
+          display: none;
+        }
+
+        /* on larger screens, drawer should be hidden and not interfere */
+        #mobileDrawer {
+          display: none !important;
+        }
+      }
+
+      /* Ensure mobile drawer is above the overlay */
+      #mobileDrawer {
+        z-index: 1250;
+        /* above page content/buttons, below FAB */
+        box-shadow: 0 -10px 40px rgba(2, 6, 23, 0.06);
+        border-top: 1px solid rgba(15, 23, 42, 0.04);
+      }
+
+      /* Light-mode (default) drawer defaults should use theme tokens, not hard-coded whites */
+      #mobileDrawer {
+        background: var(--surface);
+        color: var(--text);
+        border-top-color: rgba(15, 23, 42, 0.04);
+      }
+
+      /* Inputs/selects: use surface and token colors so light mode drawer looks consistent */
+      #mobileDrawer input,
+      #mobileDrawer select {
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid rgba(2, 6, 23, 0.06);
+      }
+
+      /* Tab list area should use a soft background derived from tokens */
+      #mobileDrawer .tab-list {
+        background: var(--bg);
+        border-radius: 8px;
+      }
+
+      /* Neutralize utility classes inside the drawer to the theme tokens (light-mode)
+         This ensures any leftover `.bg-slate-100`, `.text-slate-700`, `.border-gray-300`
+         used in markup won't visually break the drawer appearance. */
+      #mobileDrawer .bg-slate-100 {
+        background: var(--bg) !important;
+      }
+
+      #mobileDrawer .text-slate-700,
+      #mobileDrawer .text-gray-600,
+      #mobileDrawer .text-gray-800 {
+        color: var(--text) !important;
+      }
+
+      #mobileDrawer .border-gray-300,
+      #mobileDrawer .border {
+        border-color: rgba(2, 6, 23, 0.06) !important;
+      }
+
+      /* Ensure icon color (e.g., SVG) inside drawer respects theme */
+      #mobileDrawer svg,
+      #mobileDrawer .text-gray-400 {
+        color: rgba(2, 6, 23, 0.45) !important;
+      }
+
+      /* Active tab in light mode should use the accent token */
+      #mobileDrawer .tab-list a.active,
+      #mobileDrawer .tab-list a[aria-current="true"] {
+        background: var(--accent) !important;
+        color: #fff !important;
+      }
+
+      /* Mobile drawer controls: default (light) - use tokens to avoid hard-coded whites */
+      /* (Inputs/selects already defined above to use --surface; keep theme-action token-driven.) */
+
+      #mobileDrawer .theme-action {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        background: linear-gradient(90deg, var(--accent-2), var(--accent));
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      /* Dark mode: drawer surfaces and controls */
+      [data-theme="dark"] #mobileDrawer {
+        background: var(--surface);
+        color: var(--text);
+        border-top-color: rgba(255, 255, 255, 0.04);
+      }
+
+      [data-theme="dark"] #mobileDrawer input,
+      [data-theme="dark"] #mobileDrawer select {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+
+      [data-theme="dark"] #mobileDrawer .theme-action {
+        background: linear-gradient(90deg, var(--accent-2), var(--accent));
+        color: #fff;
+      }
+
+      /* More dark-mode overrides for drawer children that use utility classes */
+      [data-theme="dark"] #mobileDrawer h2,
+      [data-theme="dark"] #mobileDrawer .text-gray-800,
+      [data-theme="dark"] #mobileDrawer .text-slate-700,
+      [data-theme="dark"] #mobileDrawer .text-gray-600 {
+        color: var(--text) !important;
+      }
+
+      [data-theme="dark"] #mobileDrawer .tab-list {
+        background: rgba(255, 255, 255, 0.02) !important;
+      }
+
+      [data-theme="dark"] #mobileDrawer .tab-list a {
+        color: var(--muted) !important;
+      }
+
+      /* Active tab - keep accent in dark mode but ensure readable text */
+      [data-theme="dark"] #mobileDrawer .tab-list a.active,
+      [data-theme="dark"] #mobileDrawer .tab-list a[aria-current="true"] {
+        background: var(--accent) !important;
+        color: #fff !important;
+      }
+
+      /* Neutralize utility backgrounds/borders that force light surfaces */
+      [data-theme="dark"] #mobileDrawer .bg-slate-100 {
+        background: rgba(255, 255, 255, 0.02) !important;
+      }
+
+      [data-theme="dark"] #mobileDrawer .border-gray-300 {
+        border-color: rgba(255, 255, 255, 0.04) !important;
+      }
+
+      [data-theme="dark"] #mobileDrawer .drawer-handle {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      /* Inputs and icon colors in drawer */
+      [data-theme="dark"] #mobileDrawer input,
+      [data-theme="dark"] #mobileDrawer select,
+      [data-theme="dark"] #mobileDrawer .flex-grow {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border-color: rgba(255, 255, 255, 0.04) !important;
+        color: var(--text) !important;
+      }
+
+      [data-theme="dark"] #mobileDrawer svg,
+      [data-theme="dark"] #mobileDrawer .text-gray-400 {
+        color: rgba(255, 255, 255, 0.5) !important;
+      }
+
+      /* drawer handle */
+      #mobileDrawer .drawer-handle {
+        width: 56px;
+        height: 6px;
+        background: rgba(15, 23, 42, 0.08);
+        border-radius: 999px;
+        margin: 8px auto 12px auto;
+      }
+
+      /* Polished drawer layout helpers */
+      #mobileDrawer .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #mobileDrawer .drawer-section {
+        padding: 10px 0;
+        border-radius: 8px;
+      }
+
+      #mobileDrawer .filter-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      #mobileDrawer .filter-row input,
+      #mobileDrawer .filter-row select {
+        flex: 1 1 auto;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(2, 6, 23, 0.06);
+        background: var(--surface);
+        color: var(--text);
+        font-size: 0.95rem;
+      }
+
+      /* Placeholder and focus improvements */
+      #mobileDrawer .filter-row input::placeholder {
+        color: rgba(15, 23, 42, 0.45);
+      }
+
+      #mobileDrawer .filter-row input:focus,
+      #mobileDrawer .filter-row select:focus {
+        outline: none;
+        box-shadow: 0 6px 18px rgba(79, 70, 229, 0.06);
+        border-color: var(--accent-2);
+      }
+
+      #mobileDrawer .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(79, 70, 229, 0.08);
+        color: var(--accent-2);
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      #mobileDrawer .gender-grid {
+        display: flex;
+        gap: 8px;
+      }
+
+      #mobileDrawer .gender-grid a {
+        flex: 1 1 0;
+        padding: 10px 8px;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 600;
+        border: 1px solid transparent;
+      }
+
+      #mobileDrawer .gender-grid a.active {
+        background: linear-gradient(90deg, var(--accent-2), var(--accent));
+        color: #fff !important;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.08);
+      }
+
+      /* Gender micro-interactions */
+      #mobileDrawer .gender-grid a {
+        transition: transform 120ms var(--ease-quick), box-shadow 160ms ease, background 160ms ease;
+      }
+
+      #mobileDrawer .gender-grid a:active,
+      #mobileDrawer .gender-grid a.pressed {
+        transform: translateY(2px) scale(0.995);
+        box-shadow: none;
+        opacity: 0.96;
+      }
+
+      /* Sticky footer inside drawer (keeps close button visible) */
+      #mobileDrawer .drawer-footer {
+        position: sticky;
+        bottom: 0;
+        padding: 12px 16px;
+        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.02));
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      #mobileDrawer .btn-ghost {
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid rgba(2, 6, 23, 0.04);
+        padding: 10px 12px;
+        border-radius: 8px;
+        flex: 1 1 0;
+      }
+
+      /* ...existing code... */
+
+      /* Card meta (LR ID / Date) */
+      .card-meta {
+        margin-top: 8px;
+        color: var(--accent-1);
+        font-weight: 600;
+        direction: ltr;
+        text-align: center;
+      }
+
+      .card-meta small {
+        color: var(--muted);
+        /* light default */
+      }
+
+      /* dark mode tweaks */
+      [data-theme="dark"] .card-meta small {
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      /* Ensure action buttons sit above meta and content */
+      .card-actions {
+        z-index: 1100;
+      }
+
+      /* Decorative blob (non-interactive) */
+      .decor-blob {
+        position: absolute;
+        left: 50%;
+        top: 56px;
+        transform: translateX(-50%);
+        width: 520px;
+        height: 220px;
+        pointer-events: none;
+        opacity: 0.12;
+        z-index: 200;
+        filter: blur(22px) saturate(1.05);
+      }
+
+      @media (max-width: 640px) {
+        .decor-blob {
+          width: 360px;
+          height: 160px;
+          top: 40px;
+          opacity: 0.14
+        }
+      }
+
+      /* FAB pulse glow (subtle) */
+      .fab::after {
+        content: "";
+        position: absolute;
+        inset: -12px;
+        border-radius: 999px;
+        z-index: -1;
+        background: radial-gradient(circle, rgba(79, 70, 229, 0.14), rgba(79, 70, 229, 0));
+        filter: blur(10px);
+        animation: fabPulse 3s infinite;
+        pointer-events: none;
+      }
+
+      @keyframes fabPulse {
+        0% {
+          transform: scale(.96);
+          opacity: .9
+        }
+
+        50% {
+          transform: scale(1.06);
+          opacity: .6
+        }
+
+        100% {
+          transform: scale(.96);
+          opacity: .9
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .fab::after {
+          animation: none;
+        }
+
+        .fab {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen font-sans antialiased">
+    <!-- ARIA live region for non-blocking notifications -->
+    <div aria-live="polite" aria-atomic="true" id="toastRegion" class="sr-only"></div>
+    <!-- Toast container -->
+    <div class="toast-wrap" id="toastWrap" aria-hidden="true"></div>
+    <div class="relative">
+      <!-- Enhanced header -->
+      <header class="site-header">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="site-logo">InstaRishta</div>
+              <div id="appliedFilters" class="flex items-center gap-2 ml-2" aria-hidden="true">
+                <!-- applied filter chips (kept visible in header in enhanced view) -->
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <!-- Theme toggle (sun / moon) -->
+              <button id="themeToggle" aria-pressed="false" class="icon-btn" title="Toggle theme">
+                <!-- sun / moon icon; will be swapped in JS when toggling -->
+                <svg id="themeIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <mask id="m">
+                    <rect x="0" y="0" width="24" height="24" fill="white" />
+                    <circle cx="12" cy="7" r="4" fill="black" />
+                  </mask>
+                  <circle cx="12" cy="12" r="5" />
+                </svg>
+              </button>
+
+              <!-- Post Ad icon-only (Telegram) -->
+              <a href="https://telegram.me/liverishtey" target="_blank" class="icon-btn"
+                aria-label="Post Ad on Telegram" title="Post Ad">
+                <svg class="post-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M22 2L11 13"></path>
+                  <path d="M22 2L15 22l-4-9-9-4 20-7z"></path>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- decorative blob -->
+      <div class="decor-blob" aria-hidden="true">
+        <svg width="100%" height="100%" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid slice"
+          xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" x2="1">
+              <stop offset="0%" style="stop-color: var(--accent-2); stop-opacity: 0.12;" />
+              <stop offset="100%" style="stop-color: var(--accent); stop-opacity: 0.08;" />
+            </linearGradient>
+          </defs>
+          <path fill="url(#g1)"
+            d="M182.2,23.1C228.8,5.3,292.2-6.4,350.6,12.9C408.9,32.3,460.9,68.1,503.3,104.1C545.6,140.1,578.5,176.2,577.1,214.9C575.8,253.6,540.1,294,498.3,303.6C456.6,313.3,408.8,292.1,362.1,279.9C315.5,267.7,269,264.6,224.6,246.9C180.2,229.2,137.8,196.8,107.2,161.4C76.7,126,57.8,87.5,70.4,56.2C83,24.9,135.6,40.9,182.2,23.1Z" />
+        </svg>
+      </div>
+
+      <div class="max-w-7xl mx-auto p-4 md:p-8">
+        <!-- Typing Animation -->
+        <div class="flex">
+          <div class="text-left">
+            <div class="relative h-6 mb-3">
+              <h1 class="text-xl font-semibold" id="typingText"></h1>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop Filters -->
+        <div id="desktopFilters" class="hidden md:block mb-6 card rounded-md m-1 p-9 fade-in">
+          <div class="flex flex-wrap justify-center items-center gap-6">
+            <div class="relative flex-grow">
+              <div class="relative search-wrap">
+                <input id="searchInput" type="search" placeholder="Search..."
+                  class="flex-grow w-full px-4 pr-10 rounded-md border border-gray-200 focus:outline-none focus:border-indigo-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-3 top-3 h-6 w-6 text-gray-400" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+            </div>
+            <input id="idFilter" type="number" placeholder="Filter by ID"
+              class="p-3 border border-gray-300 rounded-sm focus:outline-none focus:border-indigo-500">
+            <select id="sortOrder"
+              class="p-3 border border-gray-300 rounded-sm focus:outline-none focus:border-indigo-500">
+              <option value="dateDesc">Date (Newest)</option>
+              <option value="dateAsc">Date (Oldest)</option>
+              <option value="userUrgent">Urgent</option>
+              <option value="relevance">Relevance</option>
+            </select>
+            <div class="p-3 border border-gray-300 rounded-sm focus:outline-none focus:border-indigo-500">
+              <select id="educationFilter">
+                <option value="">All</option>
+                <option value="Preprimary">Preprimary</option>
+                <option value="Primary">Primary</option>
+                <option value="Upper Primary">Upper Primary</option>
+                <option value="Secondary">Secondary</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Graduate">Graduate</option>
+                <option value="Post Graduate">Post Graduate</option>
+                <option value="Engineer">Engineer</option>
+                <option value="Doctor">Doctor</option>
+                <option value="PhD">PhD</option>
+                <option value="Hafiz/Aalim">Hafiz/Aalim</option>
+                <option value="Diploma">Diploma</option>
+              </select>
+            </div>
+            <div class="flex rounded-sm overflow-hidden">
+              <!-- Gender Filter Tabs -->
+              <div class="relative flex flex-col card rounded-lg w-96 mx-auto p-2">
+                <div class="w-full">
+                  <ul class="tab-list relative flex flex-wrap px-1.5 py-1.5 list-none rounded-md bg-slate-100">
+                    <li class="z-30 flex-auto text-center">
+                      <a class="flex items-center justify-center w-full px-0 py-2 text-sm mb-0 transition-all ease-in-out border-0 rounded-md cursor-pointer bg-indigo-600 text-white shadow-sm active"
+                        data-gender="all">
+                        All
+                      </a>
+                    </li>
+                    <li class="z-30 flex-auto text-center">
+                      <a class="flex items-center justify-center w-full px-0 py-2 mb-0 text-sm transition-all ease-in-out border-0 rounded-lg cursor-pointer text-slate-700 bg-inherit"
+                        data-gender="male">
+                        Male
+                      </a>
+                    </li>
+                    <li class="z-30 flex-auto text-center">
+                      <a class="flex items-center justify-center w-full px-0 py-2 text-sm mb-0 transition-all ease-in-out border-0 rounded-lg cursor-pointer text-slate-700 bg-inherit"
+                        data-gender="female">
+                        Female
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+          <div class="card p-2 rounded-md text-center">
+            <div
+              style="height:6px; width:40px; background: linear-gradient(90deg,var(--accent-2),var(--accent)); border-radius:4px; margin:6px auto 10px auto">
+            </div>
+            <p class="text-2xl font-bold text-indigo-600" id="totalAds">500</p>
+            <p class="text-gray-600">Total Ads</p>
+          </div>
+          <div class="card p-2 rounded-md text-center">
+            <div
+              style="height:6px; width:40px; background: linear-gradient(90deg,#10b981,#047857); border-radius:4px; margin:6px auto 10px auto">
+            </div>
+            <p class="text-2xl font-bold text-green-600" id="maleProfiles">144</p>
+            <p class="text-gray-600">Male Profiles</p>
+          </div>
+          <div class="card p-2 rounded-md text-center">
+            <div
+              style="height:6px; width:40px; background: linear-gradient(90deg,#ec4899,#db2777); border-radius:4px; margin:6px auto 10px auto">
+            </div>
+            <p class="text-2xl font-bold text-pink-600" id="femaleProfiles">356</p>
+            <p class="text-gray-600">Female Profiles</p>
+          </div>
+          <div class="card p-2 rounded-md text-center">
+            <div
+              style="height:6px; width:40px; background: linear-gradient(90deg,#ffb400,#ff8a00); border-radius:4px; margin:6px auto 10px auto">
+            </div>
+            <p class="text-2xl font-bold text-urgent" id="urgentAds">500</p>
+            <p class="text-gray-600">Urgent Ads</p>
+          </div>
+        </div>
+
+        <!-- Applied Filters -->
+        <div id="appliedFilters" class="my-4 hidden">
+          <div id="filterBadges" class="flex flex-wrap gap-2 mb-6"></div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center mt-8 fade-in">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+          <p class="mt-2 text-gray-600">Loading more users...</p>
+        </div>
+
+        <!-- User List -->
+        <div id="userList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- User cards will be populated here -->
+        </div>
+
+        <!-- No Results -->
+        <div id="noResults" class="text-center mt-8 hidden">
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">No profiles found</h3>
+          <p class="text-gray-600 mb-4">Try adjusting your search criteria or filters.</p>
+          <button id="clearAllFiltersDesktop"
+            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+            Clear All Filters
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Drawer (Bottom) - polished layout -->
+      <div id="mobileDrawer" role="dialog" aria-modal="false" aria-hidden="true" aria-labelledby="drawerTitle"
+        class="fixed inset-x-0 bottom-0 h-3/5 card transform transition-transform duration-300 ease-in-out md:hidden drawer closed">
+        <div class="p-4">
+          <div class="drawer-handle" aria-hidden="true"></div>
+
+          <div class="drawer-header mb-4">
+            <h2 id="drawerTitle" class="text-lg font-semibold">Filters</h2>
+            <span class="chip">Filters</span>
+          </div>
+
+          <div class="drawer-body space-y-4">
+            <!-- Search + ID row -->
+            <div class="drawer-section">
+              <div class="filter-row">
+                <input id="mobileSearchInput" type="search" placeholder="Search..." aria-label="Search" class="" />
+                <input id="mobileIdFilter" type="number" placeholder="ID" aria-label="Filter by ID" class="" />
+              </div>
+            </div>
+
+            <!-- Sort & Education -->
+            <div class="drawer-section">
+              <div class="filter-row">
+                <select id="mobileSortOrder" aria-label="Sort by">
+                  <option value="dateDesc">Newest</option>
+                  <option value="dateAsc">Oldest</option>
+                  <option value="userUrgent">Urgent</option>
+                </select>
+
+                <select id="mobileEducationFilter" aria-label="Education">
+                  <option value="">All Education</option>
+                  <option value="Preprimary">Preprimary</option>
+                  <option value="Primary">Primary</option>
+                  <option value="Upper Primary">Upper Primary</option>
+                  <option value="Secondary">Secondary</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Graduate">Graduate</option>
+                  <option value="Post Graduate">Post Graduate</option>
+                  <option value="Engineer">Engineer</option>
+                  <option value="Doctor">Doctor</option>
+                  <option value="PhD">PhD</option>
+                  <option value="Hafiz/Aalim">Hafiz/Aalim</option>
+                  <option value="Diploma">Diploma</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Gender selection -->
+            <div class="drawer-section">
+              <div class="gender-grid">
+                <a href="#" data-gender="all" class="active">All</a>
+                <a href="#" data-gender="male">Male</a>
+                <a href="#" data-gender="female">Female</a>
+              </div>
+            </div>
+
+            <!-- CTA -->
+            <div class="drawer-section">
+              <a href="https://telegram.me/liverishteyofficial"
+                class="theme-action text-xl py-3 my-3 inline-block font-semibold text-center">Post Your Ad</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button id="clearAllFilters" class="btn-ghost">Clear</button>
+          <button id="closeDrawer" class="theme-action">Close Filters</button>
+        </div>
+      </div>
+
+      <!-- Drawer Overlay -->
+      <div id="drawerOverlay" class="drawer-overlay" aria-hidden="true"></div>
+
+      <!-- Floating Action Button -->
+      <button id="openDrawer" class="fab md:hidden" aria-label="Open filters">⚙️</button>
+    </div>
+
+    <script src="script.js"></script>
+
+    <!-- Footer -->
+    <footer class="mx-auto mt-32 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="border-t border-slate-900/5 py-10">
+        <a href="https://liverishtey.com" class="inline-flex items-center justify-center">
+          <span class="ml-2 mx-auto font-bold tracking-wide text-red-600 uppercase">liverishtey.com</span>
+        </a>
+        <p class="mt-5 text-center text-sm leading-6 text-slate-500">
+          © 2024 Liverishtey Matrimonial & Matchmaking. All rights reserved.
+        </p>
+        <div class="mt-16 flex items-center justify-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
+          <a href="https://liverishtey.com/privacy">Privacy policy</a>
+          <div class="h-4 w-px bg-slate-500/20"></div>
+          <a href="https://liverishtey.com/terms">Terms & Conditions</a>
+          <div class="h-4 w-px bg-slate-500/20"></div>
+          <a href="https://liverishtey.com/refund-policy">Refund Policy</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+
+</html>

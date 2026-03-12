@@ -1,0 +1,12 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="InstaRishta">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#g)"/>
+  <path fill="#fff" d="M256 118c-77 0-139 62-139 139s62 139 139 139 139-62 139-139-62-139-139-139zm0 44c53 0 95 42 95 95s-42 95-95 95-95-42-95-95 42-95 95-95z"/>
+  <circle cx="256" cy="257" r="34" fill="#fff"/>
+  <path fill="#fff" d="M346 128h22v22h-22z"/>
+</svg>

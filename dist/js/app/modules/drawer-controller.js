@@ -1,0 +1,143 @@
+import { $, addClass, removeClass } from "../utils.js";
+
+export class DrawerController {
+  constructor() {
+    this.drawer = $("mobileDrawer");
+    this.overlay = $("drawerOverlay");
+    this.openButton = $("openDrawer");
+    this.closeButton = $("closeDrawer");
+    this.isOpen = false;
+    this.swipeState = {
+      active: false,
+      startX: 0,
+      startY: 0,
+      startTime: 0,
+    };
+  }
+
+  init() {
+    this.drawer?.setAttribute("aria-hidden", "true");
+    this.openButton?.setAttribute("aria-controls", "mobileDrawer");
+    this.openButton?.setAttribute("aria-expanded", "false");
+
+    this.openButton?.addEventListener("click", () => this.toggle(true));
+    this.closeButton?.addEventListener("click", () => this.toggle(false));
+    this.overlay?.addEventListener("click", () => this.toggle(false));
+    this.bindSwipeToClose();
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && this.isOpen) {
+        this.toggle(false);
+      }
+    });
+  }
+
+  toggle(open) {
+    if (!this.drawer || !this.overlay) return;
+    this.isOpen = open;
+    this.resetDrawerDrag();
+
+    if (open) {
+      removeClass(this.drawer, "closed");
+      addClass(this.drawer, "open");
+      addClass(this.overlay, "show");
+      this.drawer.setAttribute("aria-hidden", "false");
+      this.openButton?.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
+      this.drawer.querySelector("input,select,button,a")?.focus();
+      return;
+    }
+
+    removeClass(this.drawer, "open");
+    addClass(this.drawer, "closed");
+    removeClass(this.overlay, "show");
+    this.drawer.setAttribute("aria-hidden", "true");
+    this.openButton?.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+    this.openButton?.focus();
+  }
+
+  bindSwipeToClose() {
+    if (!this.drawer) return;
+
+    this.drawer.addEventListener(
+      "touchstart",
+      (event) => {
+        if (!this.isOpen) return;
+        if (this.drawer.scrollTop > 0) return;
+        const touch = event.touches[0];
+        if (!touch) return;
+
+        this.swipeState.active = true;
+        this.swipeState.startX = touch.clientX;
+        this.swipeState.startY = touch.clientY;
+        this.swipeState.startTime = Date.now();
+      },
+      { passive: true }
+    );
+
+    this.drawer.addEventListener(
+      "touchmove",
+      (event) => {
+        if (!this.isOpen || !this.swipeState.active) return;
+        if (this.drawer.scrollTop > 0) {
+          this.swipeState.active = false;
+          return;
+        }
+
+        const touch = event.touches[0];
+        if (!touch) return;
+
+        const deltaY = touch.clientY - this.swipeState.startY;
+        const deltaX = Math.abs(touch.clientX - this.swipeState.startX);
+
+        if (deltaY <= 0 || deltaX > Math.abs(deltaY)) return;
+
+        event.preventDefault();
+        const offset = Math.min(deltaY, 220);
+        this.drawer.style.transition = "none";
+        this.drawer.style.transform = `translateY(${offset}px)`;
+      },
+      { passive: false }
+    );
+
+    this.drawer.addEventListener(
+      "touchend",
+      (event) => {
+        if (!this.swipeState.active) {
+          this.resetDrawerDrag();
+          return;
+        }
+
+        const touch = event.changedTouches[0];
+        const endY = touch ? touch.clientY : this.swipeState.startY;
+        const deltaY = endY - this.swipeState.startY;
+        const elapsed = Math.max(1, Date.now() - this.swipeState.startTime);
+        const velocity = deltaY / elapsed;
+
+        this.swipeState.active = false;
+        this.resetDrawerDrag();
+
+        if (deltaY > 90 || velocity > 0.65) {
+          this.toggle(false);
+        }
+      },
+      { passive: true }
+    );
+
+    this.drawer.addEventListener(
+      "touchcancel",
+      () => {
+        this.swipeState.active = false;
+        this.resetDrawerDrag();
+      },
+      { passive: true }
+    );
+  }
+
+  resetDrawerDrag() {
+    if (!this.drawer) return;
+    this.drawer.style.transition = "";
+    this.drawer.style.transform = "";
+  }
+}
