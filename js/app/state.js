@@ -21,9 +21,8 @@
     typing: {
       texts: [
         "Find Verified Muslim Rishta for Nikah",
-        "Trusted Muslim Matrimony Platform",
-        "Daily Verified Marriage Proposals",
       ],
+      disableAnimation: true,
       textIndex: 0,
       charIndex: 0,
       direction: "forward",

@@ -2,3 +2,9 @@
 .card.card-hover p.card-body-urdu{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .hero-mark{width:min(84vw,340px);height:auto;opacity:.12;align-self:flex-start;margin-bottom:10px}
 .seo-faq{border:1px solid var(--border);background:var(--surface)}.seo-faq details{border:1px solid var(--border);background:var(--surface-muted);border-radius:10px;padding:10px 12px;margin-bottom:10px}.seo-faq summary{cursor:pointer;font-weight:700}.seo-faq p{margin-top:8px;color:var(--text-soft)}.seo-link-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.seo-link-grid a{display:block;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-muted);text-decoration:none;color:var(--text);font-weight:600}.seo-link-grid a:hover{border-color:var(--border-strong);transform:translateY(-1px)}
+.hero-mark{display:none !important}
+.hero-banner{max-width:760px;margin:0 auto 10px auto;padding:10px 0 8px 0;display:grid;gap:12px}
+.hero-kicker{display:inline-flex;align-items:center;width:max-content;padding:6px 12px;border-radius:999px;background:linear-gradient(90deg,rgba(79,70,229,.16),rgba(109,40,217,.16));border:1px solid var(--border-strong);font-weight:700;font-size:.82rem;letter-spacing:.02em;color:var(--text-soft)}
+.hero-banner h1{font-size:clamp(2rem,6vw,3.05rem);line-height:1.05;letter-spacing:-.02em;max-width:20ch;margin:0}
+.hero-subtitle{margin:0;font-size:1.06rem;line-height:1.65;max-width:56ch;color:var(--text-soft)}
+@media (max-width:767px){.hero-banner{padding-top:6px;gap:10px}.hero-banner h1{font-size:clamp(2rem,9.2vw,2.75rem)}.hero-subtitle{font-size:1rem;line-height:1.6}}

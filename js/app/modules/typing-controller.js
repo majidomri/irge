@@ -7,6 +7,14 @@ export class TypingController {
 
   start() {
     const container = $("typingText");
+    if (!container) return;
+
+    if (this.state.disableAnimation) {
+      const fallback = this.state.texts[0] || container.textContent || "";
+      container.textContent = fallback;
+      return;
+    }
+
     const currentText = this.state.texts[this.state.textIndex] || "";
     const staticText = container?.textContent?.trim() || "";
 

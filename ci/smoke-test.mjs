@@ -37,13 +37,13 @@ async function run() {
   try {
     await waitForServer();
 
-    const html = await fetchText("/4.html");
+    const html = await fetchText("/");
     if (!html.includes('type="module" src="js/app/main.js"')) {
-      throw new Error("4.html is not wired to module entrypoint.");
+      throw new Error("index route is not wired to module entrypoint.");
     }
 
     if (!html.includes("manifest.webmanifest")) {
-      throw new Error("Manifest link missing in 4.html.");
+      throw new Error("Manifest link missing on index route.");
     }
 
     const mainJs = await fetchText("/js/app/main.js");
