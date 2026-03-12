@@ -8,3 +8,14 @@
 .hero-banner h1{font-size:clamp(2rem,6vw,3.05rem);line-height:1.05;letter-spacing:-.02em;max-width:20ch;margin:0}
 .hero-subtitle{margin:0;font-size:1.06rem;line-height:1.65;max-width:56ch;color:var(--text-soft)}
 @media (max-width:767px){.hero-banner{padding-top:6px;gap:10px}.hero-banner h1{font-size:clamp(2rem,9.2vw,2.75rem)}.hero-subtitle{font-size:1rem;line-height:1.6}}
+#mobileDrawer{inset:0 !important;max-height:none !important;height:100dvh !important;border-radius:0 !important;overflow:hidden !important}
+#mobileDrawer .drawer-handle{display:none}
+#mobileDrawer .p-4.h-full.flex.flex-col{padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 12px);gap:8px}
+#mobileDrawer .drawer-header{margin-bottom:6px}
+#mobileDrawer .space-y-4{gap:8px !important}
+#mobileDrawer .space-y-4.flex-1{overflow:visible !important}
+#mobileDrawer .drawer-section{padding:4px 0}
+#mobileDrawer .filter-row input,#mobileDrawer .filter-row select{padding:9px 10px;font-size:.92rem}
+#mobileDrawer .theme-action{padding:10px;font-size:.96rem}
+#mobileDrawer .drawer-footer{margin-top:4px;padding:6px 0 0}
+@media (max-height:680px){#mobileDrawer .filter-row input,#mobileDrawer .filter-row select{padding:8px 9px;font-size:.88rem}#mobileDrawer .theme-action{padding:9px;font-size:.9rem}}

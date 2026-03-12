@@ -31,6 +31,18 @@
     <meta name="twitter:image" content="https://www.instarishta.me/assets/icon.svg">
     <meta name="theme-color" content="#4f46e5">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap">
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap"
+      media="print" onload="this.media='all'">
+    <noscript>
+      <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap">
+    </noscript>
+
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -424,7 +436,7 @@
       <!-- Mobile Drawer (Bottom) -->
       <div id="mobileDrawer"
         class="fixed inset-x-0 bottom-0 shadow-lg transform transition-transform duration-300 ease-in-out md:hidden drawer closed"
-        style="height: 60vh;" role="dialog" aria-label="Filters" inert>
+        role="dialog" aria-label="Filters" inert>
         <div class="p-4 h-full flex flex-col">
           <div class="drawer-handle"></div>
 
@@ -432,7 +444,7 @@
             <h2 class="text-lg font-semibold">Filters</h2>
           </div>
 
-          <div class="space-y-4 flex-1 overflow-y-auto">
+          <div class="space-y-4 flex-1">
             <!-- Search & ID -->
             <div class="drawer-section">
               <div class="filter-row">
