@@ -45,7 +45,6 @@ export class DrawerController {
       this.drawer.setAttribute("aria-modal", "true");
       this.openButton?.setAttribute("aria-expanded", "true");
       document.body.style.overflow = "hidden";
-      this.drawer.querySelector("input,select,button,a")?.focus();
       return;
     }
 

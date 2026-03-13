@@ -1,4 +1,4 @@
-const CACHE_NAME = "instarishta-v5";
+const CACHE_NAME = "instarishta-v6";
 const CORE_ASSETS = [
   "./",
   "./index.html",

@@ -73,11 +73,20 @@ export class Renderer {
     const urgentBadge = user.urgent ? '<div class="urgent-badge">URGENT</div>' : "";
     const genderText = user.gender === "female" ? "لڑکی" : user.gender === "male" ? "لڑکا" : "";
     const displayTitle = user.title || `ضرورت رشتہ ${genderText}`;
+    const bodyText = user.body || "";
+    const normalizedBody = bodyText.replace(/\s+/g, " ").trim();
+    const isLongBody = normalizedBody.length > 180 || bodyText.split(/\r?\n/).length > 3;
+    const bodyId = `profileBody${String(user.id).replace(/[^a-zA-Z0-9_-]/g, "") || "item"}`;
 
     card.innerHTML = `
       ${urgentBadge}
       <h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>
-      <p class="font-urdu text-gray-700 card-body-urdu">${formatUserText(user.body || "")}</p>
+      <p id="${bodyId}" class="font-urdu text-gray-700 card-body-urdu${isLongBody ? " is-trimmed" : ""}">${formatUserText(bodyText)}</p>
+      ${
+        isLongBody
+          ? `<button class="card-toggle-btn" type="button" aria-controls="${bodyId}" aria-expanded="false">Read more</button>`
+          : ""
+      }
       <div class="card-meta">
         <small>LR ID: ${escapeHtml(String(user.id))}</small>
         <small>Date: ${escapeHtml(formatDate(user.date))}</small>
@@ -108,13 +117,24 @@ export class Renderer {
       this.options.onCall(user);
     });
 
+    const toggleButton = card.querySelector(".card-toggle-btn");
+    if (toggleButton) {
+      const bodyElement = card.querySelector(".card-body-urdu");
+      toggleButton.addEventListener("click", () => {
+        if (!bodyElement) return;
+        const expanded = bodyElement.classList.toggle("is-expanded");
+        toggleButton.textContent = expanded ? "Read less" : "Read more";
+        toggleButton.setAttribute("aria-expanded", expanded ? "true" : "false");
+      });
+    }
+
     this.attachCardGestures(card, user);
     return card;
   }
 
   attachCardGestures(card, user) {
     const hasActionTarget = (target) =>
-      Boolean(target && target.closest && target.closest(".action-btn"));
+      Boolean(target && target.closest && target.closest(".action-btn, .card-toggle-btn"));
 
     let lastTapAt = 0;
     let longPressTimer = null;

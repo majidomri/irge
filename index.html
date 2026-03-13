@@ -42,6 +42,13 @@
       <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap">
     </noscript>
+    <noscript>
+      <style>
+        #splashScreen {
+          display: none !important;
+        }
+      </style>
+    </noscript>
 
     <script type="application/ld+json">
       {
@@ -119,6 +126,30 @@
   <body class="min-h-screen font-sans antialiased">
     <a href="#mainContent" class="sr-only skip-link">Skip to content</a>
     <div id="ariaStatus" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <div id="splashScreen" class="splash-screen" role="status" aria-live="polite" aria-label="Loading InstaRishta">
+      <div class="splash-brand">
+        <div class="splash-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="48" height="48" rx="18" fill="url(#splashGradient)"></rect>
+            <path d="M20 35c0-7.18 5.82-13 13-13 4.95 0 9.26 2.77 11.45 6.85" stroke="white" stroke-width="4.5"
+              stroke-linecap="round"></path>
+            <circle cx="33" cy="35" r="6.5" fill="white"></circle>
+            <path d="M43 22h1" stroke="white" stroke-width="4.5" stroke-linecap="round"></path>
+            <defs>
+              <linearGradient id="splashGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#4F46E5"></stop>
+                <stop offset="1" stop-color="#6D28D9"></stop>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="splash-copy">
+          <span class="splash-eyebrow">Verified Muslim Proposals</span>
+          <strong class="splash-wordmark">InstaRishta</strong>
+          <span class="splash-tagline">Fast browsing for serious nikah matches.</span>
+        </div>
+      </div>
+    </div>
     <div class="relative">
       <!-- Enhanced header -->
       <header class="site-header">
@@ -436,15 +467,15 @@
       <!-- Mobile Drawer (Bottom) -->
       <div id="mobileDrawer"
         class="fixed inset-x-0 bottom-0 shadow-lg transform transition-transform duration-300 ease-in-out md:hidden drawer closed"
-        role="dialog" aria-label="Filters" inert>
+        role="dialog" aria-labelledby="drawerTitle" inert>
         <div class="p-4 h-full flex flex-col">
           <div class="drawer-handle"></div>
 
           <div class="drawer-header mb-6">
-            <h2 class="text-lg font-semibold">Filters</h2>
+            <h2 id="drawerTitle" class="text-lg font-semibold">Filters</h2>
           </div>
 
-          <div class="space-y-4 flex-1">
+          <div class="space-y-4 flex-1 drawer-content">
             <!-- Search & ID -->
             <div class="drawer-section">
               <div class="filter-row">
@@ -492,7 +523,7 @@
             <!-- CTA -->
             <div class="drawer-section">
               <a href="https://telegram.me/liverishteyofficial"
-                class="theme-action text-xl py-3 my-3 inline-block font-semibold text-center">Post Your Ad</a>
+                class="theme-action drawer-cta inline-block font-semibold text-center">Post Your Ad</a>
             </div>
           </div>
 

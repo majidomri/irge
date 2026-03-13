@@ -23,6 +23,8 @@ class InstaRishtaApp {
     this.workerRequests = new Map();
     this.workerRequestTimeoutMs = 6000;
     this.workerReady = false;
+    this.splashDismissScheduled = false;
+    this.splashVisibleAt = typeof performance !== "undefined" ? performance.now() : Date.now();
 
     this.storage = new StorageService();
     this.logger = new ActivityLogger(this.storage, config.activityLogKey);
@@ -68,6 +70,7 @@ class InstaRishtaApp {
     this.updateGenderTabs();
     this.updateContactLimitIndicator();
     this.loadUsers();
+    this.requestSplashHide();
 
     setInterval(() => this.updateContactLimitIndicator(), 30000);
     setInterval(() => this.admin.updateStats(), 30000);
@@ -396,6 +399,23 @@ class InstaRishtaApp {
     }
   }
 
+  requestSplashHide() {
+    if (this.splashDismissScheduled) return;
+
+    this.splashDismissScheduled = true;
+    const splash = $("splashScreen");
+    if (!splash) return;
+
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const elapsed = now - this.splashVisibleAt;
+    const delay = Math.max(0, 950 - elapsed);
+
+    window.setTimeout(() => {
+      splash.classList.add("is-hidden");
+      window.setTimeout(() => splash.remove(), 420);
+    }, delay);
+  }
+
   updateGenderTabs() {
     $$(".gender-tab, .gender-grid a").forEach((tab) => {
       const active = tab.getAttribute("data-gender") === this.state.filters.gender;
@@ -445,6 +465,8 @@ class InstaRishtaApp {
         this.state.loading = false;
         this.renderer.showToast("Network slow. Showing saved data.");
       }
+    } finally {
+      this.requestSplashHide();
     }
   }
 
