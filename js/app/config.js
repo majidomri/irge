@@ -4,7 +4,7 @@ const DEFAULT_DATA_SOURCES = [
   "jsdata.json",
   "data/jsdata.json",
   "js/jsdata.json",
-  "https://raw.githubusercontent.com/majidomri/liverishtey/main/jsdata.json",
+  "https://raw.githubusercontent.com/majidomri/irge/main/jsdata.json",
 ];
 
 function normalizeSources(sources) {

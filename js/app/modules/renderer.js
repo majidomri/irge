@@ -1,5 +1,5 @@
 ﻿import {
-  $, addClass, removeClass, copyText, escapeHtml, formatDate, formatUserText,
+  $, addClass, removeClass, copyText, escapeHtml, formatDate, formatUserText, toTitleCase,
 } from "../utils.js";
 
 export class Renderer {
@@ -77,11 +77,36 @@ export class Renderer {
     const normalizedBody = bodyText.replace(/\s+/g, " ").trim();
     const isLongBody = normalizedBody.length > 180 || bodyText.split(/\r?\n/).length > 3;
     const bodyId = `profileBody${String(user.id).replace(/[^a-zA-Z0-9_-]/g, "") || "item"}`;
+    const contactMode = user.contactMode || (user.familyApproval ? "family" : "direct");
+    const contactModeLabel = contactMode === "family"
+      ? "Family contact"
+      : contactMode === "private"
+        ? "Private contact"
+        : "Direct contact";
+    const trustBadges = [
+      user.verified ? '<span class="trust-badge trust-badge-verified">Verified</span>' : "",
+      user.familyApproval ? '<span class="trust-badge trust-badge-family">Family approved</span>' : "",
+      contactMode !== "direct" ? `<span class="trust-badge trust-badge-private">${escapeHtml(contactModeLabel)}</span>` : "",
+      user.values ? '<span class="trust-badge trust-badge-values">Values-led</span>' : "",
+    ].filter(Boolean).join("");
+    const primaryActionLabel = contactMode !== "direct" || user.familyApproval
+      ? "Contact safely"
+      : "Contact";
 
     card.innerHTML = `
       ${urgentBadge}
       <h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>
+      <div class="card-trust-row">${trustBadges}</div>
       <p id="${bodyId}" class="font-urdu text-gray-700 card-body-urdu${isLongBody ? " is-trimmed" : ""}">${formatUserText(bodyText)}</p>
+      ${
+      user.contactMode || user.familyApproval || user.verified || user.values
+          ? `<div class="card-contact-note">${escapeHtml([
+              user.verified ? "Verified profile" : "",
+              contactMode !== "direct" ? contactModeLabel : "",
+              user.values ? user.values : "",
+            ].filter(Boolean).join(" | "))}</div>`
+          : ""
+      }
       ${
         isLongBody
           ? `<button class="card-toggle-btn" type="button" aria-controls="${bodyId}" aria-expanded="false">Read more</button>`
@@ -92,11 +117,11 @@ export class Renderer {
         <small>Date: ${escapeHtml(formatDate(user.date))}</small>
       </div>
       <div class="card-actions card-actions-primary">
-        <button class="action-btn action-btn-lg contact-btn" data-id="${escapeHtml(String(user.id))}" aria-label="Contact on WhatsApp">
+        <button class="action-btn action-btn-lg contact-btn" data-id="${escapeHtml(String(user.id))}" aria-label="${escapeHtml(primaryActionLabel)} on WhatsApp">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path>
           </svg>
-          <span>Contact</span>
+          <span>${escapeHtml(primaryActionLabel)}</span>
         </button>
         <button class="action-btn action-btn-lg call-btn" data-id="${escapeHtml(String(user.id))}" aria-label="Call profile">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -307,13 +332,24 @@ export class Renderer {
     ctx.font = "700 64px Inter, Arial, sans-serif";
     ctx.fillText(`LR ID: ${user.id}`, 120, 290);
 
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "700 30px Inter, Arial, sans-serif";
+    const trustFlags = [];
+    if (user.verified) trustFlags.push("Verified");
+    if (user.familyApproval) trustFlags.push("Family approved");
+    if (user.contactMode && user.contactMode !== "direct") trustFlags.push(toTitleCase(user.contactMode));
+    if (user.values) trustFlags.push("Values-led");
+    if (trustFlags.length) {
+      this.drawWrappedText(ctx, trustFlags.join(" | "), 120, 340, width - 240, 36, 2);
+    }
+
     ctx.fillStyle = "#111827";
     ctx.font = "600 42px Inter, Arial, sans-serif";
     let currentY = this.drawWrappedText(
       ctx,
       user.title || "Profile",
       120,
-      380,
+      trustFlags.length ? 400 : 380,
       width - 240,
       54,
       3
@@ -490,3 +526,5 @@ export class Renderer {
     }, 2200);
   }
 }
+
+

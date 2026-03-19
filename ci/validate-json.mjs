@@ -60,6 +60,13 @@ for (let index = 0; index < data.length; index += 1) {
       errors.push(`Row ${index}: unsupported gender '${row.gender}'.`);
     }
   }
+
+  if (row.contactMode !== undefined) {
+    const contactMode = String(row.contactMode).toLowerCase();
+    if (!["direct", "family", "private"].includes(contactMode)) {
+      errors.push(`Row ${index}: unsupported contactMode '${row.contactMode}'.`);
+    }
+  }
 }
 
 if (errors.length) {

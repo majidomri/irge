@@ -1,4 +1,4 @@
-import { config } from "./config.js";
+﻿import { config } from "./config.js";
 import { createState } from "./state.js";
 import {
   $, $$, debounce, domReady, getQueryParam,
@@ -13,6 +13,7 @@ import { TypingController } from "./modules/typing-controller.js";
 import { DrawerController } from "./modules/drawer-controller.js";
 import { Renderer } from "./modules/renderer.js";
 import { AdminController } from "./modules/admin-controller.js";
+import { escapeHtml, toSafeString, toTitleCase } from "./utils.js";
 
 class InstaRishtaApp {
   constructor() {
@@ -42,6 +43,9 @@ class InstaRishtaApp {
     this.theme = new ThemeController(this.storage, config.themeStorageKey);
     this.typing = new TypingController(this.state.typing);
     this.drawer = new DrawerController();
+    this.activeContactUser = null;
+    this.contactFlowActionTaken = false;
+    this.contactFlowReturnFocus = null;
     this.admin = new AdminController({
       storage: this.storage,
       logger: this.logger,
@@ -63,6 +67,7 @@ class InstaRishtaApp {
     this.typing.start();
     this.drawer.init();
     this.admin.init();
+    this.bindContactFlow();
     this.applyFiltersFromUrl();
     this.bindEvents();
     this.applyFiltersToInputs();
@@ -399,6 +404,37 @@ class InstaRishtaApp {
     }
   }
 
+  bindContactFlow() {
+    this.contactFlowModal = $("contactFlowModal");
+    this.contactFlowTitle = $("contactFlowTitle");
+    this.contactFlowCopy = $("contactFlowCopy");
+    this.contactFlowSummary = $("contactFlowSummary");
+    this.contactFlowBadges = $("contactFlowBadges");
+    this.contactFlowMessage = $("contactFlowMessage");
+    this.contactFlowPrimaryBtn = $("contactFlowPrimaryBtn");
+    this.contactFlowCallBtn = $("contactFlowCallBtn");
+    this.closeContactFlowBtn = $("closeContactFlow");
+    this.contactFlowActionButtons = [
+      this.contactFlowPrimaryBtn,
+      this.contactFlowCallBtn,
+    ].filter(Boolean);
+
+    const close = () => this.closeContactFlow();
+
+    this.contactFlowModal?.addEventListener("click", (event) => {
+      if (event.target?.dataset?.contactClose !== undefined) close();
+    });
+    this.closeContactFlowBtn?.addEventListener("click", close);
+    this.contactFlowPrimaryBtn?.addEventListener("click", () => this.openPrimaryContact());
+    this.contactFlowCallBtn?.addEventListener("click", () => this.callPrimaryContact());
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !this.contactFlowModal?.hidden) {
+        close();
+      }
+    });
+  }
+
   requestSplashHide() {
     if (this.splashDismissScheduled) return;
 
@@ -604,20 +640,12 @@ class InstaRishtaApp {
       return;
     }
 
-    this.contactService.recordAttempt();
-    this.logger.log("contact_success", {
-      userId: user.id,
-      remaining: this.contactService.getRemainingAttempts(),
-    });
-
-    if (user.whatsapp) {
-      window.open(`https://wa.me/${user.whatsapp}`, "_blank");
-    } else if (user.phone) {
-      this.renderer.showToast(`Contact: ${user.phone}`);
-    } else {
-      this.renderer.showToast("No contact information available");
+    if (!this.getPreferredWhatsAppNumber(user) && !this.getPreferredCallNumber(user)) {
+      this.renderer.showToast("No contact number available");
+      return;
     }
 
+    this.openContactFlow(user);
     this.updateContactLimitIndicator();
   }
 
@@ -641,23 +669,41 @@ class InstaRishtaApp {
       return;
     }
 
-    this.contactService.recordAttempt();
-    this.logger.log("call_success", {
-      userId: user.id,
-      remaining: this.contactService.getRemainingAttempts(),
-    });
-
-    if (user.phone) {
-      window.open(`tel:${user.phone}`, "_self");
-    } else {
-      this.renderer.showToast("No phone number available");
+    const mode = this.getContactMode(user);
+    const needsProtectedFlow = mode === "family" || mode === "private";
+    if (needsProtectedFlow && (user.guardianPhone || user.whatsapp || user.phone)) {
+      this.openContactFlow(user);
+      this.updateContactLimitIndicator();
+      return;
     }
 
-    this.updateContactLimitIndicator();
+    const number = this.getPreferredCallNumber(user);
+    if (!number) {
+      this.renderer.showToast("No phone number available");
+      return;
+    }
+
+    this.performOutboundAction({
+      user,
+      kind: "call",
+      targetUrl: `tel:${number}`,
+      windowTarget: "_self",
+      supportLabel: "call",
+    });
   }
 
   handleBiodata(user) {
-    const url = `https://instagram.com/instarishta__/${user.id}`;
+    const instagramTarget = user.instagramPostId || "";
+    let url = `https://instagram.com/instarishta__/${user.id}`;
+    if (instagramTarget) {
+      if (/^https?:\/\//i.test(instagramTarget)) {
+        url = instagramTarget;
+      } else if (/^(p|reel|tv|stories)\//i.test(instagramTarget)) {
+        url = `https://www.instagram.com/${instagramTarget.replace(/^\/+/, "")}`;
+      } else {
+        url = `https://www.instagram.com/p/${encodeURIComponent(instagramTarget)}/`;
+      }
+    }
     window.open(url, "_blank");
   }
 
@@ -679,6 +725,278 @@ class InstaRishtaApp {
     this.logger.log("card_long_press", { userId: user.id });
     this.handleBiodata(user);
   }
+
+  getContactMode(user) {
+    if (user.familyApproval) return "family";
+    if (user.contactMode) return user.contactMode;
+    return "direct";
+  }
+
+  getProfileTitle(user) {
+    const title = toSafeString(user?.title);
+    if (title) return title;
+    if (user?.gender === "female") return "ضرورت رشتہ لڑکی";
+    if (user?.gender === "male") return "ضرورت رشتہ لڑکا";
+    return "ضرورت رشتہ";
+  }
+
+  normalizeDialNumber(value) {
+    return toSafeString(value).replace(/[^\d+]/g, "");
+  }
+
+  normalizeWhatsAppNumber(value) {
+    return this.normalizeDialNumber(value).replace(/\+/g, "");
+  }
+
+  getPreferredWhatsAppNumber(user) {
+    const mode = this.getContactMode(user);
+    const preferred = mode === "family"
+      ? user.guardianPhone || user.whatsapp || user.phone
+      : user.whatsapp || user.phone || user.guardianPhone;
+    return this.normalizeWhatsAppNumber(preferred);
+  }
+
+  getPreferredCallNumber(user) {
+    const mode = this.getContactMode(user);
+    const preferred = mode === "family"
+      ? user.guardianPhone || user.phone
+      : user.phone || user.guardianPhone;
+    return this.normalizeDialNumber(preferred);
+  }
+
+  buildContactMessage(user) {
+    const mode = this.getContactMode(user);
+    const title = this.getProfileTitle(user);
+    const body = toSafeString(user?.body);
+    const notes = toSafeString(user?.notes);
+    const contactNotes = toSafeString(user?.contactNotes);
+    const lines = [
+      "Assalamu Alaikum,",
+      "We have seen your InstaRishta profile ad and are interested in a serious nikah conversation.",
+      mode === "family"
+        ? "We are redirecting you to the preferred guardian contact for this profile."
+        : mode === "private"
+          ? "We respect the private contact preference and have drafted a respectful message below."
+          : "We have drafted a respectful message using the full profile details below.",
+      "",
+      `InstaRishta ID: LR ${user.id}`,
+      `Title: ${title}`,
+    ];
+
+    if (user.age) lines.push(`Age: ${user.age}`);
+    if (user.gender) lines.push(`Gender: ${toTitleCase(user.gender)}`);
+    if (user.education) lines.push(`Education: ${user.education}`);
+    if (user.location) lines.push(`Location: ${user.location}`);
+    if (user.values) lines.push(`Values: ${user.values}`);
+    if (user.verified) lines.push("Verification: Verified profile");
+    if (user.familyApproval) lines.push("Family approval: Enabled");
+    if (mode !== "direct") {
+      lines.push(`Contact mode: ${mode === "family" ? "Guardian contact" : "Private contact"}`);
+    }
+    if (user.instagramPostId) lines.push(`Instagram post: ${user.instagramPostId}`);
+    if (contactNotes) lines.push(`Contact notes: ${contactNotes}`);
+    if (notes) lines.push(`Notes: ${notes}`);
+    if (body) {
+      lines.push("");
+      lines.push("Profile description:");
+      lines.push(body);
+    }
+    lines.push("");
+    lines.push(
+      mode === "family"
+        ? "Please share the best time to connect with the guardian/family contact."
+        : mode === "private"
+          ? "Please share the best time to connect privately."
+          : "Please share the best time to connect."
+    );
+    lines.push("JazakAllah Khair.");
+
+    return lines.join("\n");
+  }
+
+  setContactFlowActionsDisabled(disabled) {
+    (this.contactFlowActionButtons || []).forEach((button) => {
+      if (!button) return;
+      button.disabled = Boolean(disabled);
+    });
+  }
+
+  openContactFlow(user) {
+    this.activeContactUser = user;
+    this.contactFlowActionTaken = false;
+    this.contactFlowReturnFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const mode = this.getContactMode(user);
+    const message = this.buildContactMessage(user);
+    const whatsappNumber = this.getPreferredWhatsAppNumber(user);
+    const callNumber = this.getPreferredCallNumber(user);
+    const headline = mode === "family"
+      ? "Guardian contact"
+      : mode === "private"
+        ? "Private contact"
+        : "Contact this ad";
+    const summaryParts = [
+      `LR ${user.id}`,
+      user.verified ? "Verified profile" : "Unverified profile",
+      mode === "family" ? "Guardian contact" : mode === "private" ? "Private contact" : "Direct contact",
+      user.familyApproval ? "Family approval" : "",
+    ].filter(Boolean);
+    const badges = [
+      user.verified ? '<span class="contact-pill contact-pill-verified">Verified</span>' : "",
+      user.familyApproval ? '<span class="contact-pill contact-pill-family">Family approved</span>' : "",
+      mode !== "direct" ? `<span class="contact-pill contact-pill-mode">${escapeHtml(mode === "family" ? "Wali contact" : "Private contact")}</span>` : "",
+    ].filter(Boolean).join("");
+
+    if (this.contactFlowTitle) this.contactFlowTitle.textContent = headline;
+    if (this.contactFlowCopy) {
+      this.contactFlowCopy.textContent = mode === "family"
+        ? "You are being redirected to the preferred guardian contact for this ad. Edit the drafted message below if needed."
+        : mode === "private"
+          ? "This profile prefers a private first contact. Edit the drafted message below before sending."
+          : "We have prepared a respectful message with the full profile details below. Edit it if needed before sending.";
+    }
+    if (this.contactFlowSummary) this.contactFlowSummary.textContent = summaryParts.join(" · ");
+    if (this.contactFlowBadges) this.contactFlowBadges.innerHTML = badges;
+    if (this.contactFlowMessage) this.contactFlowMessage.value = message;
+
+    if (this.contactFlowPrimaryBtn) {
+      const primaryLabel = mode === "family" ? "Open guardian WhatsApp" : "Open WhatsApp";
+      this.contactFlowPrimaryBtn.textContent = primaryLabel;
+      this.contactFlowPrimaryBtn.hidden = !whatsappNumber;
+      this.contactFlowPrimaryBtn.disabled = !whatsappNumber;
+    }
+    if (this.contactFlowCallBtn) {
+      const callLabel = mode === "family" ? "Call guardian" : "Call";
+      this.contactFlowCallBtn.textContent = callLabel;
+      this.contactFlowCallBtn.hidden = !callNumber;
+      this.contactFlowCallBtn.disabled = !callNumber;
+    }
+    this.setContactFlowActionsDisabled(false);
+
+    if (this.contactFlowModal) {
+      this.contactFlowModal.hidden = false;
+      this.contactFlowModal.setAttribute("aria-hidden", "false");
+    }
+    document.body.style.overflow = "hidden";
+
+    const focusTarget = this.contactFlowPrimaryBtn && !this.contactFlowPrimaryBtn.hidden
+      ? this.contactFlowPrimaryBtn
+      : this.contactFlowCallBtn && !this.contactFlowCallBtn.hidden
+        ? this.contactFlowCallBtn
+        : this.closeContactFlowBtn;
+    focusTarget?.focus();
+  }
+
+  closeContactFlow() {
+    if (!this.contactFlowModal) return;
+    this.contactFlowModal.hidden = true;
+    this.contactFlowModal.setAttribute("aria-hidden", "true");
+    this.activeContactUser = null;
+    this.contactFlowActionTaken = false;
+    this.setContactFlowActionsDisabled(false);
+    document.body.style.overflow = "";
+    const returnFocus = this.contactFlowReturnFocus;
+    this.contactFlowReturnFocus = null;
+    if (returnFocus && typeof returnFocus.focus === "function") {
+      returnFocus.focus();
+    }
+  }
+
+  getContactFlowMessage(user) {
+    const message = toSafeString(this.contactFlowMessage?.value);
+    return message || this.buildContactMessage(user);
+  }
+
+  performOutboundAction({ user, kind, targetUrl, windowTarget = "_blank", supportLabel }) {
+    if (!user || !targetUrl) return false;
+
+    if (this.activeContactUser && this.contactFlowActionTaken) {
+      this.renderer.showToast("This contact is already open");
+      return false;
+    }
+
+    const remaining = this.contactService.getRemainingAttempts();
+    if (remaining <= 0) {
+      this.logger.log(`${kind}_limit_reached`, { userId: user.id });
+      const reset = this.contactService.formatTimeRemaining(
+        this.contactService.getTimeUntilReset()
+      );
+
+      if (
+        confirm(
+          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to ${supportLabel} support.`
+        )
+      ) {
+        const isCall = kind === "call";
+        const supportNumber = isCall
+          ? this.normalizeDialNumber(config.contactLimit.businessPhone)
+          : this.normalizeWhatsAppNumber(config.contactLimit.businessWhatsApp);
+        const supportUrl = isCall
+          ? `tel:${supportNumber}`
+          : `https://wa.me/${supportNumber}?text=${encodeURIComponent("Hi! I need unlimited access to InstaRishta contacts.")}`;
+        window.open(supportUrl, isCall ? "_self" : "_blank");
+      }
+
+      return false;
+    }
+
+    if (this.activeContactUser && this.activeContactUser.id === user.id) {
+      this.contactFlowActionTaken = true;
+      this.setContactFlowActionsDisabled(true);
+    }
+
+    this.contactService.recordAttempt();
+    this.logger.log(`${kind}_success`, {
+      userId: user.id,
+      remaining: this.contactService.getRemainingAttempts(),
+    });
+    this.updateContactLimitIndicator();
+
+    const opened = window.open(targetUrl, windowTarget);
+    if (this.activeContactUser && this.activeContactUser.id === user.id) {
+      this.closeContactFlow();
+    }
+
+    return Boolean(opened || windowTarget === "_self");
+  }
+
+  openPrimaryContact() {
+    const user = this.activeContactUser;
+    if (!user) return;
+    const number = this.getPreferredWhatsAppNumber(user);
+    if (!number) {
+      this.renderer.showToast("No WhatsApp number available");
+      return;
+    }
+
+    const message = encodeURIComponent(this.getContactFlowMessage(user));
+    this.performOutboundAction({
+      user,
+      kind: "contact",
+      targetUrl: `https://wa.me/${number}?text=${message}`,
+      windowTarget: "_blank",
+      supportLabel: "contact",
+    });
+  }
+
+  callPrimaryContact() {
+    const user = this.activeContactUser;
+    if (!user) return;
+    const number = this.getPreferredCallNumber(user);
+    if (!number) {
+      this.renderer.showToast("No phone number available");
+      return;
+    }
+
+    this.performOutboundAction({
+      user,
+      kind: "call",
+      targetUrl: `tel:${number}`,
+      windowTarget: "_self",
+      supportLabel: "call",
+    });
+  }
 }
 
 domReady(() => {
@@ -686,3 +1004,6 @@ domReady(() => {
   app.init();
   window.instaRishtaApp = app;
 });
+
+
+

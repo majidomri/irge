@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InstaRishta - Trusted Muslim Matrimony &amp; Nikah Matchmaking Platform</title>
     <meta name="description"
-      content="Find verified Muslim marriage proposals on InstaRishta. Trusted nikah matchmaking platform for bride and groom profiles across India and worldwide.">
+      content="Find verified Muslim marriage proposals on InstaRishta. Trusted nikah matchmaking platform with family-controlled contact, private messaging, and verified bride and groom profiles.">
     <meta name="keywords"
       content="muslim matrimony, nikah matchmaking, online rishta, muslim marriage website, find muslim bride, find muslim groom, halal marriage, islamic matrimony, shaadi rishta, verified matrimony profiles, muslim matrimony india, serious marriage proposals, arranged marriage platform">
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
@@ -55,10 +55,44 @@
         "@context": "https://schema.org",
         "@graph": [
           {
+            "@type": "WebPage",
+            "@id": "https://www.instarishta.me/#webpage",
+            "url": "https://www.instarishta.me/",
+            "name": "InstaRishta - Trusted Muslim Matrimony & Nikah Matchmaking Platform",
+            "description": "Find verified Muslim marriage proposals on InstaRishta with family-controlled contact and private messaging.",
+            "isPartOf": {
+              "@id": "https://www.instarishta.me/#website"
+            },
+            "about": {
+              "@id": "https://www.instarishta.me/#organization"
+            },
+            "speakable": {
+              "@type": "SpeakableSpecification",
+              "cssSelector": [
+                ".hero-banner h1",
+                ".hero-subtitle",
+                "#trustHighlights h2",
+                "#seoFaqTitle"
+              ]
+            }
+          },
+          {
             "@type": "Organization",
+            "@id": "https://www.instarishta.me/#organization",
             "name": "InstaRishta",
             "url": "https://www.instarishta.me/",
             "logo": "https://www.instarishta.me/assets/icon.svg",
+            "areaServed": [
+              "Hyderabad",
+              "India",
+              "Worldwide"
+            ],
+            "knowsAbout": [
+              "Muslim matrimony",
+              "Nikah matchmaking",
+              "Family-controlled contact",
+              "Private profile discovery"
+            ],
             "sameAs": [
               "https://github.com/majidomri/irge",
               "https://telegram.me/liverishteyofficial"
@@ -66,6 +100,7 @@
           },
           {
             "@type": "WebSite",
+            "@id": "https://www.instarishta.me/#website",
             "name": "InstaRishta",
             "url": "https://www.instarishta.me/",
             "description": "Trusted Muslim matrimony and nikah matchmaking platform.",
@@ -85,7 +120,7 @@
             "mainEntity": [
               {
                 "@type": "Question",
-                "name": "How to find a Muslim rishta online?",
+                "name": "How do I find a Muslim rishta online?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "Use InstaRishta filters to search by education, location, and profile details to find verified Muslim rishta proposals."
@@ -96,7 +131,7 @@
                 "name": "Is InstaRishta safe for marriage proposals?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "InstaRishta promotes verified profile discovery, controlled contact limits, and transparent profile details for safer matchmaking."
+                  "text": "Yes. InstaRishta supports transparent profile browsing with controlled contact flow, verified badges, and family-first contact options."
                 }
               },
               {
@@ -105,6 +140,14 @@
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "Browse profiles, apply filters, review biodata, and connect directly through provided contact options for serious nikah conversations."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What does family-controlled contact mean?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Family-controlled contact means the profile prefers a guardian or wali to be involved before private details are shared."
                 }
               }
             ]
@@ -246,7 +289,25 @@
         <section class="hero-banner" aria-label="Site introduction">
           <span class="hero-kicker">Trusted Muslim Matrimony Platform</span>
           <h1 class="text-xl font-semibold mb-4" id="typingText">Find Verified Muslim Rishta for Nikah</h1>
-          <p class="hero-subtitle">Trusted Muslim matrimony platform for verified bride and groom proposals across India and worldwide.</p>
+          <p class="hero-subtitle">Trusted Muslim matrimony platform for verified bride and groom proposals across India and worldwide, with family-controlled contact and private messaging.</p>
+        </section>
+
+        <section id="trustHighlights" class="trust-highlights" aria-label="Trust and family-first features">
+          <article class="trust-card">
+            <span class="trust-icon" aria-hidden="true">✓</span>
+            <h2>Visible verified badges</h2>
+            <p>Profiles can carry a clear verified badge so families can spot trusted listings faster.</p>
+          </article>
+          <article class="trust-card">
+            <span class="trust-icon" aria-hidden="true">W</span>
+            <h2>Wali and family approval</h2>
+            <p>Profiles can be marked for guardian-led contact when the family wants a more controlled introduction.</p>
+          </article>
+          <article class="trust-card">
+            <span class="trust-icon" aria-hidden="true">↗</span>
+            <h2>Private contact flow</h2>
+            <p>The contact flow pre-fills respectful messages and keeps direct details hidden until the user chooses to connect.</p>
+          </article>
         </section>
 
         <!-- Desktop Filters - Single Row -->
@@ -379,6 +440,7 @@
             <button id="clearAnalytics" class="px-3 py-1 bg-red-500 text-white rounded text-sm">Clear Data</button>
             <button id="refreshAnalytics" class="px-3 py-1 bg-green-500 text-white rounded text-sm">Refresh</button>
             <button id="emailAnalytics" class="px-3 py-1 bg-purple-500 text-white rounded text-sm">Email Report</button>
+            <a href="/profile-admin.html" class="px-3 py-1 bg-sky-500 text-white rounded text-sm">Profile Editor</a>
           </div>
         </div>
 
@@ -442,16 +504,20 @@
         <section class="seo-faq card p-4 rounded-md mt-8" aria-labelledby="seoFaqTitle">
           <h2 id="seoFaqTitle" class="text-xl font-semibold mb-4">Frequently Asked Questions</h2>
           <details>
-            <summary>How to find a Muslim rishta online?</summary>
+            <summary>How do I find a Muslim rishta online?</summary>
             <p>Use search, education, gender, and relevance filters to shortlist suitable verified proposals quickly.</p>
           </details>
           <details>
             <summary>Is InstaRishta safe for marriage proposals?</summary>
-            <p>InstaRishta supports transparent profile browsing with controlled contact flow to encourage genuine and serious matches.</p>
+            <p>Yes. InstaRishta supports transparent profile browsing with controlled contact flow, verified badges, and family-first contact options.</p>
           </details>
           <details>
             <summary>How does Muslim nikah matchmaking work on InstaRishta?</summary>
             <p>Browse profiles, review details, connect with interested families, and proceed with your preferred verified communication channel.</p>
+          </details>
+          <details>
+            <summary>What does family-controlled contact mean?</summary>
+            <p>Family-controlled contact means the profile prefers a guardian or wali to be involved before private details are shared.</p>
           </details>
           <div class="seo-link-grid mt-4">
             <a href="/what-is-instarishta.html">What is InstaRishta</a>
@@ -537,6 +603,28 @@
       <!-- Drawer Overlay -->
       <div id="drawerOverlay" class="drawer-overlay"></div>
 
+      <div id="contactFlowModal" class="contact-flow-modal" hidden aria-hidden="true" role="dialog" aria-modal="true"
+        aria-labelledby="contactFlowTitle">
+        <div class="contact-flow-backdrop" data-contact-close></div>
+        <section class="contact-flow-sheet" role="document">
+          <div class="contact-flow-head">
+            <div>
+              <p class="contact-flow-kicker">Preferred contact</p>
+              <h2 id="contactFlowTitle">Contact this ad</h2>
+              <p id="contactFlowCopy" class="contact-flow-copy">We have prepared a respectful message with the full profile details below.</p>
+            </div>
+            <button id="closeContactFlow" class="contact-flow-close" type="button" aria-label="Close contact flow">×</button>
+          </div>
+          <div id="contactFlowBadges" class="contact-flow-badges" aria-label="Contact safety badges"></div>
+          <p id="contactFlowSummary" class="contact-flow-summary"></p>
+          <textarea id="contactFlowMessage" class="contact-flow-message" aria-label="Edit message before sending" spellcheck="true"></textarea>
+          <div class="contact-flow-actions">
+            <button id="contactFlowPrimaryBtn" class="theme-action" type="button">Open WhatsApp</button>
+            <button id="contactFlowCallBtn" class="btn-ghost" type="button">Call</button>
+          </div>
+        </section>
+      </div>
+
       <!-- Floating Action Button -->
       <button id="openDrawer" class="fab md:hidden" aria-label="Open filters" type="button">&#9881;</button>
     </div>
@@ -547,7 +635,7 @@
         dataSources: [
           "jsdata.json",
           "data/jsdata.json",
-          "https://raw.githubusercontent.com/majidomri/liverishtey/main/jsdata.json"
+          "https://raw.githubusercontent.com/majidomri/irge/main/jsdata.json"
         ]
       };
 

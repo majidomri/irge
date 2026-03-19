@@ -5,9 +5,10 @@ const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const builtRoot = path.join(__dirname, "dist");
 const STATIC_ROOT = process.env.STATIC_ROOT
   ? path.resolve(__dirname, process.env.STATIC_ROOT)
-  : __dirname;
+  : (fs.existsSync(path.join(builtRoot, "index.html")) ? builtRoot : __dirname);
 
 const GZIP_EXTENSIONS = new Set([
   ".html",

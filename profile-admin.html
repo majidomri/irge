@@ -1,0 +1,315 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="color-scheme" content="dark">
+    <title>InstaRishta Profile Studio</title>
+    <meta
+      name="description"
+      content="Fetch, edit, renew, and export InstaRishta profile JSON locally before pushing updates to GitHub.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap">
+    <link rel="stylesheet" href="styles/profile-admin.css">
+  </head>
+  <body>
+    <main class="admin-app">
+      <header class="admin-hero">
+        <div class="admin-brand">
+          <div class="admin-mark" aria-hidden="true">IR</div>
+          <div>
+            <p class="admin-kicker">Local JSON Builder</p>
+            <h1 class="admin-title">Profile Studio</h1>
+            <p class="admin-lede">
+              Fetch the current GitHub-hosted profile JSON, edit records in one place, and export a clean
+              <code>jsdata.json</code> file for manual push.
+            </p>
+          </div>
+        </div>
+
+        <div class="admin-hero-actions">
+          <a class="admin-btn ghost" href="/">Open site</a>
+          <button id="fetchRemoteBtn" class="admin-btn" type="button">Load live JSON</button>
+          <label class="admin-btn secondary" for="importJsonFile">Import JSON</label>
+          <button id="exportJsonBtn" class="admin-btn" type="button">Download jsdata.json</button>
+          <button id="copyJsonBtn" class="admin-btn secondary" type="button">Copy JSON</button>
+          <button id="clearDraftBtn" class="admin-btn warn" type="button">Clear draft</button>
+        </div>
+
+        <input id="importJsonFile" class="sr-only" type="file" accept="application/json,.json">
+
+        <div id="draftBanner" class="admin-draft-banner" hidden>
+          <div>
+            <p><strong>Local draft found.</strong> Resume it or discard it and reload the live GitHub JSON.</p>
+          </div>
+          <div class="admin-draft-actions">
+            <button id="resumeDraftBtn" class="admin-btn" type="button">Resume draft</button>
+            <button id="discardDraftBtn" class="admin-btn secondary" type="button">Discard draft</button>
+          </div>
+        </div>
+
+        <p id="adminStatus" class="status-bar" role="status" aria-live="polite"></p>
+      </header>
+
+      <section class="admin-layout" aria-label="Profile management workspace">
+        <aside class="panel editor-panel">
+          <div class="panel-inner">
+            <div class="panel-head">
+              <h2 id="formTitle" class="panel-title">Create Profile</h2>
+              <p id="formSubtitle" class="panel-subtitle">Fill the canonical fields that power the public listings.</p>
+            </div>
+
+            <form id="profileForm" class="field-grid">
+              <input id="editingId" type="hidden">
+
+              <div class="field-row three">
+                <div class="field">
+                  <label for="profileId">Profile ID</label>
+                  <input id="profileId" class="admin-input" type="number" inputmode="numeric" step="1" placeholder="1735">
+                </div>
+
+                <div class="field">
+                  <label for="profileAge">Age</label>
+                  <input id="profileAge" class="admin-input" type="number" min="18" max="80" inputmode="numeric" placeholder="29">
+                </div>
+
+                <div class="field">
+                  <label for="profileGender">Gender</label>
+                  <select id="profileGender" class="admin-select">
+                    <option value="unknown">Unknown</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="profileTitle">Title</label>
+                  <input id="profileTitle" class="admin-input urdu" type="text" placeholder="Nikah Proposal">
+                </div>
+
+                <div class="field">
+                  <label for="profileEducation">Education</label>
+                  <input id="profileEducation" class="admin-input" type="text" list="educationOptions" placeholder="Doctor">
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <label class="toggle-chip">
+                  <input id="profileUrgent" type="checkbox">
+                  Urgent listing
+                </label>
+                <span class="helper-text">Urgent items stay visible and export with priority set to <code>Urgent</code>.</span>
+              </div>
+
+              <div class="field-row three">
+                <div class="field">
+                  <label class="checkbox-field" for="profileVerified">
+                    <input id="profileVerified" type="checkbox">
+                    Verified listing
+                  </label>
+                  <span class="helper-text">Adds a visible verified badge on the public card.</span>
+                </div>
+                <div class="field">
+                  <label class="checkbox-field" for="profileFamilyApproval">
+                    <input id="profileFamilyApproval" type="checkbox">
+                    Family approval
+                  </label>
+                  <span class="helper-text">Use this when a wali or family member should lead contact.</span>
+                </div>
+                <div class="field">
+                  <label for="profileContactMode">Contact mode</label>
+                  <select id="profileContactMode" class="admin-select">
+                    <option value="direct">Direct</option>
+                    <option value="family">Family</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="profileBody">Description</label>
+                <textarea id="profileBody" class="admin-textarea urdu" placeholder="Profile description in Urdu or English"></textarea>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="profilePhone">Phone</label>
+                  <input id="profilePhone" class="admin-input" type="tel" placeholder="9741865995">
+                </div>
+                <div class="field">
+                  <label for="profileWhatsapp">WhatsApp</label>
+                  <input id="profileWhatsapp" class="admin-input" type="tel" placeholder="9741865995">
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="profileInstagramPostId">Instagram Post ID / URL</label>
+                  <input id="profileInstagramPostId" class="admin-input" type="text" placeholder="shortcode, p/shortcode, or full Instagram URL">
+                </div>
+                <div class="field">
+                  <label for="profileLocation">Location</label>
+                  <input id="profileLocation" class="admin-input" type="text" placeholder="Hyderabad">
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="profileGuardianName">Guardian / Wali Name</label>
+                  <input id="profileGuardianName" class="admin-input" type="text" placeholder="Family contact name">
+                </div>
+                <div class="field">
+                  <label for="profileGuardianPhone">Guardian / Wali Phone</label>
+                  <input id="profileGuardianPhone" class="admin-input" type="tel" placeholder="9741865995">
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="profileValues">Values / Matching Notes</label>
+                  <input id="profileValues" class="admin-input" type="text" placeholder="Family-first, practicing, hijab, deen-focused">
+                </div>
+                <div class="field">
+                  <label for="profileContactNotes">Contact Note</label>
+                  <textarea id="profileContactNotes" class="admin-textarea" placeholder="Optional note used in the private contact flow"></textarea>
+                </div>
+              </div>
+
+              <div class="field-row three">
+                <div class="field">
+                  <label for="profileDate">Published At</label>
+                  <input id="profileDate" class="admin-input" type="datetime-local">
+                </div>
+                <div class="field">
+                  <label for="profileExpiresAt">Expires At</label>
+                  <input id="profileExpiresAt" class="admin-input" type="datetime-local">
+                </div>
+                <div class="field">
+                  <label for="renewDays">Renew For Days</label>
+                  <input id="renewDays" class="admin-input" type="number" min="1" max="365" value="30">
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="profileNotes">Notes</label>
+                <textarea id="profileNotes" class="admin-textarea" placeholder="Internal note, family remark, or extra profile context"></textarea>
+              </div>
+
+              <div class="action-row">
+                <button id="saveProfileBtn" class="admin-btn" type="submit">Save profile</button>
+                <button id="newProfileBtn" class="admin-btn secondary" type="button">New profile</button>
+                <button id="duplicateProfileBtn" class="admin-btn secondary" type="button" disabled>Duplicate</button>
+                <button id="renewProfileBtn" class="admin-btn secondary" type="button" disabled>Renew</button>
+                <button id="deleteProfileBtn" class="admin-btn warn" type="button" disabled>Delete</button>
+              </div>
+
+              <p class="helper-text">
+                Ctrl+Enter saves the current profile. Ctrl+S downloads the full JSON export.
+              </p>
+            </form>
+          </div>
+        </aside>
+
+        <section class="workspace">
+          <section class="panel">
+            <div class="panel-inner">
+              <div class="panel-head">
+                <h2 class="panel-title">Dataset Control</h2>
+                <p class="panel-subtitle">
+                  Load the current GitHub JSON, filter by ID or text, and keep the dataset fresh by renewing individual entries.
+                </p>
+              </div>
+
+              <div class="toolbar">
+                <input id="sourceUrlInput" class="admin-input" type="url" spellcheck="false"
+                  value="https://raw.githubusercontent.com/majidomri/irge/main/jsdata.json">
+                <input id="profilesSearch" class="admin-input" type="search" placeholder="Search by ID, title, phone, or education">
+                <select id="profilesSort" class="admin-select">
+                  <option value="dateDesc">Newest first</option>
+                  <option value="dateAsc">Oldest first</option>
+                  <option value="idAsc">ID ascending</option>
+                  <option value="idDesc">ID descending</option>
+                  <option value="urgentFirst">Urgent first</option>
+                </select>
+                <button id="loadSourceBtn" class="admin-btn" type="button">Fetch source</button>
+              </div>
+
+              <div class="stats-strip" aria-label="Profile stats">
+                <div class="stat-pill">Total <strong id="totalCount">0</strong></div>
+                <div class="stat-pill">Urgent <strong id="urgentCount">0</strong></div>
+                <div class="stat-pill">Active <strong id="activeCount">0</strong></div>
+                <div class="stat-pill">Expired <strong id="expiredCount">0</strong></div>
+                <div class="stat-pill">Duplicates <strong id="duplicateCount">0</strong></div>
+                <div class="stat-pill">Selected <strong id="selectedCount">0</strong></div>
+              </div>
+
+              <div class="table-wrap">
+                <table class="profile-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Profile</th>
+                      <th>Contacts</th>
+                      <th>Meta</th>
+                      <th>Timing</th>
+                      <th>Flags</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="profilesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel json-panel">
+            <div class="panel-inner">
+              <div class="panel-head">
+                <h2 class="panel-title">JSON Export</h2>
+                <p class="panel-subtitle">
+                  This preview is the exact file that gets downloaded as <code>jsdata.json</code>.
+                </p>
+              </div>
+
+              <textarea id="jsonPreview" readonly spellcheck="false" aria-label="JSON preview"></textarea>
+
+              <div class="json-actions">
+                <button id="downloadJsonPanelBtn" class="admin-btn" type="button">Download jsdata.json</button>
+                <button id="copyJsonPanelBtn" class="admin-btn secondary" type="button">Copy JSON</button>
+                <button id="refreshViewBtn" class="admin-btn secondary" type="button">Refresh view</button>
+              </div>
+
+              <p class="helper-text">
+                Use the downloaded file to replace the live GitHub JSON manually after review.
+              </p>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <datalist id="educationOptions">
+        <option value="Preprimary"></option>
+        <option value="Primary"></option>
+        <option value="Upper Primary"></option>
+        <option value="Secondary"></option>
+        <option value="Intermediate"></option>
+        <option value="Graduate"></option>
+        <option value="Post Graduate"></option>
+        <option value="Engineer"></option>
+        <option value="Doctor"></option>
+        <option value="PhD"></option>
+        <option value="Hafiz/Aalim"></option>
+        <option value="Diploma"></option>
+      </datalist>
+    </main>
+
+    <script type="module" src="js/app/modules/profile-admin-controller.js"></script>
+  </body>
+</html>
+
+

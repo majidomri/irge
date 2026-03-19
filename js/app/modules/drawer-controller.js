@@ -44,6 +44,10 @@ export class DrawerController {
       this.drawer.removeAttribute("inert");
       this.drawer.setAttribute("aria-modal", "true");
       this.openButton?.setAttribute("aria-expanded", "true");
+      if (this.openButton) {
+        this.openButton.hidden = true;
+        this.openButton.setAttribute("aria-hidden", "true");
+      }
       document.body.style.overflow = "hidden";
       return;
     }
@@ -54,6 +58,10 @@ export class DrawerController {
     this.drawer.setAttribute("inert", "");
     this.drawer.removeAttribute("aria-modal");
     this.openButton?.setAttribute("aria-expanded", "false");
+    if (this.openButton) {
+      this.openButton.hidden = false;
+      this.openButton.setAttribute("aria-hidden", "false");
+    }
     document.body.style.overflow = "";
     this.openButton?.focus();
   }

@@ -253,6 +253,15 @@ export class DataService {
     const whatsapp = toSafeString(
       pickFirst(user, ["whatsapp", "wa", "whatsapp_number", "mobile"])
     ).replace(/[^\d+]/g, "");
+    const contactMode = this.normalizeContactMode(
+      pickFirst(user, ["contactMode", "contact_mode", "contactFlow", "contact_flow"])
+    );
+    const familyApproval = this.normalizeBoolean(
+      pickFirst(user, ["familyApproval", "family_approval", "guardianApproval", "waliApproval"])
+    );
+    const verified = this.normalizeBoolean(
+      pickFirst(user, ["verified", "isVerified", "verifiedBadge", "trusted"])
+    );
 
     return {
       id,
@@ -269,7 +278,82 @@ export class DataService {
       priority: priority || (urgent ? "urgent" : "normal"),
       urgent,
       date: normalizeDate(pickFirst(user, ["date", "created_at", "createdAt", "timestamp"])),
+      instagramPostId: toSafeString(
+        pickFirst(user, [
+          "instagramPostId",
+          "instagram_post_id",
+          "instagramUrl",
+          "instagram_url",
+          "postId",
+          "post_id",
+        ])
+      ),
+      location: toSafeString(pickFirst(user, ["location", "city", "area"])),
+      notes: toSafeString(pickFirst(user, ["notes", "note"])),
+      values: toSafeString(
+        pickFirst(user, ["values", "valueTags", "matchValues", "preferences"])
+      ),
+      verified,
+      familyApproval: familyApproval || contactMode === "family",
+      contactMode: familyApproval ? "family" : (contactMode || "direct"),
+      guardianName: toSafeString(
+        pickFirst(user, ["guardianName", "waliName", "familyContactName"])
+      ),
+      guardianPhone: toSafeString(
+        pickFirst(user, ["guardianPhone", "waliPhone", "familyContactPhone"])
+      ).replace(/[^\d+]/g, ""),
+      contactNotes: toSafeString(
+        pickFirst(user, ["contactNotes", "contact_note", "privateContactNote"])
+      ),
+      expiresAt: this.normalizeOptionalDate(
+        pickFirst(user, ["expiresAt", "expiryAt", "expireAt", "expires_at"])
+      ),
+      updatedAt: this.normalizeOptionalDate(
+        pickFirst(user, ["updatedAt", "modifiedAt", "updated_at"])
+      ),
     };
+  }
+
+  normalizeOptionalDate(value) {
+    const dateText = toSafeString(value);
+    if (!dateText) return "";
+
+    const parsed = new Date(dateText);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+
+    const numeric = Number(dateText);
+    if (!Number.isNaN(numeric)) {
+      const timestamp = numeric < 1e12 ? numeric * 1000 : numeric;
+      const fromNumber = new Date(timestamp);
+      if (!Number.isNaN(fromNumber.getTime())) {
+        return fromNumber.toISOString();
+      }
+    }
+
+    return dateText;
+  }
+
+  normalizeBoolean(value) {
+    const text = toSafeString(value).toLowerCase();
+    return (
+      text === "true" ||
+      text === "1" ||
+      text === "yes" ||
+      text === "on" ||
+      text === "verified" ||
+      text === "family"
+    );
+  }
+
+  normalizeContactMode(value) {
+    const text = toSafeString(value).toLowerCase();
+    if (!text) return "";
+    if (text.includes("family") || text.includes("wali") || text.includes("guardian")) return "family";
+    if (text.includes("private") || text.includes("hidden") || text.includes("exclusive")) return "private";
+    if (text.includes("direct") || text.includes("open")) return "direct";
+    return "";
   }
 
   detectGender({ explicit, text }) {
@@ -349,3 +433,4 @@ export class DataService {
     return "";
   }
 }
+

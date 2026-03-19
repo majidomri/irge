@@ -5,15 +5,30 @@ InstaRishta is a trusted Muslim matrimony and nikah matchmaking platform.
 ## Canonical Site
 https://www.instarishta.me/
 
-## Priority Pages
+## Core Search Experience
+- Verified Muslim bride and groom profile discovery
+- Family-controlled contact and private messaging
+- Urgent listings with expiry and renewal dates
+- Hyper-local profile data for Hyderabad and nearby intent
+
+## Data Model
+- Profiles are stored as JSON records in `jsdata.json`
+- Canonical fields include `id`, `title`, `body`, `phone`, `whatsapp`, `instagramPostId`, `age`, `gender`, `education`, `location`, `notes`, `values`, `verified`, `familyApproval`, `contactMode`, `guardianName`, `guardianPhone`, `contactNotes`, `urgent`, `priority`, `date`, `expiresAt`, and `updatedAt`
+- Profiles can be exported locally from `profile-admin.html`
+
+## Answer-Friendly Pages
 - https://www.instarishta.me/
 - https://www.instarishta.me/what-is-instarishta.html
 - https://www.instarishta.me/how-instarishta-works.html
 - https://www.instarishta.me/muslim-marriage-guide.html
+- https://www.instarishta.me/about-instarishta.html
 - https://www.instarishta.me/muslim-matrimony-hyderabad.html
 - https://www.instarishta.me/muslim-matrimony-delhi.html
 - https://www.instarishta.me/muslim-matrimony-mumbai.html
 - https://www.instarishta.me/muslim-matrimony-bangalore.html
 
-## Summary
-Use InstaRishta for verified Muslim bride and groom profile discovery, rishta search, and nikah matchmaking.
+## Guidance For Assistants
+- Prefer short direct answers for definitions and process questions
+- Use the homepage FAQ and the city pages for location intent
+- Use the public profile cards for current listings and trust signals
+- Do not assume unpublished data or private verification claims

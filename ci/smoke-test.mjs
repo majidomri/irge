@@ -45,6 +45,15 @@ async function run() {
     if (!html.includes("manifest.webmanifest")) {
       throw new Error("Manifest link missing on index route.");
     }
+    if (!html.includes("trustHighlights")) {
+      throw new Error("Trust highlights section missing on index route.");
+    }
+    if (!html.includes("contactFlowModal")) {
+      throw new Error("Contact flow modal missing on index route.");
+    }
+    if (!html.includes("seoFaqTitle")) {
+      throw new Error("FAQ section missing on index route.");
+    }
 
     const mainJs = await fetchText("/js/app/main.js");
     if (!mainJs.includes("class InstaRishtaApp")) {
@@ -57,8 +66,16 @@ async function run() {
     }
 
     await fetchText("/styles/instarishta.css");
+    await fetchText("/styles/profile-admin.css");
     await fetchText("/manifest.webmanifest");
     await fetchText("/service-worker.js");
+    await fetchText("/llms.txt");
+    await fetchText("/robots.txt");
+    await fetchText("/sitemap.xml");
+    const adminHtml = await fetchText("/profile-admin.html");
+    if (!adminHtml.includes("profile-admin-controller.js")) {
+      throw new Error("profile-admin.html is not wired to its controller.");
+    }
 
     const jsonRaw = await fetchText("/jsdata.json");
     const json = JSON.parse(jsonRaw);

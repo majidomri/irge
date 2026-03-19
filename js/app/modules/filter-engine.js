@@ -12,7 +12,19 @@ export function applyFilters(users, filters) {
 
   if (search) {
     filtered = filtered.filter((user) => {
-      const searchText = `${toSafeString(user.body)} ${toSafeString(user.title)}`.toLowerCase();
+      const searchText = [
+        user.body,
+        user.title,
+        user.education,
+        user.location,
+        user.notes,
+        user.values,
+        user.guardianName,
+        user.contactMode,
+        user.instagramPostId,
+      ]
+        .map((value) => toSafeString(value).toLowerCase())
+        .join(" ");
       return searchText.includes(search);
     });
     appliedFilters.push({ name: "Search", value: filters.search });

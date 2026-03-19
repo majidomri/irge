@@ -38,6 +38,28 @@
       },
       "education": {
         "type": ["string", "null"]
+      },
+      "values": {
+        "type": ["string", "null"]
+      },
+      "verified": {
+        "type": ["boolean", "string", "null"]
+      },
+      "familyApproval": {
+        "type": ["boolean", "string", "null"]
+      },
+      "contactMode": {
+        "type": ["string", "null"],
+        "enum": ["direct", "family", "private", "Direct", "Family", "Private", null]
+      },
+      "guardianName": {
+        "type": ["string", "null"]
+      },
+      "guardianPhone": {
+        "type": ["string", "number", "null"]
+      },
+      "contactNotes": {
+        "type": ["string", "null"]
       }
     },
     "additionalProperties": true
