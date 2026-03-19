@@ -69,6 +69,7 @@ export class Renderer {
     const card = document.createElement("div");
     card.className = `card card-hover fade-in relative${user.urgent ? " urgent" : ""}`;
     card.setAttribute("role", "listitem");
+    card.dataset.userId = String(user.id);
 
     const urgentBadge = user.urgent ? '<div class="urgent-badge">URGENT</div>' : "";
     const genderText = user.gender === "female" ? "لڑکی" : user.gender === "male" ? "لڑکا" : "";
@@ -227,7 +228,7 @@ export class Renderer {
         if (now - lastTapAt < 320) {
           lastTapAt = 0;
           if (navigator.vibrate) navigator.vibrate(10);
-          this.options.onShare?.(user);
+          this.options.onShare?.(user, card);
           return;
         }
 
@@ -250,7 +251,7 @@ export class Renderer {
     card.addEventListener("dblclick", (event) => {
       if (hasActionTarget(event.target)) return;
       event.preventDefault();
-      this.options.onShare?.(user);
+      this.options.onShare?.(user, card);
     });
 
     // Desktop long-press equivalent using context menu.
@@ -266,8 +267,14 @@ export class Renderer {
     this.showToast(ok ? "ID copied to clipboard!" : "Could not copy ID");
   }
 
-  async shareUserCard(user) {
-    const blob = await this.createUserCardImageBlob(user);
+  async shareUserCard(user, cardElement = null) {
+    let blob;
+    try {
+      blob = await this.createUserCardImageBlob(user, cardElement);
+    } catch (error) {
+      console.warn("Card snapshot failed, falling back to legacy poster", error);
+      blob = await this.createLegacyUserCardImageBlob(user);
+    }
     const fileName = `InstaRishta-LR${user.id}.png`;
 
     const file =
@@ -306,7 +313,7 @@ export class Renderer {
     this.showToast("Image downloaded for sharing");
   }
 
-  async createUserCardImageBlob(user) {
+  async createLegacyUserCardImageBlob(user) {
     const canvas = document.createElement("canvas");
     const width = 1080;
     const height = 1350;
@@ -388,6 +395,192 @@ export class Renderer {
         0.95
       );
     });
+  }
+
+  async createUserCardImageBlob(user, cardElement = null) {
+    const sourceCard = cardElement || this.findRenderedCardElement(user);
+    if (!sourceCard) {
+      throw new Error("Rendered card unavailable");
+    }
+
+    await this.waitForFonts();
+
+    const rect = sourceCard.getBoundingClientRect();
+    const cardWidth = Math.max(1, Math.ceil(rect.width));
+    const cardHeight = Math.max(1, Math.ceil(rect.height));
+    const padding = this.getSnapshotPadding(sourceCard);
+    const snapshotWidth = cardWidth + padding * 2;
+    const snapshotHeight = cardHeight + padding * 2;
+
+    const snapshotRoot = document.createElement("div");
+    const bodyStyles = window.getComputedStyle(document.body);
+    const backgroundColor = bodyStyles.backgroundColor && bodyStyles.backgroundColor !== "rgba(0, 0, 0, 0)"
+      ? bodyStyles.backgroundColor
+      : "#f3f7fb";
+    const backgroundImage = bodyStyles.backgroundImage && bodyStyles.backgroundImage !== "none"
+      ? bodyStyles.backgroundImage
+      : "";
+
+    snapshotRoot.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+    snapshotRoot.style.cssText = [
+      "display:block",
+      "position:relative",
+      "box-sizing:border-box",
+      `width:${snapshotWidth}px`,
+      `height:${snapshotHeight}px`,
+      `padding:${padding}px`,
+      `background-color:${backgroundColor}`,
+      backgroundImage ? `background-image:${backgroundImage}` : "",
+      backgroundImage ? "background-repeat:no-repeat" : "",
+      "overflow:visible",
+      "isolation:isolate",
+    ].filter(Boolean).join(";");
+
+    const clonedCard = this.cloneNodeWithComputedStyles(sourceCard);
+    snapshotRoot.appendChild(clonedCard);
+
+    const svgMarkup = this.buildSvgSnapshotMarkup(snapshotRoot, snapshotWidth, snapshotHeight);
+    const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
+    try {
+      const image = await this.loadImage(svgUrl);
+      const canvas = document.createElement("canvas");
+      canvas.width = snapshotWidth;
+      canvas.height = snapshotHeight;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas context unavailable");
+
+      ctx.drawImage(image, 0, 0, snapshotWidth, snapshotHeight);
+
+      return await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Could not render share image"));
+              return;
+            }
+            resolve(blob);
+          },
+          "image/png",
+          0.98
+        );
+      });
+    } finally {
+      URL.revokeObjectURL(svgUrl);
+    }
+  }
+
+  findRenderedCardElement(user) {
+    if (!user?.id || typeof document === "undefined") return null;
+    const targetId = String(user.id);
+    return Array.from(document.querySelectorAll(".card[data-user-id]")).find(
+      (card) => card.getAttribute("data-user-id") === targetId
+    ) || null;
+  }
+
+  getSnapshotPadding(cardElement) {
+    const computed = window.getComputedStyle(cardElement);
+    const shadow = computed.boxShadow || "";
+    const shadowMatch = shadow.match(/(-?\d+(?:\.\d+)?)px\s+(-?\d+(?:\.\d+)?)px\s+(\d+(?:\.\d+)?)px(?:\s+(\d+(?:\.\d+)?)px)?/);
+    if (!shadowMatch) return 40;
+
+    const offsetX = Math.abs(Number(shadowMatch[1] || 0));
+    const offsetY = Math.abs(Number(shadowMatch[2] || 0));
+    const blur = Number(shadowMatch[3] || 0);
+    const spread = Number(shadowMatch[4] || 0);
+    return Math.max(32, Math.ceil(Math.max(offsetX, offsetY) + blur + spread + 12));
+  }
+
+  cloneNodeWithComputedStyles(node) {
+    const clone = node.cloneNode(true);
+    const stack = [[node, clone]];
+
+    while (stack.length) {
+      const [source, target] = stack.pop();
+      this.copyComputedStyles(source, target);
+
+      const sourceChildren = Array.from(source.children || []);
+      const targetChildren = Array.from(target.children || []);
+      for (let index = 0; index < sourceChildren.length; index += 1) {
+        const sourceChild = sourceChildren[index];
+        const targetChild = targetChildren[index];
+        if (sourceChild && targetChild) {
+          stack.push([sourceChild, targetChild]);
+        }
+      }
+    }
+
+    return clone;
+  }
+
+  copyComputedStyles(source, target) {
+    if (!(source instanceof Element) || !(target instanceof Element)) return;
+
+    const computed = window.getComputedStyle(source);
+    for (let index = 0; index < computed.length; index += 1) {
+      const property = computed[index];
+      const value = computed.getPropertyValue(property);
+      const priority = computed.getPropertyPriority(property);
+      target.style.setProperty(property, value, priority);
+    }
+
+    target.style.setProperty("animation", "none", "important");
+    target.style.setProperty("transition", "none", "important");
+  }
+
+  buildSvgSnapshotMarkup(node, width, height) {
+    const svgNS = "http://www.w3.org/2000/svg";
+    const xhtmlNS = "http://www.w3.org/1999/xhtml";
+    const svg = document.createElementNS(svgNS, "svg");
+    const foreignObject = document.createElementNS(svgNS, "foreignObject");
+    const wrapper = document.createElementNS(xhtmlNS, "div");
+
+    svg.setAttribute("xmlns", svgNS);
+    svg.setAttribute("width", String(width));
+    svg.setAttribute("height", String(height));
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("preserveAspectRatio", "none");
+
+    foreignObject.setAttribute("x", "0");
+    foreignObject.setAttribute("y", "0");
+    foreignObject.setAttribute("width", "100%");
+    foreignObject.setAttribute("height", "100%");
+
+    wrapper.setAttribute("xmlns", xhtmlNS);
+    wrapper.style.cssText = [
+      "display:block",
+      "box-sizing:border-box",
+      "width:100%",
+      "height:100%",
+      "overflow:visible",
+    ].join(";");
+    wrapper.appendChild(node);
+    foreignObject.appendChild(wrapper);
+    svg.appendChild(foreignObject);
+
+    return new XMLSerializer().serializeToString(svg);
+  }
+
+  loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Could not load snapshot image"));
+      image.src = src;
+    });
+  }
+
+  async waitForFonts() {
+    if (document.fonts?.ready) {
+      try {
+        await document.fonts.ready;
+      } catch {
+        // Ignore font loading failures and proceed with available fallbacks.
+      }
+    }
   }
 
   drawRoundedRect(ctx, x, y, width, height, radius, fillStyle) {

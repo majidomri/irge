@@ -707,10 +707,10 @@ class InstaRishtaApp {
     window.open(url, "_blank");
   }
 
-  async handleShareCard(user) {
+  async handleShareCard(user, card) {
     this.logger.log("card_share_attempt", { userId: user.id });
     try {
-      await this.renderer.shareUserCard(user);
+      await this.renderer.shareUserCard(user, card);
       this.logger.log("card_share_success", { userId: user.id });
     } catch (error) {
       this.logger.log("card_share_failed", {
