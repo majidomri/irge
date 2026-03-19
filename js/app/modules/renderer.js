@@ -439,37 +439,29 @@ export class Renderer {
     const clonedCard = this.cloneNodeWithComputedStyles(sourceCard);
     snapshotRoot.appendChild(clonedCard);
 
-    const svgMarkup = this.buildSvgSnapshotMarkup(snapshotRoot, snapshotWidth, snapshotHeight);
-    const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-    const svgUrl = URL.createObjectURL(svgBlob);
+    const image = await this.loadSvgImage(snapshotRoot, snapshotWidth, snapshotHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = snapshotWidth;
+    canvas.height = snapshotHeight;
 
-    try {
-      const image = await this.loadImage(svgUrl);
-      const canvas = document.createElement("canvas");
-      canvas.width = snapshotWidth;
-      canvas.height = snapshotHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas context unavailable");
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas context unavailable");
+    ctx.drawImage(image, 0, 0, snapshotWidth, snapshotHeight);
 
-      ctx.drawImage(image, 0, 0, snapshotWidth, snapshotHeight);
-
-      return await new Promise((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error("Could not render share image"));
-              return;
-            }
-            resolve(blob);
-          },
-          "image/png",
-          0.98
-        );
-      });
-    } finally {
-      URL.revokeObjectURL(svgUrl);
-    }
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Could not render share image"));
+            return;
+          }
+          resolve(blob);
+        },
+        "image/png",
+        0.98
+      );
+    });
   }
 
   findRenderedCardElement(user) {
@@ -542,18 +534,19 @@ export class Renderer {
     svg.setAttribute("height", String(height));
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("overflow", "visible");
 
     foreignObject.setAttribute("x", "0");
     foreignObject.setAttribute("y", "0");
-    foreignObject.setAttribute("width", "100%");
-    foreignObject.setAttribute("height", "100%");
+    foreignObject.setAttribute("width", String(width));
+    foreignObject.setAttribute("height", String(height));
 
     wrapper.setAttribute("xmlns", xhtmlNS);
     wrapper.style.cssText = [
       "display:block",
       "box-sizing:border-box",
-      "width:100%",
-      "height:100%",
+      `width:${width}px`,
+      `height:${height}px`,
       "overflow:visible",
     ].join(";");
     wrapper.appendChild(node);
@@ -563,13 +556,30 @@ export class Renderer {
     return new XMLSerializer().serializeToString(svg);
   }
 
-  loadImage(src) {
+  loadSvgImage(node, width, height) {
+    const svgMarkup = this.buildSvgSnapshotMarkup(node, width, height);
+    const encoded = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
+
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.decoding = "async";
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("Could not load snapshot image"));
-      image.src = src;
+      image.onerror = () => {
+        const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+        const blobUrl = URL.createObjectURL(svgBlob);
+        const fallbackImage = new Image();
+        fallbackImage.decoding = "async";
+        fallbackImage.onload = () => {
+          URL.revokeObjectURL(blobUrl);
+          resolve(fallbackImage);
+        };
+        fallbackImage.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          reject(new Error("Could not load snapshot image"));
+        };
+        fallbackImage.src = blobUrl;
+      };
+      image.src = encoded;
     });
   }
 
