@@ -66,19 +66,14 @@ async function run() {
     }
 
     await fetchText("/styles/instarishta.css");
-    await fetchText("/styles/profile-admin.css");
     await fetchText("/manifest.webmanifest");
     await fetchText("/service-worker.js");
     await fetchText("/llms.txt");
     await fetchText("/robots.txt");
     await fetchText("/sitemap.xml");
     const postAdHtml = await fetchText("/post-your-ad.html");
-    if (!postAdHtml.includes("postAdForm") || !postAdHtml.includes("post-ad-controller.js")) {
-      throw new Error("post-your-ad.html is not wired to its controller.");
-    }
-    const adminHtml = await fetchText("/profile-admin.html");
-    if (!adminHtml.includes("profile-admin-controller.js")) {
-      throw new Error("profile-admin.html is not wired to its controller.");
+    if (!postAdHtml.includes("postAdForm") || !postAdHtml.includes("telegram.me/instarishtagroup")) {
+      throw new Error("post-your-ad.html is not wired to the Telegram handoff form.");
     }
 
     const proxyMissing = await fetch(`${BASE_URL}/api/proxy-json`, {

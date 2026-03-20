@@ -45,6 +45,15 @@ const SHORT_CACHE_EXTENSIONS = new Set([
   ".txt",
 ]);
 
+const TELEGRAM_BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || "").trim();
+const TELEGRAM_TARGET = String(
+  process.env.TELEGRAM_TARGET ||
+  process.env.TELEGRAM_CHAT_ID ||
+  process.env.TELEGRAM_CHANNEL ||
+  ""
+).trim();
+const TELEGRAM_THREAD_ID = String(process.env.TELEGRAM_MESSAGE_THREAD_ID || process.env.TELEGRAM_TOPIC_ID || "").trim();
+
 const NO_CACHE_EXTENSIONS = new Set([
   ".html",
   ".webmanifest",
@@ -82,6 +91,103 @@ function setCacheHeaders(res, filePath) {
   }
 
   res.setHeader("Cache-Control", "public, max-age=3600");
+}
+
+function escapeTelegramHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function cleanText(value) {
+  return String(value ?? "").replace(/\r\n/g, "\n").trim();
+}
+
+function clipText(value, max = 3000) {
+  const text = cleanText(value);
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(0, max - 1))}…`;
+}
+
+function normalizeSubmission(body = {}) {
+  const name = cleanText(body.name);
+  const phone = cleanText(body.phone);
+  const whatsapp = cleanText(body.whatsapp);
+  const bioData = cleanText(body.bioData);
+  const urgent = Boolean(body.urgent === true || body.urgent === "true" || body.urgent === 1 || body.urgent === "1");
+
+  return {
+    name,
+    phone,
+    whatsapp,
+    bioData,
+    urgent,
+  };
+}
+
+function buildSubmissionMessage(submission) {
+  const submittedAt = new Date().toISOString();
+  return [
+    "<b>InstaRishta profile submission</b>",
+    "",
+    `<b>Name:</b> ${escapeTelegramHtml(submission.name)}`,
+    `<b>Phone:</b> ${escapeTelegramHtml(submission.phone)}`,
+    `<b>WhatsApp:</b> ${escapeTelegramHtml(submission.whatsapp)}`,
+    `<b>Urgent:</b> ${submission.urgent ? "Yes" : "No"}`,
+    "",
+    "<b>Bio data:</b>",
+    `<pre>${escapeTelegramHtml(clipText(submission.bioData, 3200))}</pre>`,
+    "",
+    `<b>Submitted:</b> ${escapeTelegramHtml(submittedAt)}`,
+    `<b>Source:</b> Post your ad popup`,
+  ].join("\n");
+}
+
+async function sendTelegramSubmission(submission) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_TARGET) {
+    const error = new Error("Telegram delivery is not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_TARGET.");
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const payload = {
+    chat_id: TELEGRAM_TARGET,
+    text: buildSubmissionMessage(submission),
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  };
+
+  if (TELEGRAM_THREAD_ID) {
+    payload.message_thread_id = TELEGRAM_THREAD_ID;
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let responseBody = null;
+  try {
+    responseBody = await response.json();
+  } catch {
+    responseBody = null;
+  }
+
+  if (!response.ok || !responseBody?.ok) {
+    const error = new Error(responseBody?.description || `Telegram HTTP ${response.status}`);
+    error.statusCode = response.status || 502;
+    error.details = responseBody;
+    throw error;
+  }
+
+  return responseBody.result || null;
 }
 
 app.disable("x-powered-by");
@@ -197,6 +303,32 @@ app.post("/api/proxy-json", async (req, res) => {
     res.status(502).json({
       ok: false,
       error: error?.message || "Proxy request failed",
+    });
+  }
+});
+
+app.post("/api/submit-profile-ad", async (req, res) => {
+  const submission = normalizeSubmission(req.body || {});
+
+  if (!submission.name || !submission.phone || !submission.whatsapp || !submission.bioData) {
+    res.status(400).json({
+      ok: false,
+      error: "Missing required submission fields",
+    });
+    return;
+  }
+
+  try {
+    const result = await sendTelegramSubmission(submission);
+    res.json({
+      ok: true,
+      message: "Submission delivered",
+      result,
+    });
+  } catch (error) {
+    res.status(error?.statusCode || 502).json({
+      ok: false,
+      error: error?.message || "Submission delivery failed",
     });
   }
 });

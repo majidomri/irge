@@ -1,5 +1,5 @@
 ﻿import {
-  $, addClass, removeClass, copyText, escapeHtml, formatDate, formatUserText, toTitleCase,
+  $, addClass, removeClass, copyText, escapeHtml, formatDate, formatUserText, toSafeString, toTitleCase,
 } from "../utils.js";
 
 export class Renderer {
@@ -65,13 +65,35 @@ export class Renderer {
     });
   }
 
+  getCardTone(user) {
+    const priority = toSafeString(user?.priority).toLowerCase();
+    const urgent = Boolean(user?.urgent || priority === "urgent");
+    const featured = Boolean(
+      user?.featured ||
+      user?.premium ||
+      priority === "featured" ||
+      priority === "premium"
+    );
+    const premium = urgent || featured;
+
+    return {
+      priority,
+      urgent,
+      featured,
+      premium,
+      tone: featured && !urgent ? "featured" : urgent ? "urgent" : "standard",
+      badgeLabel: featured && !urgent ? "FEATURED" : "URGENT",
+    };
+  }
+
   createUserCard(user) {
+    const tone = this.getCardTone(user);
     const card = document.createElement("div");
-    card.className = `card card-hover fade-in relative${user.urgent ? " urgent" : ""}`;
+    card.className = `card card-hover fade-in relative${tone.premium ? " card-premium" : ""}`;
     card.setAttribute("role", "listitem");
     card.dataset.userId = String(user.id);
+    card.dataset.cardTone = tone.premium ? tone.tone : "standard";
 
-    const urgentBadge = user.urgent ? '<div class="urgent-badge">URGENT</div>' : "";
     const genderText = user.gender === "female" ? "لڑکی" : user.gender === "male" ? "لڑکا" : "";
     const displayTitle = user.title || `ضرورت رشتہ ${genderText}`;
     const bodyText = user.body || "";
@@ -93,30 +115,29 @@ export class Renderer {
     const primaryActionLabel = contactMode !== "direct" || user.familyApproval
       ? "Contact safely"
       : "Contact";
-
-    card.innerHTML = `
-      ${urgentBadge}
-      <h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>
-      <div class="card-trust-row">${trustBadges}</div>
-      <p id="${bodyId}" class="font-urdu text-gray-700 card-body-urdu${isLongBody ? " is-trimmed" : ""}">${formatUserText(bodyText)}</p>
-      ${
-      user.contactMode || user.familyApproval || user.verified || user.values
-          ? `<div class="card-contact-note">${escapeHtml([
-              user.verified ? "Verified profile" : "",
-              contactMode !== "direct" ? contactModeLabel : "",
-              user.values ? user.values : "",
-            ].filter(Boolean).join(" | "))}</div>`
-          : ""
-      }
-      ${
-        isLongBody
-          ? `<button class="card-toggle-btn" type="button" aria-controls="${bodyId}" aria-expanded="false">Read more</button>`
-          : ""
-      }
+    const premiumBadge = tone.premium
+      ? `<div class="premium-badge premium-badge--${tone.tone}">${escapeHtml(tone.badgeLabel)}</div>`
+      : "";
+    const titleHtml = `<h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>`;
+    const trustHtml = trustBadges ? `<div class="card-trust-row">${trustBadges}</div>` : "";
+    const bodyHtml = `<p id="${bodyId}" class="font-urdu text-gray-700 card-body-urdu${isLongBody ? " is-trimmed" : ""}">${formatUserText(bodyText)}</p>`;
+    const contactNoteHtml = user.contactMode || user.familyApproval || user.verified || user.values
+      ? `<div class="card-contact-note">${escapeHtml([
+          user.verified ? "Verified profile" : "",
+          contactMode !== "direct" ? contactModeLabel : "",
+          user.values ? user.values : "",
+        ].filter(Boolean).join(" | "))}</div>`
+      : "";
+    const toggleHtml = isLongBody
+      ? `<button class="card-toggle-btn" type="button" aria-controls="${bodyId}" aria-expanded="false">Read more</button>`
+      : "";
+    const metaHtml = `
       <div class="card-meta">
         <small>LR ID: ${escapeHtml(String(user.id))}</small>
         <small>Date: ${escapeHtml(formatDate(user.date))}</small>
       </div>
+    `;
+    const actionsHtml = `
       <div class="card-actions card-actions-primary">
         <button class="action-btn action-btn-lg contact-btn" data-id="${escapeHtml(String(user.id))}" aria-label="${escapeHtml(primaryActionLabel)} on WhatsApp">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -132,6 +153,38 @@ export class Renderer {
         </button>
       </div>
     `;
+
+    if (tone.premium) {
+      card.innerHTML = `
+        <div class="card-premium-bar" aria-hidden="true"></div>
+        <div class="card-premium-glow card-premium-glow-1" aria-hidden="true"></div>
+        <div class="card-premium-glow card-premium-glow-2" aria-hidden="true"></div>
+        <div class="card-premium-sheen" aria-hidden="true"></div>
+        <div class="card-premium-content">
+          <div class="card-premium-topline">
+            ${premiumBadge}
+          </div>
+                ${titleHtml}
+                ${trustHtml}
+                ${bodyHtml}
+                ${contactNoteHtml}
+                ${toggleHtml}
+                ${metaHtml}
+                ${actionsHtml}
+                <div class="card-premium-footer">instarishta.me</div>
+        </div>
+      `;
+    } else {
+      card.innerHTML = `
+        <h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>
+        <div class="card-trust-row">${trustBadges}</div>
+        ${bodyHtml}
+        ${contactNoteHtml}
+        ${toggleHtml}
+        ${metaHtml}
+        ${actionsHtml}
+      `;
+    }
 
     card.querySelector(".contact-btn")?.addEventListener("click", (event) => {
       event.preventDefault();
@@ -729,5 +782,6 @@ export class Renderer {
     }, 2200);
   }
 }
+
 
 
