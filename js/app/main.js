@@ -68,6 +68,7 @@ class InstaRishtaApp {
     this.drawer.init();
     this.admin.init();
     this.bindContactFlow();
+    this.bindPostAdModal();
     this.applyFiltersFromUrl();
     this.bindEvents();
     this.applyFiltersToInputs();
@@ -430,6 +431,32 @@ class InstaRishtaApp {
 
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !this.contactFlowModal?.hidden) {
+        close();
+      }
+    });
+  }
+
+  bindPostAdModal() {
+    this.postAdModal = $("postAdModal");
+    this.postAdFrame = $("postAdFrame");
+    this.closePostAdBtn = $("closePostAd");
+    this.postAdOpeners = $$("[data-open-post-ad]");
+
+    const close = () => this.closePostAdModal();
+
+    this.postAdModal?.addEventListener("click", (event) => {
+      if (event.target?.dataset?.postAdClose !== undefined) close();
+    });
+    this.closePostAdBtn?.addEventListener("click", close);
+    this.postAdOpeners.forEach((trigger) => {
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.openPostAdModal();
+      });
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !this.postAdModal?.hidden) {
         close();
       }
     });
@@ -901,6 +928,26 @@ class InstaRishtaApp {
     if (returnFocus && typeof returnFocus.focus === "function") {
       returnFocus.focus();
     }
+  }
+
+  openPostAdModal() {
+    if (!this.postAdModal) return;
+
+    if (this.postAdFrame && !this.postAdFrame.src) {
+      this.postAdFrame.src = this.postAdFrame.dataset.src || "/post-your-ad.html";
+    }
+
+    this.postAdModal.hidden = false;
+    this.postAdModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    this.closePostAdBtn?.focus();
+  }
+
+  closePostAdModal() {
+    if (!this.postAdModal) return;
+    this.postAdModal.hidden = true;
+    this.postAdModal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
   }
 
   getContactFlowMessage(user) {

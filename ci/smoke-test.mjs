@@ -72,9 +72,24 @@ async function run() {
     await fetchText("/llms.txt");
     await fetchText("/robots.txt");
     await fetchText("/sitemap.xml");
+    const postAdHtml = await fetchText("/post-your-ad.html");
+    if (!postAdHtml.includes("postAdForm") || !postAdHtml.includes("post-ad-controller.js")) {
+      throw new Error("post-your-ad.html is not wired to its controller.");
+    }
     const adminHtml = await fetchText("/profile-admin.html");
     if (!adminHtml.includes("profile-admin-controller.js")) {
       throw new Error("profile-admin.html is not wired to its controller.");
+    }
+
+    const proxyMissing = await fetch(`${BASE_URL}/api/proxy-json`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    if (proxyMissing.status !== 400) {
+      throw new Error("Proxy route validation failed.");
     }
 
     const jsonRaw = await fetchText("/jsdata.json");

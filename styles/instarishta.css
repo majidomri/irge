@@ -510,6 +510,94 @@
   line-height: 1;
 }
 
+.post-ad-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  z-index: 1200;
+  padding: 8px;
+}
+
+.post-ad-modal[hidden] {
+  display: none !important;
+}
+
+.post-ad-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.56);
+  backdrop-filter: blur(10px);
+  z-index: 0;
+}
+
+.post-ad-sheet {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, calc(100vw - 16px));
+  height: min(92dvh, 960px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface-elevated);
+  box-shadow: 0 24px 56px rgba(2, 6, 23, 0.32);
+}
+
+.post-ad-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.post-ad-modal-kicker {
+  margin: 0 0 6px;
+  color: var(--accent-2);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.post-ad-modal-head h2 {
+  margin: 0;
+  font-size: clamp(1.3rem, 3.5vw, 1.85rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.post-ad-modal-copy {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.post-ad-modal-close {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.post-ad-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+  background: var(--bg);
+}
+
 @media (max-width: 767px) {
   .trust-highlights {
     grid-template-columns: 1fr;
@@ -524,6 +612,24 @@
   .contact-flow-head {
     flex-direction: column;
   }
+
+  .post-ad-modal {
+    padding: 4px;
+  }
+
+  .post-ad-sheet {
+    width: calc(100vw - 8px);
+    height: calc(100dvh - 8px);
+    border-radius: 20px;
+  }
+
+  .post-ad-modal-head {
+    padding: 14px 14px 12px;
+  }
+
+  .post-ad-modal-head {
+    flex-direction: column;
+  }
 }
 
 @media (min-width: 768px) {
@@ -533,5 +639,9 @@
 
   .contact-flow-sheet {
     border-radius: 24px;
+  }
+
+  .post-ad-modal {
+    place-items: center;
   }
 }

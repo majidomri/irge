@@ -50,6 +50,18 @@ const NO_CACHE_EXTENSIONS = new Set([
   ".webmanifest",
 ]);
 
+const PROXY_ALLOWED_HOSTS = new Set([
+  "docs.google.com",
+  "script.google.com",
+  "sheets.googleapis.com",
+  "raw.githubusercontent.com",
+  "api.telegram.org",
+  "telegram.me",
+  "t.me",
+  "www.googleapis.com",
+  "content.googleapis.com",
+]);
+
 function setCacheHeaders(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const fileName = path.basename(filePath).toLowerCase();
@@ -74,6 +86,7 @@ function setCacheHeaders(res, filePath) {
 
 app.disable("x-powered-by");
 app.use(cors());
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (req, res, next) => {
   const indexPath = path.join(STATIC_ROOT, "index.html");
@@ -117,6 +130,76 @@ app.use(express.static(STATIC_ROOT, {
 
 // simple health endpoint
 app.get("/ping", (req, res) => res.json({ ok: true, time: Date.now() }));
+
+app.post("/api/proxy-json", async (req, res) => {
+  const rawUrl = String(req.body?.url || "").trim();
+  if (!rawUrl) {
+    res.status(400).json({ ok: false, error: "Missing url" });
+    return;
+  }
+
+  let target;
+  try {
+    target = new URL(rawUrl);
+  } catch {
+    res.status(400).json({ ok: false, error: "Invalid url" });
+    return;
+  }
+
+  if (!["http:", "https:"].includes(target.protocol)) {
+    res.status(400).json({ ok: false, error: "Unsupported protocol" });
+    return;
+  }
+
+  if (!PROXY_ALLOWED_HOSTS.has(target.hostname)) {
+    res.status(403).json({ ok: false, error: "Host not allowed" });
+    return;
+  }
+
+  try {
+    const upstream = await fetch(target.href, {
+      method: "GET",
+      headers: {
+        accept: "application/json,text/plain,*/*",
+      },
+    });
+
+    if (!upstream.ok) {
+      res.status(upstream.status).json({
+        ok: false,
+        error: `Upstream HTTP ${upstream.status}`,
+      });
+      return;
+    }
+
+    const text = await upstream.text();
+    const contentType = upstream.headers.get("content-type") || "";
+    res.setHeader("Cache-Control", "no-store");
+
+    try {
+      const data = JSON.parse(text);
+      res.json({
+        ok: true,
+        source: target.href,
+        contentType: contentType || "application/json",
+        data,
+      });
+      return;
+    } catch {
+      res.json({
+        ok: true,
+        source: target.href,
+        contentType: contentType || "text/plain",
+        data: text,
+      });
+    }
+  } catch (error) {
+    res.status(502).json({
+      ok: false,
+      error: error?.message || "Proxy request failed",
+    });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Static server running: http://localhost:${PORT}`);

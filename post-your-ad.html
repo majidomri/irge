@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Your Profile Ad | InstaRishta</title>
+    <meta
+      name="description"
+      content="Create and manage InstaRishta profile ads, import remote JSON through the same-origin proxy, and export a clean jsdata.json file for GitHub hosting."
+    >
+    <meta
+      name="keywords"
+      content="post profile ad, InstaRishta, jsdata.json, muslim matrimony admin, profile builder, Google Sheets import, Telegram JSON import"
+    >
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+    <link rel="preload" href="src/output.css" as="style">
+    <link rel="preload" href="styles/instarishta.css" as="style">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap">
+    <link rel="stylesheet" href="src/output.css">
+    <link rel="stylesheet" href="styles/instarishta.css">
+    <style>
+      body.post-page {
+        background:
+          radial-gradient(circle at top left, rgba(109, 40, 217, 0.14), transparent 28%),
+          radial-gradient(circle at top right, rgba(79, 70, 229, 0.12), transparent 34%),
+          linear-gradient(180deg, #f8fbff 0%, #edf2ff 100%);
+      }
+
+      .post-page-shell {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 18px 16px 28px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .post-hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 22px 24px;
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.68));
+        box-shadow: var(--card-shadow);
+        backdrop-filter: blur(16px);
+      }
+
+      .post-hero-copy {
+        max-width: 760px;
+      }
+
+      .post-hero-kicker {
+        margin: 0 0 10px;
+        color: var(--accent-2);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .post-hero h1 {
+        margin: 0;
+        font-size: clamp(2rem, 6vw, 3.2rem);
+        line-height: 1.04;
+        letter-spacing: -0.04em;
+      }
+
+      .post-hero-subtitle {
+        margin: 12px 0 0;
+        color: var(--text-soft);
+        line-height: 1.7;
+        max-width: 68ch;
+      }
+
+      .post-hero-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .hero-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow: 0 8px 20px rgba(2, 6, 23, 0.04);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      }
+
+      .hero-link:hover {
+        transform: translateY(-1px);
+        border-color: var(--border-strong);
+        box-shadow: 0 12px 28px rgba(2, 6, 23, 0.08);
+      }
+
+      .hero-link-alt {
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(109, 40, 217, 0.08));
+      }
+
+      .status-strip {
+        max-width: 1440px;
+        margin: 12px auto 0;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.78);
+        border-radius: 18px;
+        padding: 12px 14px;
+        color: var(--text-soft);
+        box-shadow: var(--card-shadow);
+      }
+
+      .status-strip[data-tone="success"] {
+        color: #166534;
+        border-color: rgba(34, 197, 94, 0.22);
+        background: rgba(240, 253, 244, 0.84);
+      }
+
+      .status-strip[data-tone="warning"] {
+        color: #b45309;
+        border-color: rgba(245, 158, 11, 0.22);
+        background: rgba(255, 247, 237, 0.84);
+      }
+
+      .status-strip[data-tone="error"] {
+        color: #b91c1c;
+        border-color: rgba(239, 68, 68, 0.24);
+        background: rgba(254, 242, 242, 0.84);
+      }
+
+      .post-page-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.16fr) minmax(320px, 0.84fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .studio-card {
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: var(--surface);
+        box-shadow: var(--card-shadow);
+        padding: 20px;
+      }
+
+      .studio-card.sticky {
+        position: sticky;
+        top: 16px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .section-head h2 {
+        margin: 0;
+        font-size: 1.3rem;
+        line-height: 1.15;
+      }
+
+      .section-head p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .section-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(109, 40, 217, 0.08));
+        border: 1px solid var(--border);
+        color: var(--accent-2);
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .source-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: end;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      .field label {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: var(--text-soft);
+      }
+
+      .field input,
+      .field select,
+      .field textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface-muted);
+        color: var(--text);
+        padding: 12px 14px;
+        font: inherit;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      }
+
+      .field textarea {
+        min-height: 140px;
+        resize: vertical;
+      }
+
+      .field input:focus,
+      .field select:focus,
+      .field textarea:focus {
+        outline: none;
+        border-color: rgba(79, 70, 229, 0.45);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+      }
+
+      .inline-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .inline-row > * {
+        flex: 1;
+      }
+
+      .mini-btn,
+      .studio-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--surface-muted);
+        color: var(--text);
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      }
+
+      .mini-btn:hover,
+      .studio-btn:hover {
+        transform: translateY(-1px);
+        border-color: var(--border-strong);
+      }
+
+      .studio-btn-primary {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        border-color: transparent;
+        color: #fff;
+      }
+
+      .studio-btn-ghost {
+        background: transparent;
+      }
+
+      .studio-btn-danger {
+        background: rgba(220, 38, 38, 0.08);
+        border-color: rgba(220, 38, 38, 0.18);
+        color: #b91c1c;
+      }
+
+      .checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .check {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface-muted);
+      }
+
+      .check input {
+        margin-top: 3px;
+      }
+
+      .helper-note {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.93rem;
+        line-height: 1.6;
+      }
+
+      .imported-wrap {
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(79, 70, 229, 0.05), rgba(109, 40, 217, 0.03));
+        border: 1px solid var(--border);
+      }
+
+      .imported-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+        color: var(--text-soft);
+        font-weight: 700;
+      }
+
+      .imported-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .import-pill {
+        text-align: left;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 10px 12px;
+        min-width: 200px;
+        max-width: 100%;
+        display: grid;
+        gap: 4px;
+        cursor: pointer;
+        color: var(--text);
+      }
+
+      .import-pill.active {
+        border-color: rgba(79, 70, 229, 0.45);
+        box-shadow: 0 10px 24px rgba(79, 70, 229, 0.12);
+      }
+
+      .import-pill-row {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .import-pill-status {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .import-pill-status-active {
+        color: #2563eb;
+      }
+
+      .import-pill-status-verified {
+        color: #16a34a;
+      }
+
+      .import-pill-status-urgent {
+        color: #d97706;
+      }
+
+      .import-pill-status-warning {
+        color: #dc2626;
+      }
+
+      .import-pill-status-expired {
+        color: #b91c1c;
+      }
+
+      .import-pill-title {
+        color: var(--text-soft);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .import-pill-meta {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .crud-bar {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .action-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .preview-stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .preview-frame {
+        background: var(--bg);
+        border: 1px dashed var(--border);
+        border-radius: 22px;
+        padding: 14px;
+      }
+
+      .json-box {
+        width: 100%;
+        min-height: 320px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface-muted);
+        color: var(--text);
+        padding: 14px;
+        font: inherit;
+        line-height: 1.65;
+        resize: vertical;
+      }
+
+      .preview-note {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.6;
+      }
+
+      .preview-help {
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(79, 70, 229, 0.05), rgba(109, 40, 217, 0.03));
+      }
+
+      .preview-help p {
+        margin: 0;
+        color: var(--text-soft);
+        line-height: 1.7;
+      }
+
+      @media (max-width: 1100px) {
+        .post-page-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .studio-card.sticky {
+          position: static;
+        }
+      }
+
+      @media (max-width: 820px) {
+        .post-hero {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .post-hero-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .source-grid,
+        .field-grid,
+        .crud-bar,
+        .action-grid,
+        .checkbox-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .post-page-shell {
+          padding: 12px 10px 20px;
+        }
+
+        .post-hero,
+        .studio-card {
+          padding: 16px;
+          border-radius: 20px;
+        }
+
+        .field input,
+        .field select,
+        .field textarea,
+        .json-box {
+          border-radius: 14px;
+        }
+
+        .import-pill {
+          min-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen font-sans antialiased post-page">
+    <a href="#postAdMain" class="sr-only skip-link">Skip to content</a>
+    <div id="postAdStatus" class="status-strip" aria-live="polite" aria-atomic="true">Ready to build a clean profile ad.</div>
+
+    <div class="post-page-shell">
+      <header class="post-hero">
+        <div class="post-hero-copy">
+          <p class="post-hero-kicker">Profile studio</p>
+          <h1>Post Your Profile Ad</h1>
+          <p class="post-hero-subtitle">
+            Build one or many profile ads, load remote Google Sheets or Telegram JSON through the same-origin proxy,
+            and export a clean <strong>jsdata.json</strong> file that you can host directly on GitHub.
+          </p>
+        </div>
+        <div class="post-hero-actions">
+          <a href="/" target="_top" rel="noopener" class="hero-link">Back to site</a>
+          <a href="/profile-admin.html" target="_top" rel="noopener" class="hero-link hero-link-alt">Open local admin</a>
+        </div>
+      </header>
+
+      <main id="postAdMain" class="post-page-grid">
+        <section class="studio-card">
+          <div class="section-head">
+            <div>
+              <p class="post-hero-kicker">Import</p>
+              <h2>Load from remote JSON</h2>
+              <p>Paste a Google Sheets export, Telegram JSON endpoint, or raw GitHub JSON source.</p>
+            </div>
+            <span class="section-badge">Same-origin proxy</span>
+          </div>
+
+          <div class="source-grid">
+            <div class="field">
+              <label for="profileSourceUrl">Remote JSON URL</label>
+              <input
+                id="profileSourceUrl"
+                type="url"
+                inputmode="url"
+                placeholder="https://docs.google.com/... or https://t.me/... or https://raw.githubusercontent.com/..."
+                autocomplete="off"
+              >
+            </div>
+            <button id="loadSourceBtn" class="studio-btn studio-btn-primary" type="button">Load source</button>
+          </div>
+          <p class="helper-note">
+            Remote fetches are routed through <code>/api/proxy-json</code> so the browser does not hit CORS errors.
+          </p>
+
+          <div class="imported-wrap">
+            <div class="imported-head">
+              <strong>Imported profiles</strong>
+              <span><span id="importedCount">0</span> loaded</span>
+            </div>
+            <div id="importedList" class="imported-list" hidden></div>
+          </div>
+
+          <div class="crud-bar">
+            <button id="newProfileBtn" class="studio-btn" type="button">New profile</button>
+            <button id="duplicateProfileBtn" class="studio-btn" type="button">Duplicate</button>
+            <button id="renewProfileBtn" class="studio-btn" type="button">Renew</button>
+            <button id="deleteProfileBtn" class="studio-btn studio-btn-danger" type="button">Delete</button>
+          </div>
+
+          <form id="postAdForm" class="profile-form" novalidate>
+            <div class="section-head" style="margin-top: 20px;">
+              <div>
+                <p class="post-hero-kicker">Details</p>
+                <h2>Profile fields</h2>
+                <p>Everything exported here stays compatible with the site loader and the JSON schema.</p>
+              </div>
+              <button id="generateIdBtn" class="studio-btn studio-btn-ghost" type="button">Generate ID</button>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="profileId">Profile ID</label>
+                <input id="profileId" type="text" inputmode="numeric" placeholder="2092" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="profileTitle">Title</label>
+                <input id="profileTitle" type="text" class="font-urdu" dir="rtl" placeholder="ضرورت رشتہ لڑکی / لڑکا" autocomplete="off">
+              </div>
+
+              <div class="field">
+                <label for="profileAge">Age</label>
+                <input id="profileAge" type="number" inputmode="numeric" min="18" max="80" placeholder="27" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="profileGender">Gender</label>
+                <select id="profileGender">
+                  <option value="unknown">Unknown</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="profileEducation">Education</label>
+                <input id="profileEducation" type="text" placeholder="MBBS, MD, Engineer" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="profileLocation">Location</label>
+                <input id="profileLocation" type="text" placeholder="Hyderabad, India" autocomplete="off">
+              </div>
+
+              <div class="field">
+                <label for="profilePhone">Phone</label>
+                <input id="profilePhone" type="tel" inputmode="tel" placeholder="+91..." autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="profileWhatsapp">WhatsApp</label>
+                <input id="profileWhatsapp" type="tel" inputmode="tel" placeholder="+91..." autocomplete="off">
+              </div>
+
+              <div class="field full">
+                <label for="profileInstagramPostId">Instagram post ID or URL</label>
+                <input id="profileInstagramPostId" type="text" placeholder="p/ABC123 or https://www.instagram.com/p/..." autocomplete="off">
+              </div>
+
+              <div class="field">
+                <label for="profileContactMode">Contact mode</label>
+                <select id="profileContactMode">
+                  <option value="direct">Direct</option>
+                  <option value="family">Family / Guardian</option>
+                  <option value="private">Private</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="profileExpiresDays">Renew for days</label>
+                <input id="profileExpiresDays" type="number" min="1" max="3650" step="1" value="30" inputmode="numeric">
+              </div>
+
+              <div class="field">
+                <label for="profileValues">Values</label>
+                <input id="profileValues" type="text" placeholder="family-first, educated, settled" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="profileNotes">Notes</label>
+                <input id="profileNotes" type="text" placeholder="Short admin note" autocomplete="off">
+              </div>
+
+              <div class="field full">
+                <label for="profileContactNotes">Contact notes</label>
+                <input id="profileContactNotes" type="text" placeholder="Preferred contact window, guardian note, privacy preference" autocomplete="off">
+              </div>
+
+              <div class="field">
+                <label for="profileGuardianName">Guardian name</label>
+                <input id="profileGuardianName" type="text" placeholder="Wali / parent name" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="profileGuardianPhone">Guardian phone</label>
+                <input id="profileGuardianPhone" type="tel" inputmode="tel" placeholder="+91..." autocomplete="off">
+              </div>
+
+              <div class="field full">
+                <label for="profileBody">Profile description</label>
+                <textarea
+                  id="profileBody"
+                  class="font-urdu"
+                  dir="rtl"
+                  required
+                  placeholder="Write the complete profile ad here in Urdu or English..."
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="checkbox-grid" style="margin-top: 12px;">
+              <label class="check" for="profileUrgent">
+                <input id="profileUrgent" type="checkbox">
+                <span>
+                  <strong>Urgent</strong>
+                  <small class="block muted">Highlight this ad first in the feed.</small>
+                </span>
+              </label>
+              <label class="check" for="profileVerified">
+                <input id="profileVerified" type="checkbox">
+                <span>
+                  <strong>Verified</strong>
+                  <small class="block muted">Show the verified trust badge.</small>
+                </span>
+              </label>
+              <label class="check" for="profileFamilyApproval">
+                <input id="profileFamilyApproval" type="checkbox">
+                <span>
+                  <strong>Family approval</strong>
+                  <small class="block muted">Route contact through wali or family flow.</small>
+                </span>
+              </label>
+            </div>
+
+            <div class="action-grid" style="margin-top: 16px;">
+              <button id="downloadJsonBtn" class="studio-btn studio-btn-primary" type="button">Download JSON</button>
+              <button id="copyJsonBtn" class="studio-btn" type="button">Copy JSON</button>
+              <button id="copyMessageBtn" class="studio-btn" type="button">Copy message</button>
+              <button id="openWhatsAppBtn" class="studio-btn" type="button">Open WhatsApp</button>
+              <button id="openTelegramBtn" class="studio-btn" type="button">Open Telegram</button>
+              <button id="resetBtn" class="studio-btn studio-btn-ghost" type="button">Reset form</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="preview-stack">
+          <section class="studio-card sticky">
+            <div class="section-head">
+              <div>
+                <p class="post-hero-kicker">Preview</p>
+                <h2>Live card output</h2>
+                <p>This is the same card-style layout the public feed uses.</p>
+              </div>
+              <span class="section-badge">Card snapshot</span>
+            </div>
+            <div id="postAdPreview" class="preview-frame" aria-live="polite"></div>
+            <p class="preview-note">
+              Double tap share uses the rendered card on the feed. This page is only for editing and exporting JSON.
+            </p>
+          </section>
+
+          <section class="studio-card">
+            <div class="section-head">
+              <div>
+                <p class="post-hero-kicker">Export</p>
+                <h2>JSON preview</h2>
+                <p>Always exported as an array, ready to drop into <code>jsdata.json</code>.</p>
+              </div>
+              <span class="section-badge">Array</span>
+            </div>
+            <textarea
+              id="postAdJsonPreview"
+              class="json-box"
+              readonly
+              spellcheck="false"
+              aria-label="JSON preview"
+            ></textarea>
+            <div class="preview-help">
+              <p>
+                Use <strong>Load source</strong> for Google Sheets or Telegram JSON endpoints, then edit, duplicate, renew,
+                or delete profiles before exporting.
+              </p>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module">
+      import { domReady } from "./js/app/utils.js";
+      import { PostAdController } from "./js/app/modules/post-ad-controller.js";
+
+      domReady(() => {
+        const controller = new PostAdController();
+        controller.init();
+        window.__POST_AD_CONTROLLER__ = controller;
+      });
+    </script>
+  </body>
+</html>

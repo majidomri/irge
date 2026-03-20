@@ -1,4 +1,4 @@
-const CACHE_NAME = "instarishta-v8";
+const CACHE_NAME = "instarishta-v9";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const CORE_ASSETS = [
   "./muslim-matrimony-delhi.html",
   "./muslim-matrimony-mumbai.html",
   "./muslim-matrimony-bangalore.html",
+  "./post-your-ad.html",
   "./profile-admin.html",
   "./robots.txt",
   "./sitemap.xml",
@@ -27,6 +28,7 @@ const CORE_ASSETS = [
   "./js/app/modules/typing-controller.js",
   "./js/app/modules/drawer-controller.js",
   "./js/app/modules/renderer.js",
+  "./js/app/modules/post-ad-controller.js",
   "./js/app/modules/profile-admin-controller.js",
   "./js/app/modules/admin-controller.js",
   "./js/app/services/storage-service.js",
