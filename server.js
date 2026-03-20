@@ -118,6 +118,17 @@ function normalizeSubmission(body = {}) {
   const whatsapp = cleanText(body.whatsapp);
   const bioData = cleanText(body.bioData);
   const urgent = Boolean(body.urgent === true || body.urgent === "true" || body.urgent === 1 || body.urgent === "1");
+  const directContact = Boolean(
+    body.directContact === true
+    || body.directContact === "true"
+    || body.directContact === 1
+    || body.directContact === "1"
+    || body.directContact === "yes"
+    || body.directContact === "on",
+  );
+  const guardianConnect = cleanText(body.guardianConnect || body.guardianMode || body.contactGuardian).toLowerCase();
+  const honeypot = cleanText(body.honeypot || body.company || body.website);
+  const formOpenedAt = Number(body.formOpenedAt || body.startedAt || body.clientStartedAt || 0);
 
   return {
     name,
@@ -125,6 +136,10 @@ function normalizeSubmission(body = {}) {
     whatsapp,
     bioData,
     urgent,
+    directContact,
+    guardianConnect,
+    honeypot,
+    formOpenedAt: Number.isFinite(formOpenedAt) ? formOpenedAt : 0,
   };
 }
 
@@ -137,6 +152,8 @@ function buildSubmissionMessage(submission) {
     `<b>Phone:</b> ${escapeTelegramHtml(submission.phone)}`,
     `<b>WhatsApp:</b> ${escapeTelegramHtml(submission.whatsapp)}`,
     `<b>Urgent:</b> ${submission.urgent ? "Yes" : "No"}`,
+    `<b>Direct contact:</b> ${submission.directContact ? "Yes" : "No"}`,
+    `<b>Guardian connect:</b> ${escapeTelegramHtml(submission.guardianConnect || "none")}`,
     "",
     "<b>Bio data:</b>",
     `<pre>${escapeTelegramHtml(clipText(submission.bioData, 3200))}</pre>`,
@@ -314,6 +331,22 @@ app.post("/api/submit-profile-ad", async (req, res) => {
     res.status(400).json({
       ok: false,
       error: "Missing required submission fields",
+    });
+    return;
+  }
+
+  if (submission.honeypot) {
+    res.status(400).json({
+      ok: false,
+      error: "Spam detected",
+    });
+    return;
+  }
+
+  if (submission.formOpenedAt && Date.now() - submission.formOpenedAt < 3500) {
+    res.status(429).json({
+      ok: false,
+      error: "Please spend a little more time filling the form.",
     });
     return;
   }

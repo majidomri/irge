@@ -110,7 +110,8 @@
       }
 
       .field input,
-      .field textarea {
+      .field textarea,
+      .field select {
         width: 100%;
         border: 1px solid var(--border);
         border-radius: 16px;
@@ -128,8 +129,22 @@
         font-family: "Inter", "Noto Naskh Arabic", sans-serif;
       }
 
+      .field select {
+        appearance: none;
+        background-image:
+          linear-gradient(45deg, transparent 50%, currentColor 50%),
+          linear-gradient(135deg, currentColor 50%, transparent 50%);
+        background-position:
+          calc(100% - 18px) calc(1em + 4px),
+          calc(100% - 12px) calc(1em + 4px);
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat;
+        padding-right: 40px;
+      }
+
       .field input:focus,
-      .field textarea:focus {
+      .field textarea:focus,
+      .field select:focus {
         outline: none;
         border-color: rgba(79, 70, 229, 0.45);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
@@ -165,6 +180,27 @@
         margin-top: 4px;
         color: var(--muted);
         line-height: 1.5;
+      }
+
+      .field-helper {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.5;
+      }
+
+      .field-grid--contact {
+        align-items: stretch;
+      }
+
+      .honeypot {
+        position: absolute;
+        inset-inline-start: -9999px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
       }
 
       .submit-btn {
@@ -261,10 +297,17 @@
         <header class="hero">
           <p class="kicker">Post your ad</p>
           <h1 id="postAdTitle">Share your details privately</h1>
-          <p>Fill the form below. We’ll copy your details locally and open Telegram with the message prefilled.</p>
+          <p>Fill the form below. The submission goes straight to our private review flow and never exposes the relay details on the page.</p>
         </header>
 
         <form id="postAdForm" class="form" novalidate>
+          <input id="formOpenedAt" name="formOpenedAt" type="hidden" value="">
+
+          <div class="honeypot" aria-hidden="true">
+            <label for="company">Company</label>
+            <input id="company" name="company" type="text" autocomplete="off" tabindex="-1" maxlength="120" value="">
+          </div>
+
           <div class="field full">
             <label for="name">Full Name *</label>
             <input id="name" name="name" type="text" autocomplete="name" required maxlength="120" placeholder="Enter your full name">
@@ -282,8 +325,30 @@
           </div>
 
           <div class="field full">
-            <label for="bioData">Bio Data *</label>
-            <textarea id="bioData" name="bioData" required maxlength="2000" dir="auto" placeholder="Tell us about yourself, including age, occupation, education, and anything you want us to know."></textarea>
+            <label for="bioData">Full Biodata *</label>
+            <textarea id="bioData" name="bioData" required maxlength="2500" dir="auto" placeholder="Share age, education, occupation, location, family background, and anything you want us to know."></textarea>
+          </div>
+
+          <div class="field-grid field-grid--contact">
+            <label class="check-row" for="directContact">
+              <input id="directContact" name="directContact" type="checkbox" checked>
+              <span>
+                <strong>Allow direct contact</strong>
+                <small>If enabled, we can contact the applicant directly for review.</small>
+              </span>
+            </label>
+
+            <div class="field">
+              <label for="guardianConnect">Wali / parent / guardian connect</label>
+              <select id="guardianConnect" name="guardianConnect">
+                <option value="none">No guardian</option>
+                <option value="wali">Wali</option>
+                <option value="parent">Parent</option>
+                <option value="guardian">Guardian</option>
+                <option value="family">Family member</option>
+              </select>
+              <p class="field-helper">Use this when a family member should be contacted first.</p>
+            </div>
           </div>
 
           <label class="check-row full" for="urgent">
@@ -294,19 +359,21 @@
             </span>
           </label>
 
-          <button id="submitBtn" class="submit-btn" type="submit">Open Telegram with message</button>
+          <button id="submitBtn" class="submit-btn" type="submit">Submit privately</button>
           <div id="submitStatus" class="status" role="status" aria-live="polite"></div>
         </form>
 
-        <p class="footnote">Your details are copied locally first, then Telegram opens with the message prefilled in the share composer. Pick the group if Telegram shows the share sheet.</p>
+        <p class="footnote">The form is protected with a hidden trap field and timing checks before the Worker forwards it to our private review inbox.</p>
       </section>
     </main>
 
     <script>
-      const TELEGRAM_TARGET = 'https://telegram.me/instarishtagroup';
+      const DEFAULT_PROFILE_AD_ENDPOINT = 'https://instarishta-profile-relay.instarishtalead.workers.dev/api/submit-profile-ad';
       const form = document.getElementById('postAdForm');
       const submitBtn = document.getElementById('submitBtn');
       const submitStatus = document.getElementById('submitStatus');
+      const formOpenedAt = document.getElementById('formOpenedAt');
+      const honeypot = document.getElementById('company');
 
       function setStatus(message, tone = '') {
         submitStatus.textContent = message;
@@ -315,7 +382,7 @@
 
       function setBusy(isBusy) {
         submitBtn.disabled = isBusy;
-        submitBtn.textContent = isBusy ? 'Preparing...' : 'Open Telegram with message';
+        submitBtn.textContent = isBusy ? 'Sending...' : 'Submit privately';
       }
 
       function getFieldValue(id) {
@@ -323,52 +390,74 @@
         return element ? element.value.trim() : '';
       }
 
-      function buildTelegramHandoffUrl(message) {
-        const encodedMessage = encodeURIComponent(message);
-        return `https://t.me/share/url?url=${encodeURIComponent(TELEGRAM_TARGET)}&text=${encodedMessage}`;
-      }
-
-      function buildSubmissionMessage() {
-        const urgent = document.getElementById('urgent')?.checked === true ? 'Yes' : 'No';
-        const lines = [
-          'Assalamualaikum,',
-          '',
-          `Name: ${getFieldValue('name')}`,
-          `Phone: ${getFieldValue('phone')}`,
-          `WhatsApp: ${getFieldValue('whatsapp')}`,
-          `Urgent: ${urgent}`,
-          '',
-          'Bio data:',
-          getFieldValue('bioData'),
-        ];
-
-        return lines.join('\n').trim();
-      }
-
-      async function copyToClipboard(text) {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        }
-
-        const fallback = document.createElement('textarea');
-        fallback.value = text;
-        fallback.setAttribute('readonly', '');
-        fallback.style.position = 'fixed';
-        fallback.style.opacity = '0';
-        document.body.appendChild(fallback);
-        fallback.focus();
-        fallback.select();
-
-        let copied = false;
+      function resolveEndpoint() {
         try {
-          copied = document.execCommand('copy');
-        } catch (error) {
-          copied = false;
+          const parentConfig = window.parent !== window
+            ? window.parent?.INSTA_RISHTA_CONFIG?.profileAdEndpoint
+            : '';
+          const localConfig = window.INSTA_RISHTA_CONFIG?.profileAdEndpoint;
+          const configured = String(parentConfig || localConfig || '').trim();
+          if (configured) return configured;
+        } catch {
+          // Ignore cross-window access issues and fall back below.
         }
 
-        document.body.removeChild(fallback);
-        return copied;
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+          return '/api/submit-profile-ad';
+        }
+
+        return DEFAULT_PROFILE_AD_ENDPOINT;
+      }
+
+      function normalizeGuardianConnect(value) {
+        const allowed = new Set(['none', 'wali', 'parent', 'guardian', 'family']);
+        const normalized = String(value || '').trim().toLowerCase();
+        return allowed.has(normalized) ? normalized : 'none';
+      }
+
+      function buildSubmissionPayload() {
+        return {
+          name: getFieldValue('name'),
+          phone: getFieldValue('phone'),
+          whatsapp: getFieldValue('whatsapp'),
+          bioData: getFieldValue('bioData'),
+          urgent: document.getElementById('urgent')?.checked === true,
+          directContact: document.getElementById('directContact')?.checked === true,
+          guardianConnect: normalizeGuardianConnect(document.getElementById('guardianConnect')?.value),
+          formOpenedAt: formOpenedAt?.value || String(Date.now()),
+          submittedAt: new Date().toISOString(),
+          pageUrl: window.location.href,
+          referrer: document.referrer || '',
+          source: 'post-your-ad',
+          honeypot: honeypot?.value || '',
+        };
+      }
+
+      async function submitPayload(payload) {
+        const endpoint = resolveEndpoint();
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const rawText = await response.text();
+        let data = null;
+        try {
+          data = rawText ? JSON.parse(rawText) : null;
+        } catch {
+          data = null;
+        }
+
+        if (!response.ok || data?.ok === false) {
+          const errorMessage = data?.error || data?.message || rawText || `HTTP ${response.status}`;
+          throw new Error(errorMessage);
+        }
+
+        return data;
       }
 
       form.addEventListener('submit', async (event) => {
@@ -379,24 +468,32 @@
           return;
         }
 
-        const message = buildSubmissionMessage();
+        const openedAt = Number(formOpenedAt?.value || 0);
+        if (Number.isFinite(openedAt) && Date.now() - openedAt < 3500) {
+          setStatus('Please take a moment before submitting so we can filter automated spam.', 'warning');
+          return;
+        }
+
+        const payload = buildSubmissionPayload();
 
         setBusy(true);
-        setStatus('Copying your details and preparing Telegram...', 'warning');
+        setStatus('Sending your details to our private review inbox...', 'warning');
 
         try {
-          const copied = await copyToClipboard(message).catch(() => false);
-          setStatus(copied ? 'Details copied. Opening Telegram...' : 'Opening Telegram...', 'success');
-          window.setTimeout(() => {
-            window.top.location.href = buildTelegramHandoffUrl(message);
-          }, 350);
+          await submitPayload(payload);
+          setStatus('Sent privately. We will review your submission shortly.', 'success');
+          form.reset();
+          formOpenedAt.value = String(Date.now());
+          if (honeypot) honeypot.value = '';
         } catch (error) {
           console.error('Profile ad handoff failed:', error);
-          setStatus('Could not copy the details. Please try again or copy them manually before opening Telegram.', 'error');
+          setStatus(error?.message || 'Submission could not be sent right now. Please try again in a little while.', 'error');
         } finally {
           setBusy(false);
         }
       });
+
+      formOpenedAt.value = String(Date.now());
     </script>
   </body>
 </html>

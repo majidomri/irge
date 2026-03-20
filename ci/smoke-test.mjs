@@ -1,4 +1,4 @@
-﻿import { spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 
 const BASE_URL = "http://127.0.0.1:3000";
 
@@ -72,8 +72,14 @@ async function run() {
     await fetchText("/robots.txt");
     await fetchText("/sitemap.xml");
     const postAdHtml = await fetchText("/post-your-ad.html");
-    if (!postAdHtml.includes("postAdForm") || !postAdHtml.includes("telegram.me/instarishtagroup")) {
-      throw new Error("post-your-ad.html is not wired to the Telegram handoff form.");
+    if (
+      !postAdHtml.includes("postAdForm")
+      || !postAdHtml.includes("profileAdEndpoint")
+      || !postAdHtml.includes("guardianConnect")
+      || !postAdHtml.includes("directContact")
+      || !postAdHtml.includes("submit-profile-ad")
+    ) {
+      throw new Error("post-your-ad.html is not wired to the Worker submission form.");
     }
 
     const proxyMissing = await fetch(`${BASE_URL}/api/proxy-json`, {
@@ -103,3 +109,4 @@ run().catch((error) => {
   console.error("Smoke test failed:", error.message);
   process.exit(1);
 });
+
