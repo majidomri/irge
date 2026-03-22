@@ -537,34 +537,37 @@
 
       <!-- Mobile Drawer (Bottom) -->
       <div id="mobileDrawer"
-        class="fixed inset-x-0 bottom-0 shadow-lg transform transition-transform duration-300 ease-in-out md:hidden drawer closed"
+        class="fixed inset-x-0 bottom-0 shadow-lg transform transition-transform duration-300 ease-in-out md:hidden drawer closed max-w-[100vw] overflow-x-hidden"
         role="dialog" aria-labelledby="drawerTitle" inert>
-        <div class="drawer-shell p-4 h-full flex flex-col pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <div class="drawer-shell p-4 h-full flex flex-col w-full box-border pb-[calc(12px+env(safe-area-inset-bottom))]">
           <div class="drawer-handle"></div>
 
           <div class="drawer-header mb-6">
             <h2 id="drawerTitle" class="text-lg font-semibold">Filters</h2>
           </div>
 
-          <div class="space-y-4 flex-1 drawer-content">
+          <div class="flex-1 drawer-content w-full">
             <!-- Search & ID -->
             <div class="drawer-section">
-              <div class="filter-row">
-                <input id="mobileSearchInput" type="search" placeholder="Search..." />
-                <input id="mobileIdFilter" type="number" placeholder="ID" />
+              <div class="filter-row filter-row-search w-full">
+                <input id="mobileSearchInput" class="drawer-field drawer-field-wide" type="search" placeholder="Search..."
+                  aria-label="Search profiles" />
+                <input id="mobileIdFilter" class="drawer-field" type="number" placeholder="ID"
+                  aria-label="Filter by ID" />
               </div>
             </div>
 
             <!-- Sort & Education -->
             <div class="drawer-section">
-              <div class="filter-row">
-                <select id="mobileSortOrder">
+              <div class="filter-row filter-row-selects w-full">
+                <select id="mobileSortOrder" class="drawer-field" aria-label="Sort profiles">
                   <option value="dateDesc">Newest</option>
                   <option value="dateAsc">Oldest</option>
                   <option value="userUrgent">Urgent</option>
                 </select>
 
-                <select id="mobileEducationFilter">
+                <select id="mobileEducationFilter" class="drawer-field drawer-field-wide"
+                  aria-label="Filter by education">
                   <option value="">All Education</option>
                   <option value="Preprimary">Preprimary</option>
                   <option value="Primary">Primary</option>
@@ -584,7 +587,7 @@
 
             <!-- Gender selection -->
             <div class="drawer-section">
-              <div class="gender-grid">
+              <div class="gender-grid w-full">
                 <a href="#" data-gender="all" class="active">All</a>
                 <a href="#" data-gender="male">Male</a>
                 <a href="#" data-gender="female">Female</a>
@@ -592,13 +595,13 @@
             </div>
 
             <!-- CTA -->
-            <div class="drawer-section">
+            <div class="drawer-section w-full">
               <a href="/post-your-ad.html" data-open-post-ad
                 class="theme-action drawer-cta inline-block font-semibold text-center">Post Your Ad</a>
             </div>
           </div>
 
-          <div class="drawer-footer">
+          <div class="drawer-footer w-full mt-4">
             <button id="clearAllFiltersMobile" class="btn-ghost">Clear</button>
             <button id="closeDrawer" class="theme-action">Close Filters</button>
           </div>

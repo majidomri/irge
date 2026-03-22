@@ -15,6 +15,7 @@ export class DrawerController {
       startTime: 0,
     };
     this.handleViewportResize = () => this.syncViewportHeight();
+    this.handlePageShow = () => this.toggle(false, { restoreFocus: false });
   }
 
   init() {
@@ -31,16 +32,20 @@ export class DrawerController {
     window.addEventListener("orientationchange", this.handleViewportResize, { passive: true });
     window.visualViewport?.addEventListener("resize", this.handleViewportResize, { passive: true });
     window.visualViewport?.addEventListener("scroll", this.handleViewportResize, { passive: true });
+    window.addEventListener("pageshow", this.handlePageShow, { passive: true });
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && this.isOpen) {
         this.toggle(false);
       }
     });
+
+    this.toggle(false, { restoreFocus: false });
   }
 
-  toggle(open) {
+  toggle(open, options = {}) {
     if (!this.drawer || !this.overlay) return;
+    const restoreFocus = options.restoreFocus !== false;
     this.isOpen = open;
     this.resetDrawerDrag();
     this.syncViewportHeight();
@@ -71,7 +76,9 @@ export class DrawerController {
       this.openButton.setAttribute("aria-hidden", "false");
     }
     document.body.style.overflow = "";
-    this.openButton?.focus();
+    if (restoreFocus) {
+      this.openButton?.focus();
+    }
   }
 
   bindSwipeToClose() {
