@@ -1,8 +1,6 @@
 ﻿import { config } from "./config.js";
 import { createState } from "./state.js";
-import {
-  $, $$, debounce, domReady, getQueryParam,
-} from "./utils.js";
+import { $, $$, debounce, domReady, getQueryParam } from "./utils.js";
 import { StorageService } from "./services/storage-service.js";
 import { ActivityLogger } from "./services/activity-logger.js";
 import { ContactService } from "./services/contact-service.js";
@@ -25,7 +23,8 @@ class InstaRishtaApp {
     this.workerRequestTimeoutMs = 6000;
     this.workerReady = false;
     this.splashDismissScheduled = false;
-    this.splashVisibleAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    this.splashVisibleAt =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
 
     this.storage = new StorageService();
     this.logger = new ActivityLogger(this.storage, config.activityLogKey);
@@ -171,10 +170,17 @@ class InstaRishtaApp {
       });
     });
 
-    $("clearAllFilters")?.addEventListener("click", () => this.clearAllFilters());
-    $("clearAllFiltersMobile")?.addEventListener("click", () => this.clearAllFilters());
+    $("clearAllFilters")?.addEventListener("click", () =>
+      this.clearAllFilters(),
+    );
+    $("clearAllFiltersMobile")?.addEventListener("click", () =>
+      this.clearAllFilters(),
+    );
 
-    window.addEventListener("scroll", debounce(() => this.handleScroll(), 100));
+    window.addEventListener(
+      "scroll",
+      debounce(() => this.handleScroll(), 100),
+    );
   }
 
   syncInput(id, value) {
@@ -322,7 +328,10 @@ class InstaRishtaApp {
       nextFilters.gender = gender;
     }
 
-    if (sort && ["dateDesc", "dateAsc", "userUrgent", "relevance"].includes(sort)) {
+    if (
+      sort &&
+      ["dateDesc", "dateAsc", "userUrgent", "relevance"].includes(sort)
+    ) {
       nextFilters.sort = sort;
     }
 
@@ -377,7 +386,10 @@ class InstaRishtaApp {
     $("sortOrder")?.setAttribute("aria-label", "Sort profiles");
     $("mobileSortOrder")?.setAttribute("aria-label", "Sort profiles");
     $("educationFilter")?.setAttribute("aria-label", "Filter by education");
-    $("mobileEducationFilter")?.setAttribute("aria-label", "Filter by education");
+    $("mobileEducationFilter")?.setAttribute(
+      "aria-label",
+      "Filter by education",
+    );
 
     $("userList")?.setAttribute("role", "list");
     $("filterChips")?.setAttribute("aria-live", "polite");
@@ -426,8 +438,12 @@ class InstaRishtaApp {
       if (event.target?.dataset?.contactClose !== undefined) close();
     });
     this.closeContactFlowBtn?.addEventListener("click", close);
-    this.contactFlowPrimaryBtn?.addEventListener("click", () => this.openPrimaryContact());
-    this.contactFlowCallBtn?.addEventListener("click", () => this.callPrimaryContact());
+    this.contactFlowPrimaryBtn?.addEventListener("click", () =>
+      this.openPrimaryContact(),
+    );
+    this.contactFlowCallBtn?.addEventListener("click", () =>
+      this.callPrimaryContact(),
+    );
 
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !this.contactFlowModal?.hidden) {
@@ -469,7 +485,8 @@ class InstaRishtaApp {
     const splash = $("splashScreen");
     if (!splash) return;
 
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const now =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
     const elapsed = now - this.splashVisibleAt;
     const delay = Math.max(0, 950 - elapsed);
 
@@ -481,7 +498,8 @@ class InstaRishtaApp {
 
   updateGenderTabs() {
     $$(".gender-tab, .gender-grid a").forEach((tab) => {
-      const active = tab.getAttribute("data-gender") === this.state.filters.gender;
+      const active =
+        tab.getAttribute("data-gender") === this.state.filters.gender;
       tab.classList.toggle("active", active);
       tab.setAttribute("aria-pressed", active ? "true" : "false");
     });
@@ -506,8 +524,11 @@ class InstaRishtaApp {
     try {
       const { users, source } = await this.dataService.loadUsers();
       const incomingSignature = this.dataService.getUsersSignature(users);
-      const currentSignature = this.dataService.getUsersSignature(this.state.allUsers);
-      const shouldRefreshView = !hasRenderedCache || incomingSignature !== currentSignature;
+      const currentSignature = this.dataService.getUsersSignature(
+        this.state.allUsers,
+      );
+      const shouldRefreshView =
+        !hasRenderedCache || incomingSignature !== currentSignature;
 
       this.state.allUsers = users;
       this.state.activeDataSource = source;
@@ -519,7 +540,12 @@ class InstaRishtaApp {
       }
       void this.syncUsersToWorker();
 
-      console.info("InstaRishta data loaded from:", source, "records:", users.length);
+      console.info(
+        "InstaRishta data loaded from:",
+        source,
+        "records:",
+        users.length,
+      );
     } catch (error) {
       if (!hasRenderedCache) {
         this.state.loading = false;
@@ -566,7 +592,9 @@ class InstaRishtaApp {
 
     this.renderer.renderUsers(this.state.displayedUsers);
     this.renderer.updateStatistics(this.state.filteredUsers);
-    this.renderer.updateFilterChips(this.state.appliedFilters, (name) => this.removeFilter(name));
+    this.renderer.updateFilterChips(this.state.appliedFilters, (name) =>
+      this.removeFilter(name),
+    );
   }
 
   removeFilter(filterName) {
@@ -622,12 +650,14 @@ class InstaRishtaApp {
     if (this.state.loading) return;
 
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+    const windowHeight =
+      window.innerHeight || document.documentElement.clientHeight;
     const documentHeight = document.documentElement.scrollHeight;
 
     if (scrollTop + windowHeight < documentHeight - 500) return;
 
-    if (this.state.displayedUsers.length >= this.state.filteredUsers.length) return;
+    if (this.state.displayedUsers.length >= this.state.filteredUsers.length)
+      return;
 
     this.state.currentPage += 1;
     this.updateDisplayedUsers();
@@ -636,38 +666,47 @@ class InstaRishtaApp {
   updateContactLimitIndicator() {
     const remaining = this.contactService.getRemainingAttempts();
     const reset = this.contactService.formatTimeRemaining(
-      this.contactService.getTimeUntilReset()
+      this.contactService.getTimeUntilReset(),
     );
 
     this.renderer.updateContactLimitIndicator(remaining, reset);
   }
 
   handleContact(user) {
-    this.logger.log("contact_attempt", { userId: user.id, userGender: user.gender });
+    this.logger.log("contact_attempt", {
+      userId: user.id,
+      userGender: user.gender,
+    });
 
     const remaining = this.contactService.getRemainingAttempts();
     if (remaining <= 0) {
       this.logger.log("contact_limit_reached", { userId: user.id });
       const reset = this.contactService.formatTimeRemaining(
-        this.contactService.getTimeUntilReset()
+        this.contactService.getTimeUntilReset(),
       );
 
       if (
         confirm(
-          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to contact support.`
+          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to contact support.`,
         )
       ) {
-        const number = config.contactLimit.businessWhatsApp.replace(/[^\d+]/g, "");
+        const number = config.contactLimit.businessWhatsApp.replace(
+          /[^\d+]/g,
+          "",
+        );
         window.open(
           `https://wa.me/${number}?text=Hi! I need unlimited access to InstaRishta contacts.`,
-          "_blank"
+          "_blank",
         );
       }
 
       return;
     }
 
-    if (!this.getPreferredWhatsAppNumber(user) && !this.getPreferredCallNumber(user)) {
+    if (
+      !this.getPreferredWhatsAppNumber(user) &&
+      !this.getPreferredCallNumber(user)
+    ) {
       this.renderer.showToast("No contact number available");
       return;
     }
@@ -677,18 +716,21 @@ class InstaRishtaApp {
   }
 
   handleCall(user) {
-    this.logger.log("call_attempt", { userId: user.id, userGender: user.gender });
+    this.logger.log("call_attempt", {
+      userId: user.id,
+      userGender: user.gender,
+    });
 
     const remaining = this.contactService.getRemainingAttempts();
     if (remaining <= 0) {
       this.logger.log("call_limit_reached", { userId: user.id });
       const reset = this.contactService.formatTimeRemaining(
-        this.contactService.getTimeUntilReset()
+        this.contactService.getTimeUntilReset(),
       );
 
       if (
         confirm(
-          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to call support.`
+          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to call support.`,
         )
       ) {
         window.open(`tel:${config.contactLimit.businessPhone}`, "_self");
@@ -698,7 +740,10 @@ class InstaRishtaApp {
 
     const mode = this.getContactMode(user);
     const needsProtectedFlow = mode === "family" || mode === "private";
-    if (needsProtectedFlow && (user.guardianPhone || user.whatsapp || user.phone)) {
+    if (
+      needsProtectedFlow &&
+      (user.guardianPhone || user.whatsapp || user.phone)
+    ) {
       this.openContactFlow(user);
       this.updateContactLimitIndicator();
       return;
@@ -777,17 +822,19 @@ class InstaRishtaApp {
 
   getPreferredWhatsAppNumber(user) {
     const mode = this.getContactMode(user);
-    const preferred = mode === "family"
-      ? user.guardianPhone || user.whatsapp || user.phone
-      : user.whatsapp || user.phone || user.guardianPhone;
+    const preferred =
+      mode === "family"
+        ? user.guardianPhone || user.whatsapp || user.phone
+        : user.whatsapp || user.phone || user.guardianPhone;
     return this.normalizeWhatsAppNumber(preferred);
   }
 
   getPreferredCallNumber(user) {
     const mode = this.getContactMode(user);
-    const preferred = mode === "family"
-      ? user.guardianPhone || user.phone
-      : user.phone || user.guardianPhone;
+    const preferred =
+      mode === "family"
+        ? user.guardianPhone || user.phone
+        : user.phone || user.guardianPhone;
     return this.normalizeDialNumber(preferred);
   }
 
@@ -804,9 +851,8 @@ class InstaRishtaApp {
         ? "We are redirecting you to the preferred guardian contact for this profile."
         : mode === "private"
           ? "We respect the private contact preference and have drafted a respectful message below."
-          : "We have drafted a respectful message using the full profile details below.",
-      "",
-      `InstaRishta ID: LR ${user.id}`,
+          : "",
+      `InstaRishta ID: IR ${user.id}`,
       `Title: ${title}`,
     ];
 
@@ -818,23 +864,26 @@ class InstaRishtaApp {
     if (user.verified) lines.push("Verification: Verified profile");
     if (user.familyApproval) lines.push("Family approval: Enabled");
     if (mode !== "direct") {
-      lines.push(`Contact mode: ${mode === "family" ? "Guardian contact" : "Private contact"}`);
+      lines.push(
+        `Contact mode: ${mode === "family" ? "Guardian contact" : "Private contact"}`,
+      );
     }
-    if (user.instagramPostId) lines.push(`Instagram post: ${user.instagramPostId}`);
+    if (user.instagramPostId)
+      lines.push(`Instagram post: ${user.instagramPostId}`);
     if (contactNotes) lines.push(`Contact notes: ${contactNotes}`);
     if (notes) lines.push(`Notes: ${notes}`);
     if (body) {
       lines.push("");
-      lines.push("Profile description:");
+      lines.push("Your Profile Ad:");
       lines.push(body);
     }
     lines.push("");
     lines.push(
       mode === "family"
-        ? "Please share the best time to connect with the guardian/family contact."
+        ? "Please respond to this message and share the best time to connect with the guardian/family contact."
         : mode === "private"
-          ? "Please share the best time to connect privately."
-          : "Please share the best time to connect."
+          ? "Please respond to this message and share the best time to connect privately."
+          : "Please respond to this message and share the best time to connect.",
     );
     lines.push("JazakAllah Khair.");
 
@@ -851,44 +900,61 @@ class InstaRishtaApp {
   openContactFlow(user) {
     this.activeContactUser = user;
     this.contactFlowActionTaken = false;
-    this.contactFlowReturnFocus = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
+    this.contactFlowReturnFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const mode = this.getContactMode(user);
     const message = this.buildContactMessage(user);
     const whatsappNumber = this.getPreferredWhatsAppNumber(user);
     const callNumber = this.getPreferredCallNumber(user);
-    const headline = mode === "family"
-      ? "Guardian contact"
-      : mode === "private"
-        ? "Private contact"
-        : "Contact this ad";
+    const headline =
+      mode === "family"
+        ? "Guardian contact"
+        : mode === "private"
+          ? "Private contact"
+          : "Contact this ad";
     const summaryParts = [
       `LR ${user.id}`,
       user.verified ? "Verified profile" : "Unverified profile",
-      mode === "family" ? "Guardian contact" : mode === "private" ? "Private contact" : "Direct contact",
+      mode === "family"
+        ? "Guardian contact"
+        : mode === "private"
+          ? "Private contact"
+          : "Direct contact",
       user.familyApproval ? "Family approval" : "",
     ].filter(Boolean);
     const badges = [
-      user.verified ? '<span class="contact-pill contact-pill-verified">Verified</span>' : "",
-      user.familyApproval ? '<span class="contact-pill contact-pill-family">Family approved</span>' : "",
-      mode !== "direct" ? `<span class="contact-pill contact-pill-mode">${escapeHtml(mode === "family" ? "Wali contact" : "Private contact")}</span>` : "",
-    ].filter(Boolean).join("");
+      user.verified
+        ? '<span class="contact-pill contact-pill-verified">Verified</span>'
+        : "",
+      user.familyApproval
+        ? '<span class="contact-pill contact-pill-family">Family approved</span>'
+        : "",
+      mode !== "direct"
+        ? `<span class="contact-pill contact-pill-mode">${escapeHtml(mode === "family" ? "Wali contact" : "Private contact")}</span>`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
 
     if (this.contactFlowTitle) this.contactFlowTitle.textContent = headline;
     if (this.contactFlowCopy) {
-      this.contactFlowCopy.textContent = mode === "family"
-        ? "You are being redirected to the preferred guardian contact for this ad. Edit the drafted message below if needed."
-        : mode === "private"
-          ? "This profile prefers a private first contact. Edit the drafted message below before sending."
-          : "We have prepared a respectful message with the full profile details below. Edit it if needed before sending.";
+      this.contactFlowCopy.textContent =
+        mode === "family"
+          ? "You are being redirected to the preferred guardian contact for this ad. Edit the drafted message below if needed."
+          : mode === "private"
+            ? "This profile prefers a private first contact. Edit the drafted message below before sending."
+            : "We have prepared a respectful message with the full profile details below. Edit it if needed before sending.";
     }
-    if (this.contactFlowSummary) this.contactFlowSummary.textContent = summaryParts.join(" · ");
+    if (this.contactFlowSummary)
+      this.contactFlowSummary.textContent = summaryParts.join(" · ");
     if (this.contactFlowBadges) this.contactFlowBadges.innerHTML = badges;
     if (this.contactFlowMessage) this.contactFlowMessage.value = message;
 
     if (this.contactFlowPrimaryBtn) {
-      const primaryLabel = mode === "family" ? "Open guardian WhatsApp" : "Open WhatsApp";
+      const primaryLabel =
+        mode === "family" ? "Open guardian WhatsApp" : "Open WhatsApp";
       this.contactFlowPrimaryBtn.textContent = primaryLabel;
       this.contactFlowPrimaryBtn.hidden = !whatsappNumber;
       this.contactFlowPrimaryBtn.disabled = !whatsappNumber;
@@ -907,11 +973,12 @@ class InstaRishtaApp {
     }
     document.body.style.overflow = "hidden";
 
-    const focusTarget = this.contactFlowPrimaryBtn && !this.contactFlowPrimaryBtn.hidden
-      ? this.contactFlowPrimaryBtn
-      : this.contactFlowCallBtn && !this.contactFlowCallBtn.hidden
-        ? this.contactFlowCallBtn
-        : this.closeContactFlowBtn;
+    const focusTarget =
+      this.contactFlowPrimaryBtn && !this.contactFlowPrimaryBtn.hidden
+        ? this.contactFlowPrimaryBtn
+        : this.contactFlowCallBtn && !this.contactFlowCallBtn.hidden
+          ? this.contactFlowCallBtn
+          : this.closeContactFlowBtn;
     focusTarget?.focus();
   }
 
@@ -934,7 +1001,8 @@ class InstaRishtaApp {
     if (!this.postAdModal) return;
 
     if (this.postAdFrame && !this.postAdFrame.src) {
-      this.postAdFrame.src = this.postAdFrame.dataset.src || "/post-your-ad.html";
+      this.postAdFrame.src =
+        this.postAdFrame.dataset.src || "/post-your-ad.html";
     }
 
     this.postAdModal.hidden = false;
@@ -955,7 +1023,13 @@ class InstaRishtaApp {
     return message || this.buildContactMessage(user);
   }
 
-  performOutboundAction({ user, kind, targetUrl, windowTarget = "_blank", supportLabel }) {
+  performOutboundAction({
+    user,
+    kind,
+    targetUrl,
+    windowTarget = "_blank",
+    supportLabel,
+  }) {
     if (!user || !targetUrl) return false;
 
     if (this.activeContactUser && this.contactFlowActionTaken) {
@@ -967,12 +1041,12 @@ class InstaRishtaApp {
     if (remaining <= 0) {
       this.logger.log(`${kind}_limit_reached`, { userId: user.id });
       const reset = this.contactService.formatTimeRemaining(
-        this.contactService.getTimeUntilReset()
+        this.contactService.getTimeUntilReset(),
       );
 
       if (
         confirm(
-          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to ${supportLabel} support.`
+          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to ${supportLabel} support.`,
         )
       ) {
         const isCall = kind === "call";
@@ -1051,6 +1125,3 @@ domReady(() => {
   app.init();
   window.instaRishtaApp = app;
 });
-
-
-

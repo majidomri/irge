@@ -397,14 +397,11 @@
         </div>
 
         <!-- Contact Limit Indicator -->
-        <div id="contactLimitIndicator" class="card p-3 rounded-md text-center mb-4"
-          style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1px solid #0ea5e9;">
-          <div
-            style="height:4px; width:30px; background: linear-gradient(90deg,#0ea5e9,#0284c7); border-radius:2px; margin:4px auto 8px auto">
-          </div>
-          <p class="text-lg font-bold" style="color: #0284c7;" id="remainingContacts">10</p>
-          <p class="text-md" style="color: #0369a1;">Contacts Remaining</p>
-          <p class="text-md mt-1" style="color: #075985;" id="resetTimer">Resets every hour</p>
+        <div id="contactLimitIndicator" class="card p-3 rounded-md text-center mb-4">
+          <div class="contact-limit-bar"></div>
+          <p class="contact-limit-value text-lg font-bold" id="remainingContacts">10</p>
+          <p class="contact-limit-label text-md">Contacts Remaining</p>
+          <p class="contact-limit-reset text-md mt-1" id="resetTimer">Resets every hour</p>
         </div>
 
         <!-- Admin Analytics Panel (Hidden by default) -->

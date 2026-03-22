@@ -1,6 +1,41 @@
 ﻿import {
-  $, addClass, removeClass, copyText, escapeHtml, formatDate, formatUserText, toSafeString, toTitleCase,
+  $,
+  addClass,
+  removeClass,
+  copyText,
+  escapeHtml,
+  formatDate,
+  formatUserText,
+  toSafeString,
+  toTitleCase,
 } from "../utils.js";
+
+const LOCAL_URDU_FONT_FACE_CSS = `
+  @font-face {
+    font-family: "FaizResolved";
+    src:
+      local("Faiz Lahori Nastaleeq"),
+      local("Faiz Nastaleeq"),
+      local("Faiz Nastaliq"),
+      local("Faiz Noori Nastaleeq"),
+      local("Jameel Noori Nastaleeq");
+    font-display: swap;
+  }
+`;
+
+const URDU_FONT_STACK = [
+  '"FaizResolved"',
+  '"Faiz Lahori Nastaleeq"',
+  '"Faiz Nastaleeq"',
+  '"Faiz Nastaliq"',
+  '"Jameel Noori Nastaleeq"',
+  '"Noto Nastaliq Urdu"',
+  '"Noto Naskh Arabic"',
+  '"Arial"',
+  "serif",
+].join(", ");
+
+const SNAPSHOT_URDU_SELECTOR = ".font-urdu, .card-title-urdu, .card-body-urdu";
 
 export class Renderer {
   constructor(options) {
@@ -13,7 +48,10 @@ export class Renderer {
     const loading = $("loading");
     const grid = $("userList");
     if (loading) {
-      if (this.loadingTemplate && !loading.innerHTML.includes("skeleton-card")) {
+      if (
+        this.loadingTemplate &&
+        !loading.innerHTML.includes("skeleton-card")
+      ) {
         loading.innerHTML = this.loadingTemplate;
       }
       loading.classList.add("skeleton-grid");
@@ -72,7 +110,7 @@ export class Renderer {
       user?.featured ||
       user?.premium ||
       priority === "featured" ||
-      priority === "premium"
+      priority === "premium",
     );
     const premium = urgent || featured;
 
@@ -94,46 +132,68 @@ export class Renderer {
     card.dataset.userId = String(user.id);
     card.dataset.cardTone = tone.premium ? tone.tone : "standard";
 
-    const genderText = user.gender === "female" ? "لڑکی" : user.gender === "male" ? "لڑکا" : "";
+    const genderText =
+      user.gender === "female" ? "لڑکی" : user.gender === "male" ? "لڑکا" : "";
     const displayTitle = user.title || `ضرورت رشتہ ${genderText}`;
     const bodyText = user.body || "";
     const normalizedBody = bodyText.replace(/\s+/g, " ").trim();
-    const isLongBody = normalizedBody.length > 180 || bodyText.split(/\r?\n/).length > 3;
+    const isLongBody =
+      normalizedBody.length > 180 || bodyText.split(/\r?\n/).length > 3;
     const bodyId = `profileBody${String(user.id).replace(/[^a-zA-Z0-9_-]/g, "") || "item"}`;
-    const contactMode = user.contactMode || (user.familyApproval ? "family" : "direct");
-    const contactModeLabel = contactMode === "family"
-      ? "Family contact"
-      : contactMode === "private"
-        ? "Private contact"
-        : "Direct contact";
+    const contactMode =
+      user.contactMode || (user.familyApproval ? "family" : "direct");
+    const contactModeLabel =
+      contactMode === "family"
+        ? "Family contact"
+        : contactMode === "private"
+          ? "Private contact"
+          : "Direct contact";
     const trustBadges = [
-      user.verified ? '<span class="trust-badge trust-badge-verified">Verified</span>' : "",
-      user.familyApproval ? '<span class="trust-badge trust-badge-family">Family approved</span>' : "",
-      contactMode !== "direct" ? `<span class="trust-badge trust-badge-private">${escapeHtml(contactModeLabel)}</span>` : "",
-      user.values ? '<span class="trust-badge trust-badge-values">Values-led</span>' : "",
-    ].filter(Boolean).join("");
-    const primaryActionLabel = contactMode !== "direct" || user.familyApproval
-      ? "Contact safely"
-      : "Contact";
+      user.verified
+        ? '<span class="trust-badge trust-badge-verified">Verified</span>'
+        : "",
+      user.familyApproval
+        ? '<span class="trust-badge trust-badge-family">Family approved</span>'
+        : "",
+      contactMode !== "direct"
+        ? `<span class="trust-badge trust-badge-private">${escapeHtml(contactModeLabel)}</span>`
+        : "",
+      user.values
+        ? '<span class="trust-badge trust-badge-values">Values-led</span>'
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
+    const primaryActionLabel =
+      contactMode !== "direct" || user.familyApproval
+        ? "Contact safely"
+        : "Contact";
     const premiumBadge = tone.premium
       ? `<div class="premium-badge premium-badge--${tone.tone}">${escapeHtml(tone.badgeLabel)}</div>`
       : "";
     const titleHtml = `<h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>`;
-    const trustHtml = trustBadges ? `<div class="card-trust-row">${trustBadges}</div>` : "";
-    const bodyHtml = `<p id="${bodyId}" class="font-urdu text-gray-700 card-body-urdu${isLongBody ? " is-trimmed" : ""}">${formatUserText(bodyText)}</p>`;
-    const contactNoteHtml = user.contactMode || user.familyApproval || user.verified || user.values
-      ? `<div class="card-contact-note">${escapeHtml([
-          user.verified ? "Verified profile" : "",
-          contactMode !== "direct" ? contactModeLabel : "",
-          user.values ? user.values : "",
-        ].filter(Boolean).join(" | "))}</div>`
+    const trustHtml = trustBadges
+      ? `<div class="card-trust-row">${trustBadges}</div>`
       : "";
+    const bodyHtml = `<p id="${bodyId}" class="font-urdu text-gray-700 card-body-urdu${isLongBody ? " is-trimmed" : ""}">${formatUserText(bodyText)}</p>`;
+    const contactNoteHtml =
+      user.contactMode || user.familyApproval || user.verified || user.values
+        ? `<div class="card-contact-note">${escapeHtml(
+            [
+              user.verified ? "Verified profile" : "",
+              contactMode !== "direct" ? contactModeLabel : "",
+              user.values ? user.values : "",
+            ]
+              .filter(Boolean)
+              .join(" | "),
+          )}</div>`
+        : "";
     const toggleHtml = isLongBody
       ? `<button class="card-toggle-btn" type="button" aria-controls="${bodyId}" aria-expanded="false">Read more</button>`
       : "";
     const metaHtml = `
       <div class="card-meta">
-        <small>LR ID: ${escapeHtml(String(user.id))}</small>
+        <small>IR ID: ${escapeHtml(String(user.id))}</small>
         <small>Date: ${escapeHtml(formatDate(user.date))}</small>
       </div>
     `;
@@ -162,7 +222,9 @@ export class Renderer {
         <div class="card-premium-sheen" aria-hidden="true"></div>
         <div class="card-premium-content">
           <div class="card-premium-topline">
+            <span class="card-premium-rule card-premium-rule--lead" aria-hidden="true"></span>
             ${premiumBadge}
+            <span class="card-premium-rule card-premium-rule--tail" aria-hidden="true"></span>
           </div>
                 ${titleHtml}
                 ${trustHtml}
@@ -213,7 +275,11 @@ export class Renderer {
 
   attachCardGestures(card, user) {
     const hasActionTarget = (target) =>
-      Boolean(target && target.closest && target.closest(".action-btn, .card-toggle-btn"));
+      Boolean(
+        target &&
+        target.closest &&
+        target.closest(".action-btn, .card-toggle-btn"),
+      );
 
     let lastTapAt = 0;
     let longPressTimer = null;
@@ -247,7 +313,7 @@ export class Renderer {
           this.options.onLongPress?.(user);
         }, 600);
       },
-      { passive: true }
+      { passive: true },
     );
 
     card.addEventListener(
@@ -263,7 +329,7 @@ export class Renderer {
           clearLongPress();
         }
       },
-      { passive: true }
+      { passive: true },
     );
 
     card.addEventListener(
@@ -287,7 +353,7 @@ export class Renderer {
 
         lastTapAt = now;
       },
-      { passive: true }
+      { passive: true },
     );
 
     card.addEventListener(
@@ -297,7 +363,7 @@ export class Renderer {
         longPressTriggered = false;
         clearLongPress();
       },
-      { passive: true }
+      { passive: true },
     );
 
     // Desktop fallback for quick testing.
@@ -325,7 +391,10 @@ export class Renderer {
     try {
       blob = await this.createUserCardImageBlob(user, cardElement);
     } catch (error) {
-      console.warn("Card snapshot failed, falling back to legacy poster", error);
+      console.warn(
+        "Card snapshot failed, falling back to legacy poster",
+        error,
+      );
       blob = await this.createLegacyUserCardImageBlob(user);
     }
     const fileName = `InstaRishta-LR${user.id}.png`;
@@ -344,7 +413,7 @@ export class Renderer {
       try {
         await navigator.share({
           title: `InstaRishta LR ${user.id}`,
-          text: `LR ID: ${user.id}`,
+          text: `IR ID: ${user.id}`,
           files: [file],
         });
         this.showToast("Card shared");
@@ -390,17 +459,26 @@ export class Renderer {
 
     ctx.fillStyle = "#4f46e5";
     ctx.font = "700 64px Inter, Arial, sans-serif";
-    ctx.fillText(`LR ID: ${user.id}`, 120, 290);
+    ctx.fillText(`IR ID: ${user.id}`, 120, 290);
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "700 30px Inter, Arial, sans-serif";
     const trustFlags = [];
     if (user.verified) trustFlags.push("Verified");
     if (user.familyApproval) trustFlags.push("Family approved");
-    if (user.contactMode && user.contactMode !== "direct") trustFlags.push(toTitleCase(user.contactMode));
+    if (user.contactMode && user.contactMode !== "direct")
+      trustFlags.push(toTitleCase(user.contactMode));
     if (user.values) trustFlags.push("Values-led");
     if (trustFlags.length) {
-      this.drawWrappedText(ctx, trustFlags.join(" | "), 120, 340, width - 240, 36, 2);
+      this.drawWrappedText(
+        ctx,
+        trustFlags.join(" | "),
+        120,
+        340,
+        width - 240,
+        36,
+        2,
+      );
     }
 
     ctx.fillStyle = "#111827";
@@ -412,7 +490,7 @@ export class Renderer {
       trustFlags.length ? 400 : 380,
       width - 240,
       54,
-      3
+      3,
     );
 
     ctx.fillStyle = "#374151";
@@ -424,12 +502,16 @@ export class Renderer {
       currentY + 20,
       width - 240,
       46,
-      12
+      12,
     );
 
     ctx.fillStyle = "#6b7280";
     ctx.font = "500 30px Inter, Arial, sans-serif";
-    ctx.fillText(`Date: ${formatDate(user.date)}`, 120, Math.min(currentY + 70, 1130));
+    ctx.fillText(
+      `Date: ${formatDate(user.date)}`,
+      120,
+      Math.min(currentY + 70, 1130),
+    );
 
     ctx.fillStyle = "#111827";
     ctx.font = "600 28px Inter, Arial, sans-serif";
@@ -445,7 +527,7 @@ export class Renderer {
           resolve(blob);
         },
         "image/png",
-        0.95
+        0.95,
       );
     });
   }
@@ -467,12 +549,15 @@ export class Renderer {
 
     const snapshotRoot = document.createElement("div");
     const bodyStyles = window.getComputedStyle(document.body);
-    const backgroundColor = bodyStyles.backgroundColor && bodyStyles.backgroundColor !== "rgba(0, 0, 0, 0)"
-      ? bodyStyles.backgroundColor
-      : "#f3f7fb";
-    const backgroundImage = bodyStyles.backgroundImage && bodyStyles.backgroundImage !== "none"
-      ? bodyStyles.backgroundImage
-      : "";
+    const backgroundColor =
+      bodyStyles.backgroundColor &&
+      bodyStyles.backgroundColor !== "rgba(0, 0, 0, 0)"
+        ? bodyStyles.backgroundColor
+        : "#f3f7fb";
+    const backgroundImage =
+      bodyStyles.backgroundImage && bodyStyles.backgroundImage !== "none"
+        ? bodyStyles.backgroundImage
+        : "";
 
     snapshotRoot.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
     snapshotRoot.style.cssText = [
@@ -487,12 +572,19 @@ export class Renderer {
       backgroundImage ? "background-repeat:no-repeat" : "",
       "overflow:visible",
       "isolation:isolate",
-    ].filter(Boolean).join(";");
+    ]
+      .filter(Boolean)
+      .join(";");
 
+    snapshotRoot.appendChild(this.buildSnapshotStyleElement());
     const clonedCard = this.cloneNodeWithComputedStyles(sourceCard);
     snapshotRoot.appendChild(clonedCard);
 
-    const image = await this.loadSvgImage(snapshotRoot, snapshotWidth, snapshotHeight);
+    const image = await this.loadSvgImage(
+      snapshotRoot,
+      snapshotWidth,
+      snapshotHeight,
+    );
     const canvas = document.createElement("canvas");
     canvas.width = snapshotWidth;
     canvas.height = snapshotHeight;
@@ -512,7 +604,7 @@ export class Renderer {
           resolve(blob);
         },
         "image/png",
-        0.98
+        0.98,
       );
     });
   }
@@ -520,22 +612,29 @@ export class Renderer {
   findRenderedCardElement(user) {
     if (!user?.id || typeof document === "undefined") return null;
     const targetId = String(user.id);
-    return Array.from(document.querySelectorAll(".card[data-user-id]")).find(
-      (card) => card.getAttribute("data-user-id") === targetId
-    ) || null;
+    return (
+      Array.from(document.querySelectorAll(".card[data-user-id]")).find(
+        (card) => card.getAttribute("data-user-id") === targetId,
+      ) || null
+    );
   }
 
   getSnapshotPadding(cardElement) {
     const computed = window.getComputedStyle(cardElement);
     const shadow = computed.boxShadow || "";
-    const shadowMatch = shadow.match(/(-?\d+(?:\.\d+)?)px\s+(-?\d+(?:\.\d+)?)px\s+(\d+(?:\.\d+)?)px(?:\s+(\d+(?:\.\d+)?)px)?/);
+    const shadowMatch = shadow.match(
+      /(-?\d+(?:\.\d+)?)px\s+(-?\d+(?:\.\d+)?)px\s+(\d+(?:\.\d+)?)px(?:\s+(\d+(?:\.\d+)?)px)?/,
+    );
     if (!shadowMatch) return 40;
 
     const offsetX = Math.abs(Number(shadowMatch[1] || 0));
     const offsetY = Math.abs(Number(shadowMatch[2] || 0));
     const blur = Number(shadowMatch[3] || 0);
     const spread = Number(shadowMatch[4] || 0);
-    return Math.max(32, Math.ceil(Math.max(offsetX, offsetY) + blur + spread + 12));
+    return Math.max(
+      32,
+      Math.ceil(Math.max(offsetX, offsetY) + blur + spread + 12),
+    );
   }
 
   cloneNodeWithComputedStyles(node) {
@@ -573,6 +672,40 @@ export class Renderer {
 
     target.style.setProperty("animation", "none", "important");
     target.style.setProperty("transition", "none", "important");
+
+    if (source.matches?.(SNAPSHOT_URDU_SELECTOR)) {
+      target.style.setProperty("font-family", URDU_FONT_STACK, "important");
+      target.style.setProperty("text-rendering", "geometricPrecision");
+      target.style.setProperty("-webkit-font-smoothing", "antialiased");
+      target.style.setProperty("font-feature-settings", '"liga" 1, "calt" 1');
+    }
+  }
+
+  buildSnapshotStyleElement() {
+    const style = document.createElement("style");
+    style.textContent = `
+      ${LOCAL_URDU_FONT_FACE_CSS}
+
+      ${SNAPSHOT_URDU_SELECTOR} {
+        font-family: ${URDU_FONT_STACK} !important;
+        text-rendering: geometricPrecision;
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings: "liga" 1, "calt" 1;
+      }
+
+      .card-title-urdu {
+        text-align: center !important;
+        text-align-last: center !important;
+      }
+
+      .card-body-urdu {
+        direction: rtl !important;
+        text-align: right !important;
+        text-align-last: right !important;
+        unicode-bidi: plaintext;
+      }
+    `;
+    return style;
   }
 
   buildSvgSnapshotMarkup(node, width, height) {
@@ -618,7 +751,9 @@ export class Renderer {
       image.decoding = "async";
       image.onload = () => resolve(image);
       image.onerror = () => {
-        const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+        const svgBlob = new Blob([svgMarkup], {
+          type: "image/svg+xml;charset=utf-8",
+        });
         const blobUrl = URL.createObjectURL(svgBlob);
         const fallbackImage = new Image();
         fallbackImage.decoding = "async";
@@ -637,6 +772,15 @@ export class Renderer {
   }
 
   async waitForFonts() {
+    if (document.fonts?.load) {
+      await Promise.allSettled([
+        document.fonts.load('400 24px "FaizResolved"'),
+        document.fonts.load(`400 24px ${URDU_FONT_STACK}`),
+        document.fonts.load('400 24px "Noto Nastaliq Urdu"'),
+        document.fonts.load('400 24px "Noto Naskh Arabic"'),
+      ]);
+    }
+
     if (document.fonts?.ready) {
       try {
         await document.fonts.ready;
@@ -663,7 +807,10 @@ export class Renderer {
   }
 
   drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
-    const words = String(text || "").replace(/\s+/g, " ").trim().split(" ");
+    const words = String(text || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ");
     const lines = [];
     let line = "";
 
@@ -688,7 +835,8 @@ export class Renderer {
     if (words.length && lines.length === maxLines) {
       const last = lines[maxLines - 1];
       if (last && !last.endsWith("...")) {
-        lines[maxLines - 1] = `${last.slice(0, Math.max(0, last.length - 3))}...`;
+        lines[maxLines - 1] =
+          `${last.slice(0, Math.max(0, last.length - 3))}...`;
       }
     }
 
@@ -737,7 +885,9 @@ export class Renderer {
         <button class="chip-close" data-filter="${escapeHtml(filter.name)}">&times;</button>
       `;
 
-      chip.querySelector(".chip-close")?.addEventListener("click", () => onRemove(filter.name));
+      chip
+        .querySelector(".chip-close")
+        ?.addEventListener("click", () => onRemove(filter.name));
       container.appendChild(chip);
     });
   }
@@ -753,19 +903,25 @@ export class Renderer {
 
     if (remaining === 0) {
       timerElement.textContent = `Resets in ${resetText}`;
-      indicator.style.background = "linear-gradient(135deg, #fef2f2, #fee2e2)";
-      indicator.style.borderColor = "#ef4444";
-      remainingElement.style.color = "#dc2626";
+      indicator.style.setProperty("--limit-accent", "#dc2626");
+      indicator.style.setProperty("--limit-accent-end", "#ef4444");
+      indicator.style.setProperty("--limit-text-strong", "#dc2626");
+      indicator.style.setProperty("--limit-text", "#991b1b");
+      indicator.style.setProperty("--limit-border", "rgba(239, 68, 68, 0.28)");
     } else if (remaining <= 3) {
       timerElement.textContent = `Resets in ${resetText}`;
-      indicator.style.background = "linear-gradient(135deg, #fffbeb, #fef3c7)";
-      indicator.style.borderColor = "#f59e0b";
-      remainingElement.style.color = "#d97706";
+      indicator.style.setProperty("--limit-accent", "#d97706");
+      indicator.style.setProperty("--limit-accent-end", "#f59e0b");
+      indicator.style.setProperty("--limit-text-strong", "#d97706");
+      indicator.style.setProperty("--limit-text", "#92400e");
+      indicator.style.setProperty("--limit-border", "rgba(245, 158, 11, 0.28)");
     } else {
       timerElement.textContent = "Resets every hour";
-      indicator.style.background = "linear-gradient(135deg, #f0f9ff, #e0f2fe)";
-      indicator.style.borderColor = "#0ea5e9";
-      remainingElement.style.color = "#0284c7";
+      indicator.style.setProperty("--limit-accent", "#0284c7");
+      indicator.style.setProperty("--limit-accent-end", "#0ea5e9");
+      indicator.style.setProperty("--limit-text-strong", "#0284c7");
+      indicator.style.setProperty("--limit-text", "#0369a1");
+      indicator.style.setProperty("--limit-border", "rgba(14, 165, 233, 0.24)");
     }
   }
 
@@ -782,6 +938,3 @@ export class Renderer {
     }, 2200);
   }
 }
-
-
-
