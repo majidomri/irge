@@ -6,6 +6,7 @@ export class DrawerController {
     this.overlay = $("drawerOverlay");
     this.openButton = $("openDrawer");
     this.closeButton = $("closeDrawer");
+    this.scrollContainer = this.drawer?.querySelector(".drawer-content") ?? null;
     this.isOpen = false;
     this.swipeState = {
       active: false,
@@ -13,17 +14,23 @@ export class DrawerController {
       startY: 0,
       startTime: 0,
     };
+    this.handleViewportResize = () => this.syncViewportHeight();
   }
 
   init() {
     if (this.drawer) this.drawer.setAttribute("inert", "");
     this.openButton?.setAttribute("aria-controls", "mobileDrawer");
     this.openButton?.setAttribute("aria-expanded", "false");
+    this.syncViewportHeight();
 
     this.openButton?.addEventListener("click", () => this.toggle(true));
     this.closeButton?.addEventListener("click", () => this.toggle(false));
     this.overlay?.addEventListener("click", () => this.toggle(false));
     this.bindSwipeToClose();
+    window.addEventListener("resize", this.handleViewportResize, { passive: true });
+    window.addEventListener("orientationchange", this.handleViewportResize, { passive: true });
+    window.visualViewport?.addEventListener("resize", this.handleViewportResize, { passive: true });
+    window.visualViewport?.addEventListener("scroll", this.handleViewportResize, { passive: true });
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && this.isOpen) {
@@ -36,6 +43,7 @@ export class DrawerController {
     if (!this.drawer || !this.overlay) return;
     this.isOpen = open;
     this.resetDrawerDrag();
+    this.syncViewportHeight();
 
     if (open) {
       removeClass(this.drawer, "closed");
@@ -73,7 +81,7 @@ export class DrawerController {
       "touchstart",
       (event) => {
         if (!this.isOpen) return;
-        if (this.drawer.scrollTop > 0) return;
+        if (this.getScrollTop() > 0) return;
         const touch = event.touches[0];
         if (!touch) return;
 
@@ -89,7 +97,7 @@ export class DrawerController {
       "touchmove",
       (event) => {
         if (!this.isOpen || !this.swipeState.active) return;
-        if (this.drawer.scrollTop > 0) {
+        if (this.getScrollTop() > 0) {
           this.swipeState.active = false;
           return;
         }
@@ -149,5 +157,21 @@ export class DrawerController {
     if (!this.drawer) return;
     this.drawer.style.transition = "";
     this.drawer.style.transform = "";
+  }
+
+  getScrollTop() {
+    return this.scrollContainer?.scrollTop ?? this.drawer?.scrollTop ?? 0;
+  }
+
+  syncViewportHeight() {
+    if (!this.drawer) return;
+
+    const viewportHeight = Math.round(
+      window.visualViewport?.height || window.innerHeight || 0
+    );
+
+    if (viewportHeight > 0) {
+      this.drawer.style.setProperty("--drawer-viewport-height", `${viewportHeight}px`);
+    }
   }
 }
