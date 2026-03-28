@@ -4,7 +4,7 @@
 import { StorageService } from "../services/storage-service.js";
 import { DataService } from "../services/data-service.js";
 
-const DEFAULT_REMOTE_URL = "https://raw.githubusercontent.com/majidomri/irge/main/jsdata.json";
+const DEFAULT_REMOTE_URL = "https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles";
 const DRAFT_STORAGE_KEY = "InstaRishtaProfileStudioDraft:v1";
 const SOURCE_STORAGE_KEY = "InstaRishtaProfileStudioSource:v1";
 

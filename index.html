@@ -662,11 +662,9 @@
         debug: true,
         allowTestData: true,
         useTestData: false,
-        // Put your live JSON first. If it fails, the script automatically tries the next source.
+        // Profiles are loaded through the Cloudflare Worker so the repo/raw JSON URL stays hidden from the client.
         dataSources: [
-          "jsdata.json",
-          "data/jsdata.json",
-          "https://raw.githubusercontent.com/majidomri/irge/main/jsdata.json"
+          "https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles"
         ],
         profileAdEndpoint: "https://instarishta-profile-relay.instarishtalead.workers.dev/api/submit-profile-ad"
       };
@@ -676,12 +674,9 @@
           ? window.INSTA_RISHTA_CONFIG.dataSources
           : [];
 
-        const primaryLocalSource = sources.find((source) => {
-          if (typeof source !== "string") return false;
-          const trimmed = source.trim();
-          if (!trimmed) return false;
-          return !/^https?:\/\//i.test(trimmed);
-        }) || "jsdata.json";
+        const primarySource = sources.find((source) =>
+          typeof source === "string" && source.trim()
+        ) || "jsdata.json";
 
         const store = window.__INSTA_DATA_PREFETCH instanceof Map
           ? window.__INSTA_DATA_PREFETCH
@@ -689,21 +684,22 @@
         window.__INSTA_DATA_PREFETCH = store;
 
         const runPrefetch = () => {
-          const sourceUrl = new URL(primaryLocalSource, window.location.href).href;
+          const sourceUrl = new URL(primarySource, window.location.href).href;
           if (store.has(sourceUrl)) return;
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 8000);
+          const isRemote = new URL(sourceUrl).origin !== window.location.origin;
 
-          const preloadPromise = fetch(primaryLocalSource, {
+          const preloadPromise = fetch(sourceUrl, {
             method: "GET",
             cache: "default",
-            credentials: "same-origin",
+            credentials: isRemote ? "omit" : "same-origin",
             signal: controller.signal,
           })
             .then((response) => {
               if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error("HTTP " + response.status);
               }
               return response.json();
             })

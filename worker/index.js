@@ -11,11 +11,18 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 3;
 const MAX_BIO_LENGTH = 3000;
 const MAX_FIELD_LENGTH = 220;
+const PROFILE_CACHE_KEY = "profiles:payload";
+const PROFILE_RAW_KEY = "profiles:raw";
+const PROFILE_CACHE_TTL = 60 * 15;
 const rateLimitStore = globalThis.__instarishtaLeadRateLimitStore || new Map();
 globalThis.__instarishtaLeadRateLimitStore = rateLimitStore;
 
 function getLeadStore(env) {
   return env.insta || env.INSTA || null;
+}
+
+function getProfilesSource(env) {
+  return String(env.PROFILES_SOURCE_URL || "").trim();
 }
 
 function parseCsvList(value, fallback = []) {
@@ -98,7 +105,7 @@ function isAllowedOrigin(origin, env) {
 
 function buildCorsHeaders(origin, env) {
   const headers = new Headers({
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
@@ -269,6 +276,93 @@ function validateSubmission(submission) {
   return "";
 }
 
+async function readCachedProfiles(store) {
+  if (!store) return null;
+
+  try {
+    const rawPayload = await store.get(PROFILE_RAW_KEY);
+    if (typeof rawPayload === "string" && rawPayload.trim()) {
+      JSON.parse(rawPayload);
+      return {
+        payload: rawPayload,
+        source: "kv-raw",
+        cachedAt: new Date().toISOString(),
+      };
+    }
+
+    const cached = await store.get(PROFILE_CACHE_KEY, { type: "json" });
+    if (!cached || typeof cached.payload !== "string") return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedProfiles(store, payload, source) {
+  if (!store) return;
+
+  await store.put(PROFILE_CACHE_KEY, JSON.stringify({
+    payload,
+    source,
+    cachedAt: new Date().toISOString(),
+  }), {
+    expirationTtl: PROFILE_CACHE_TTL,
+  });
+}
+
+async function fetchProfilesPayload(env, store) {
+  const source = getProfilesSource(env);
+  const cached = await readCachedProfiles(store);
+
+  if (cached?.source === "kv-raw" && cached?.payload) {
+    return { payload: cached.payload, source: cached.source, cached: true, stale: false };
+  }
+
+  if (!source) {
+    if (cached?.payload) {
+      return { payload: cached.payload, source: cached.source || "kv-cache", cached: true, stale: true };
+    }
+    const error = new Error("Profiles source is not configured.");
+    error.statusCode = 503;
+    throw error;
+  }
+
+  try {
+    const response = await fetch(source, {
+      method: "GET",
+      headers: {
+        Accept: "application/json; charset=utf-8",
+      },
+    });
+
+    if (!response.ok) {
+      const error = new Error(`Profiles source HTTP ${response.status}`);
+      error.statusCode = response.status || 502;
+      throw error;
+    }
+
+    const payload = await response.text();
+    JSON.parse(payload);
+    await writeCachedProfiles(store, payload, source);
+    return { payload, source, cached: false, stale: false };
+  } catch (error) {
+    if (cached?.payload) {
+      return { payload: cached.payload, source: cached.source || source, cached: true, stale: true };
+    }
+
+    if (!error.statusCode) error.statusCode = 502;
+    throw error;
+  }
+}
+
+function buildJsonHeaders(origin, env, extra = {}) {
+  const headers = buildCorsHeaders(origin, env);
+  for (const [key, value] of Object.entries(extra)) {
+    headers.set(key, value);
+  }
+  return headers;
+}
+
 async function reserveSubmissionFingerprint(store, fingerprint) {
   if (!store || !fingerprint) return { reserved: true, key: "" };
 
@@ -355,6 +449,32 @@ export default {
 
     if (url.pathname === "/health" && request.method === "GET") {
       return jsonResponse({ ok: true, time: Date.now() }, 200, origin, env);
+    }
+
+    if (url.pathname === "/api/profiles" && request.method === "GET") {
+      if (!isAllowedOrigin(origin, env)) {
+        return jsonResponse({ ok: false, error: "Origin not allowed" }, 403, origin, env);
+      }
+
+      try {
+        const leadStore = getLeadStore(env);
+        const result = await fetchProfilesPayload(env, leadStore);
+        return new Response(result.payload, {
+          status: 200,
+          headers: buildJsonHeaders(origin, env, {
+            "Cache-Control": "public, max-age=300, s-maxage=900",
+            "X-InstaRishta-Source": result.cached ? "worker-cache" : "worker-origin",
+            "X-InstaRishta-Stale": result.stale ? "true" : "false",
+          }),
+        });
+      } catch (error) {
+        return jsonResponse(
+          { ok: false, error: error?.message || "Profiles unavailable" },
+          error?.statusCode || 502,
+          origin,
+          env,
+        );
+      }
     }
 
     if (url.pathname !== "/api/submit-profile-ad") {
