@@ -5,6 +5,7 @@ import { StorageService } from "./services/storage-service.js";
 import { ActivityLogger } from "./services/activity-logger.js";
 import { ContactService } from "./services/contact-service.js";
 import { DataService } from "./services/data-service.js";
+import { VoicePreviewService } from "./services/voice-preview-service.js";
 import { applyFilters } from "./modules/filter-engine.js";
 import { ThemeController } from "./modules/theme-controller.js";
 import { TypingController } from "./modules/typing-controller.js";
@@ -32,19 +33,31 @@ class InstaRishtaApp {
     this.storage = new StorageService();
     this.logger = new ActivityLogger(this.storage, config.activityLogKey);
     this.contactService = new ContactService(this.storage, config.contactLimit);
+    this.audioPreviewLimit = new ContactService(
+      this.storage,
+      config.audioPreviewLimit,
+    );
     this.runtime = runtime;
     this.dataService = new DataService(config.dataSources, {
       allowTestData: config.allowTestData,
       useTestData: config.useTestData,
       secureRuntimeSource: config.secureRuntimeSource,
     });
+    this.voicePreviews = new VoicePreviewService({
+      onStateChange: (userId, state) =>
+        this.renderer.setVoicePreviewState(userId, state),
+    });
 
     this.renderer = new Renderer({
       onContact: (user) => this.handleContact(user),
       onCall: (user) => this.handleCall(user),
+      onInstagram: (user) => this.handleInstagram(user),
       onBiodata: (user) => this.handleBiodata(user),
       onShare: (user) => this.handleShareCard(user),
       onLongPress: (user) => this.handleLongPressCard(user),
+      onVoicePreview: (user) => this.handleVoicePreview(user),
+      getVoicePreviewMeta: (user) => this.voicePreviews.getPreviewMeta(user),
+      getVoicePreviewState: (userId) => this.voicePreviews.getState(userId),
     });
 
     this.theme = new ThemeController(this.storage, config.themeStorageKey);
@@ -80,6 +93,7 @@ class InstaRishtaApp {
     this.drawer.init();
     this.admin.init();
     this.bindContactFlow();
+    this.bindUsageLimitModal();
     this.bindPostAdModal();
     this.applyFiltersFromUrl();
     this.bindEvents();
@@ -491,6 +505,34 @@ class InstaRishtaApp {
     });
   }
 
+  bindUsageLimitModal() {
+    this.usageLimitModal = $("usageLimitModal");
+    this.usageLimitTitle = $("usageLimitTitle");
+    this.usageLimitCopy = $("usageLimitCopy");
+    this.usageLimitBody = $("usageLimitBody");
+    this.usageLimitPrimaryBtn = $("usageLimitPrimaryBtn");
+    this.usageLimitSecondaryBtn = $("usageLimitSecondaryBtn");
+    this.closeUsageLimitBtn = $("closeUsageLimit");
+    this.usageLimitSupportAction = null;
+
+    const close = () => this.closeUsageLimitModal();
+
+    this.usageLimitModal?.addEventListener("click", (event) => {
+      if (event.target?.dataset?.usageLimitClose !== undefined) close();
+    });
+    this.closeUsageLimitBtn?.addEventListener("click", close);
+    this.usageLimitSecondaryBtn?.addEventListener("click", close);
+    this.usageLimitPrimaryBtn?.addEventListener("click", () =>
+      this.openUsageLimitSupport(),
+    );
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !this.usageLimitModal?.hidden) {
+        close();
+      }
+    });
+  }
+
   requestSplashHide() {
     if (this.splashDismissScheduled) return;
 
@@ -686,12 +728,152 @@ class InstaRishtaApp {
   }
 
   updateContactLimitIndicator() {
-    const remaining = this.contactService.getRemainingAttempts();
-    const reset = this.contactService.formatTimeRemaining(
+    const contactRemaining = this.contactService.getRemainingAttempts();
+    const contactReset = this.contactService.formatTimeRemaining(
       this.contactService.getTimeUntilReset(),
     );
+    const audioRemaining = this.audioPreviewLimit.getRemainingAttempts();
+    const audioReset = this.audioPreviewLimit.formatTimeRemaining(
+      this.audioPreviewLimit.getTimeUntilReset(),
+    );
 
-    this.renderer.updateContactLimitIndicator(remaining, reset);
+    this.renderer.updateContactLimitIndicator({
+      contact: {
+        remaining: contactRemaining,
+        resetText: contactReset,
+        maxAttempts: config.contactLimit.maxAttempts,
+      },
+      audio: {
+        remaining: audioRemaining,
+        resetText: audioReset,
+        maxAttempts: config.audioPreviewLimit.maxAttempts,
+      },
+    });
+  }
+
+  buildUsageLimitCards(focus = "contact") {
+    const contactRemaining = this.contactService.getRemainingAttempts();
+    const contactReset = this.contactService.formatTimeRemaining(
+      this.contactService.getTimeUntilReset(),
+    );
+    const audioRemaining = this.audioPreviewLimit.getRemainingAttempts();
+    const audioReset = this.audioPreviewLimit.formatTimeRemaining(
+      this.audioPreviewLimit.getTimeUntilReset(),
+    );
+
+    const cards = [];
+
+    if (contactRemaining <= 0 || focus === "contact") {
+      cards.push({
+        kind: "contact",
+        title: "Contact access",
+        detail: `${config.contactLimit.maxAttempts} openings per hour`,
+        reset: contactRemaining <= 0 ? `Resets in ${contactReset}` : "Available",
+        exhausted: contactRemaining <= 0,
+      });
+    }
+
+    if (audioRemaining <= 0 || focus === "audio") {
+      cards.push({
+        kind: "audio",
+        title: "Voice previews",
+        detail: `${config.audioPreviewLimit.maxAttempts} listens per hour`,
+        reset: audioRemaining <= 0 ? `Resets in ${audioReset}` : "Available",
+        exhausted: audioRemaining <= 0,
+      });
+    }
+
+    return { cards };
+  }
+
+  openUsageLimitModal({ focus = "contact", supportKind = null } = {}) {
+    if (!this.usageLimitModal) return;
+
+    const { cards } = this.buildUsageLimitCards(focus);
+    if (!cards.length) return;
+
+    const primaryCard = cards.find((card) => card.kind === focus) || cards[0];
+
+    if (this.usageLimitTitle) {
+      this.usageLimitTitle.textContent =
+        primaryCard.kind === "audio"
+          ? "Voice preview limit reached"
+          : "Contact limit reached";
+    }
+
+    if (this.usageLimitCopy) {
+      this.usageLimitCopy.textContent =
+        primaryCard.kind === "audio"
+          ? "Voice previews are paused until the current hourly window resets."
+          : "Contact access is paused until the current hourly window resets.";
+    }
+
+    if (this.usageLimitBody) {
+      this.usageLimitBody.innerHTML = cards
+        .map(
+          (card) => `
+            <div class="usage-limit-card${card.exhausted ? " is-exhausted" : ""}">
+              <span class="usage-limit-chip">${escapeHtml(card.title)}</span>
+              <strong>${escapeHtml(card.detail)}</strong>
+              <p>${escapeHtml(card.reset)}</p>
+            </div>
+          `,
+        )
+        .join("");
+    }
+
+    this.usageLimitSupportAction = supportKind;
+    if (this.usageLimitPrimaryBtn) {
+      const showSupport = supportKind === "whatsapp" || supportKind === "call";
+      this.usageLimitPrimaryBtn.hidden = !showSupport;
+      this.usageLimitPrimaryBtn.textContent =
+        supportKind === "call" ? "Call support" : "Contact support";
+    }
+
+    this.usageLimitModal.hidden = false;
+    this.usageLimitModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    (this.usageLimitPrimaryBtn && !this.usageLimitPrimaryBtn.hidden
+      ? this.usageLimitPrimaryBtn
+      : this.usageLimitSecondaryBtn
+    )?.focus();
+  }
+
+  closeUsageLimitModal() {
+    if (!this.usageLimitModal) return;
+    this.usageLimitModal.hidden = true;
+    this.usageLimitModal.setAttribute("aria-hidden", "true");
+    this.usageLimitSupportAction = null;
+
+    if (this.contactFlowModal?.hidden === false || this.postAdModal?.hidden === false) {
+      document.body.style.overflow = "hidden";
+      return;
+    }
+
+    document.body.style.overflow = "";
+  }
+
+  openUsageLimitSupport() {
+    if (this.usageLimitSupportAction === "call") {
+      const number = this.normalizeDialNumber(config.contactLimit.businessPhone);
+      if (number) window.open(`tel:${number}`, "_self");
+      this.closeUsageLimitModal();
+      return;
+    }
+
+    if (this.usageLimitSupportAction === "whatsapp") {
+      const number = this.normalizeWhatsAppNumber(
+        config.contactLimit.businessWhatsApp,
+      );
+      if (number) {
+        window.open(
+          `https://wa.me/${number}?text=${encodeURIComponent("Hi! I need unlimited access to InstaRishta contacts.")}`,
+          "_blank",
+        );
+      }
+    }
+
+    this.closeUsageLimitModal();
   }
 
   handleContact(user) {
@@ -703,25 +885,7 @@ class InstaRishtaApp {
     const remaining = this.contactService.getRemainingAttempts();
     if (remaining <= 0) {
       this.logger.log("contact_limit_reached", { userId: user.id });
-      const reset = this.contactService.formatTimeRemaining(
-        this.contactService.getTimeUntilReset(),
-      );
-
-      if (
-        confirm(
-          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to contact support.`,
-        )
-      ) {
-        const number = config.contactLimit.businessWhatsApp.replace(
-          /[^\d+]/g,
-          "",
-        );
-        window.open(
-          `https://wa.me/${number}?text=Hi! I need unlimited access to InstaRishta contacts.`,
-          "_blank",
-        );
-      }
-
+      this.openUsageLimitModal({ focus: "contact", supportKind: "whatsapp" });
       return;
     }
 
@@ -746,17 +910,7 @@ class InstaRishtaApp {
     const remaining = this.contactService.getRemainingAttempts();
     if (remaining <= 0) {
       this.logger.log("call_limit_reached", { userId: user.id });
-      const reset = this.contactService.formatTimeRemaining(
-        this.contactService.getTimeUntilReset(),
-      );
-
-      if (
-        confirm(
-          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to call support.`,
-        )
-      ) {
-        window.open(`tel:${config.contactLimit.businessPhone}`, "_self");
-      }
+      this.openUsageLimitModal({ focus: "contact", supportKind: "call" });
       return;
     }
 
@@ -786,9 +940,10 @@ class InstaRishtaApp {
     });
   }
 
-  handleBiodata(user) {
+  resolveInstagramUrl(user) {
     const instagramTarget = user.instagramPostId || "";
-    let url = `https://instagram.com/instarishta__/${user.id}`;
+    if (!instagramTarget) return "";
+    let url = "";
     if (instagramTarget) {
       if (/^https?:\/\//i.test(instagramTarget)) {
         url = instagramTarget;
@@ -797,6 +952,39 @@ class InstaRishtaApp {
       } else {
         url = `https://www.instagram.com/p/${encodeURIComponent(instagramTarget)}/`;
       }
+    }
+    return url;
+  }
+
+  resolveBiodataUrl(user) {
+    const target = toSafeString(user?.biodataUrl);
+    if (!target) return "";
+
+    if (/^(https?:|mailto:|tel:|blob:|data:)/i.test(target)) {
+      return target;
+    }
+
+    try {
+      return new URL(target, window.location.href).href;
+    } catch {
+      return "";
+    }
+  }
+
+  handleInstagram(user) {
+    const url = this.resolveInstagramUrl(user);
+    if (!url) {
+      this.renderer.showToast("No Instagram post available");
+      return;
+    }
+    window.open(url, "_blank");
+  }
+
+  handleBiodata(user) {
+    const url = this.resolveBiodataUrl(user);
+    if (!url) {
+      this.renderer.showToast("No biodata available");
+      return;
     }
     window.open(url, "_blank");
   }
@@ -815,9 +1003,47 @@ class InstaRishtaApp {
     }
   }
 
+  async handleVoicePreview(user) {
+    this.logger.log("voice_preview_attempt", { userId: user.id });
+    const actionType = this.voicePreviews.getActionType(user);
+
+    if (actionType === "start") {
+      const remaining = this.audioPreviewLimit.getRemainingAttempts();
+      if (remaining <= 0) {
+        this.logger.log("voice_preview_limit_reached", { userId: user.id });
+        this.openUsageLimitModal({ focus: "audio" });
+        this.updateContactLimitIndicator();
+        return;
+      }
+    }
+
+    try {
+      await this.voicePreviews.toggle(user);
+      if (actionType === "start") {
+        this.audioPreviewLimit.recordAttempt();
+        this.updateContactLimitIndicator();
+      }
+      this.logger.log("voice_preview_toggle", { userId: user.id });
+    } catch (error) {
+      this.logger.log("voice_preview_failed", {
+        userId: user.id,
+        reason: error?.message || "unknown",
+      });
+      this.renderer.showToast("Voice preview unavailable right now");
+    }
+  }
+
   handleLongPressCard(user) {
     this.logger.log("card_long_press", { userId: user.id });
-    this.handleBiodata(user);
+    if (user.biodataUrl) {
+      this.handleBiodata(user);
+      return;
+    }
+    if (user.instagramPostId) {
+      this.handleInstagram(user);
+      return;
+    }
+    this.renderer.showToast("No external profile details available");
   }
 
   getContactMode(user) {
@@ -1011,7 +1237,10 @@ class InstaRishtaApp {
     this.activeContactUser = null;
     this.contactFlowActionTaken = false;
     this.setContactFlowActionsDisabled(false);
-    document.body.style.overflow = "";
+    document.body.style.overflow =
+      this.usageLimitModal?.hidden === false || this.postAdModal?.hidden === false
+        ? "hidden"
+        : "";
     const returnFocus = this.contactFlowReturnFocus;
     this.contactFlowReturnFocus = null;
     if (returnFocus && typeof returnFocus.focus === "function") {
@@ -1037,7 +1266,10 @@ class InstaRishtaApp {
     if (!this.postAdModal) return;
     this.postAdModal.hidden = true;
     this.postAdModal.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
+    document.body.style.overflow =
+      this.usageLimitModal?.hidden === false || this.contactFlowModal?.hidden === false
+        ? "hidden"
+        : "";
   }
 
   getContactFlowMessage(user) {
@@ -1062,25 +1294,10 @@ class InstaRishtaApp {
     const remaining = this.contactService.getRemainingAttempts();
     if (remaining <= 0) {
       this.logger.log(`${kind}_limit_reached`, { userId: user.id });
-      const reset = this.contactService.formatTimeRemaining(
-        this.contactService.getTimeUntilReset(),
-      );
-
-      if (
-        confirm(
-          `You've reached the hourly contact limit (10 contacts/hour).\n\nResets in ${reset}.\n\nClick OK to ${supportLabel} support.`,
-        )
-      ) {
-        const isCall = kind === "call";
-        const supportNumber = isCall
-          ? this.normalizeDialNumber(config.contactLimit.businessPhone)
-          : this.normalizeWhatsAppNumber(config.contactLimit.businessWhatsApp);
-        const supportUrl = isCall
-          ? `tel:${supportNumber}`
-          : `https://wa.me/${supportNumber}?text=${encodeURIComponent("Hi! I need unlimited access to InstaRishta contacts.")}`;
-        window.open(supportUrl, isCall ? "_self" : "_blank");
-      }
-
+      this.openUsageLimitModal({
+        focus: "contact",
+        supportKind: supportLabel === "call" ? "call" : "whatsapp",
+      });
       return false;
     }
 

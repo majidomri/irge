@@ -60,6 +60,27 @@
       },
       "contactNotes": {
         "type": ["string", "null"]
+      },
+      "voiceId": {
+        "type": ["string", "null"]
+      },
+      "voicePath": {
+        "type": ["string", "null"]
+      },
+      "voiceLabel": {
+        "type": ["string", "null"]
+      },
+      "voiceDurationSec": {
+        "type": ["number", "string", "null"]
+      },
+      "voiceEnabled": {
+        "type": ["boolean", "string", "null"]
+      },
+      "instagramPostId": {
+        "type": ["string", "null"]
+      },
+      "biodataUrl": {
+        "type": ["string", "null"]
       }
     },
     "additionalProperties": true

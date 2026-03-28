@@ -235,10 +235,11 @@ function formatKb(bytes) {
 async function writeOutputFile(relPath, content, shouldGzip) {
   const target = path.join(outDir, relPath);
   await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.writeFile(target, content, "utf8");
+  const isTextContent = typeof content === "string";
+  await fs.writeFile(target, content, isTextContent ? "utf8" : undefined);
 
   let gzBytes = 0;
-  if (shouldGzip) {
+  if (shouldGzip && isTextContent) {
     const gz = gzipSync(Buffer.from(content, "utf8"), { level: 9 });
     gzBytes = gz.length;
     await fs.writeFile(`${target}.gz`, gz);
@@ -256,9 +257,12 @@ async function run() {
 
   for (const relPath of inputFiles) {
     const sourcePath = path.join(rootDir, relPath);
-    const raw = await fs.readFile(sourcePath, "utf8");
-    const minified = minifyByExt(relPath, raw);
-    const shouldGzip = textExtensions.has(path.extname(relPath).toLowerCase());
+    const extension = path.extname(relPath).toLowerCase();
+    const shouldGzip = textExtensions.has(extension);
+    const raw = shouldGzip
+      ? await fs.readFile(sourcePath, "utf8")
+      : await fs.readFile(sourcePath);
+    const minified = shouldGzip ? minifyByExt(relPath, raw) : raw;
     const { gzBytes } = await writeOutputFile(relPath, minified, shouldGzip);
 
     totalOriginal += Buffer.byteLength(raw);

@@ -349,6 +349,27 @@ export class DataService {
           "post_id",
         ])
       ),
+      biodataUrl: toSafeString(
+        pickFirst(user, [
+          "biodataUrl",
+          "biodata_url",
+          "biodataLink",
+          "biodata_link",
+          "biodataPdf",
+          "biodata_pdf",
+          "profilePdf",
+          "profile_pdf",
+        ])
+      ),
+      voiceId: toSafeString(
+        pickFirst(user, ["voiceId", "voice_id", "voiceKey", "voice_key"])
+      ),
+      voiceDurationSec: Number(
+        pickFirst(user, ["voiceDurationSec", "voice_duration_sec", "voiceDuration", "voice_duration"])
+      ) || 0,
+      voiceSrc: toSafeString(
+        pickFirst(user, ["voiceSrc", "voice_src", "voiceUrl", "voice_url", "voicePath", "voice_path"])
+      ),
       location: toSafeString(pickFirst(user, ["location", "city", "area"])),
       notes: toSafeString(pickFirst(user, ["notes", "note"])),
       values: toSafeString(
@@ -365,6 +386,21 @@ export class DataService {
       ).replace(/[^\d+]/g, ""),
       contactNotes: toSafeString(
         pickFirst(user, ["contactNotes", "contact_note", "privateContactNote"])
+      ),
+      voiceId: toSafeString(
+        pickFirst(user, ["voiceId", "voice_id", "audioId", "audio_id"])
+      ),
+      voicePath: toSafeString(
+        pickFirst(user, ["voicePath", "voice_path", "audioPath", "audio_path"])
+      ),
+      voiceLabel: toSafeString(
+        pickFirst(user, ["voiceLabel", "voice_label", "audioLabel", "audio_label"])
+      ),
+      voiceDurationSec: Number(
+        pickFirst(user, ["voiceDurationSec", "voice_duration_sec", "audioDurationSec"])
+      ) || 0,
+      voiceEnabled: this.normalizeBoolean(
+        pickFirst(user, ["voiceEnabled", "voice_enabled", "hasVoice", "has_voice"])
       ),
       expiresAt: this.normalizeOptionalDate(
         pickFirst(user, ["expiresAt", "expiryAt", "expireAt", "expires_at"])

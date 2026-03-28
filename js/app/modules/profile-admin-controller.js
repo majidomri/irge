@@ -125,6 +125,7 @@ export class ProfileAdminController {
     this.profilePhone = $("profilePhone");
     this.profileWhatsapp = $("profileWhatsapp");
     this.profileInstagramPostId = $("profileInstagramPostId");
+    this.profileBiodataUrl = $("profileBiodataUrl");
     this.profileAge = $("profileAge");
     this.profileGender = $("profileGender");
     this.profileEducation = $("profileEducation");
@@ -323,6 +324,7 @@ export class ProfileAdminController {
       location: toSafeString(normalized.location),
       notes: toSafeString(normalized.notes),
       instagramPostId: toSafeString(normalized.instagramPostId),
+      biodataUrl: toSafeString(normalized.biodataUrl),
       expiresAt: toSafeString(normalized.expiresAt),
       updatedAt: toSafeString(normalized.updatedAt),
     };
@@ -359,6 +361,7 @@ export class ProfileAdminController {
       phone: normalizePhone(record.phone),
       whatsapp: normalizePhone(record.whatsapp),
       instagramPostId: toSafeString(record.instagramPostId),
+      biodataUrl: toSafeString(record.biodataUrl),
       age: toSafeString(record.age),
       gender: this.normalizeGender(record.gender),
       education: toSafeString(record.education),
@@ -601,6 +604,7 @@ export class ProfileAdminController {
       phone: normalizePhone(profile.phone),
       whatsapp: normalizePhone(profile.whatsapp),
       instagramPostId: toSafeString(profile.instagramPostId),
+      biodataUrl: toSafeString(profile.biodataUrl),
       age: toSafeString(profile.age),
       gender: this.normalizeGender(profile.gender),
       education: toSafeString(profile.education),
@@ -650,6 +654,7 @@ export class ProfileAdminController {
       phone: "",
       whatsapp: "",
       instagramPostId: "",
+      biodataUrl: "",
       age: "",
       gender: "unknown",
       education: "",
@@ -760,6 +765,7 @@ export class ProfileAdminController {
     const phone = normalizePhone(this.profilePhone?.value);
     const whatsapp = normalizePhone(this.profileWhatsapp?.value);
     const instagramPostId = toSafeString(this.profileInstagramPostId?.value);
+    const biodataUrl = toSafeString(this.profileBiodataUrl?.value);
     const age = toSafeString(this.profileAge?.value);
     const gender = this.normalizeGender(this.profileGender?.value);
     const education = toSafeString(this.profileEducation?.value);
@@ -799,6 +805,7 @@ export class ProfileAdminController {
       phone,
       whatsapp,
       instagramPostId,
+      biodataUrl,
       age,
       gender,
       education,
@@ -826,6 +833,7 @@ export class ProfileAdminController {
     if (this.profilePhone) this.profilePhone.value = record.phone ?? "";
     if (this.profileWhatsapp) this.profileWhatsapp.value = record.whatsapp ?? "";
     if (this.profileInstagramPostId) this.profileInstagramPostId.value = record.instagramPostId ?? "";
+    if (this.profileBiodataUrl) this.profileBiodataUrl.value = record.biodataUrl ?? "";
     if (this.profileAge) this.profileAge.value = record.age ?? "";
     if (this.profileGender) this.profileGender.value = record.gender || "unknown";
     if (this.profileEducation) this.profileEducation.value = record.education ?? "";

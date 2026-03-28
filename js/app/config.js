@@ -68,11 +68,22 @@ export const config = {
         ...DEFAULT_DATA_SOURCES,
       ]),
   contactLimit: {
-    maxAttempts: Number(runtimeConfig.maxContactAttempts) || 10,
+    maxAttempts: Number(runtimeConfig.maxContactAttempts) || 7,
     timeWindowMs: Number(runtimeConfig.contactWindowMs) || 60 * 60 * 1000,
     businessWhatsApp: runtimeConfig.businessWhatsApp || "+923001234567",
     businessPhone: runtimeConfig.businessPhone || "+923001234567",
     storageKey: runtimeConfig.contactStorageKey || "InstaRishtaContactUsage",
+    sessionStorageKey:
+      runtimeConfig.contactSessionStorageKey || "InstaRishtaContactUsage:session",
+  },
+  audioPreviewLimit: {
+    maxAttempts: Number(runtimeConfig.maxAudioPreviewAttempts) || 30,
+    timeWindowMs: Number(runtimeConfig.audioPreviewWindowMs) || 60 * 60 * 1000,
+    storageKey:
+      runtimeConfig.audioPreviewStorageKey || "InstaRishtaAudioPreviewUsage",
+    sessionStorageKey:
+      runtimeConfig.audioPreviewSessionStorageKey ||
+      "InstaRishtaAudioPreviewUsage:session",
   },
   themeStorageKey: runtimeConfig.themeStorageKey || "theme",
   adminCode: runtimeConfig.adminCode || "admin123",

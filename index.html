@@ -397,11 +397,20 @@
         </div>
 
         <!-- Contact Limit Indicator -->
-        <div id="contactLimitIndicator" class="card p-3 rounded-md text-center mb-4">
+        <div id="contactLimitIndicator" class="card p-3 rounded-md text-center mb-4" hidden aria-hidden="true">
           <div class="contact-limit-bar"></div>
-          <p class="contact-limit-value text-lg font-bold" id="remainingContacts">10</p>
-          <p class="contact-limit-label text-md">Contacts Remaining</p>
-          <p class="contact-limit-reset text-md mt-1" id="resetTimer">Resets every hour</p>
+          <div class="contact-limit-grid">
+            <div class="contact-limit-stat" id="contactLimitStat">
+              <p class="contact-limit-value text-lg font-bold" id="remainingContacts">7</p>
+              <p class="contact-limit-label text-md">Contacts left</p>
+              <p class="contact-limit-reset text-md mt-1" id="resetTimer">Resets every hour</p>
+            </div>
+            <div class="contact-limit-stat" id="audioLimitStat">
+              <p class="contact-limit-value text-lg font-bold" id="remainingAudioPreviews">30</p>
+              <p class="contact-limit-label text-md">Voice plays left</p>
+              <p class="contact-limit-reset text-md mt-1" id="audioResetTimer">Resets every hour</p>
+            </div>
+          </div>
         </div>
 
         <!-- Admin Analytics Panel (Hidden by default) -->
@@ -629,6 +638,27 @@
           <div class="contact-flow-actions">
             <button id="contactFlowPrimaryBtn" class="theme-action" type="button">Open WhatsApp</button>
             <button id="contactFlowCallBtn" class="btn-ghost" type="button">Call</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="usageLimitModal" class="usage-limit-modal" hidden aria-hidden="true" role="dialog" aria-modal="true"
+        aria-labelledby="usageLimitTitle">
+        <div class="usage-limit-backdrop" data-usage-limit-close></div>
+        <section class="usage-limit-sheet" role="document">
+          <div class="usage-limit-head">
+            <div>
+              <p class="usage-limit-kicker">Usage limit</p>
+              <h2 id="usageLimitTitle">Hourly limit reached</h2>
+              <p id="usageLimitCopy" class="usage-limit-copy">This action is paused until the hourly window resets.</p>
+            </div>
+            <button id="closeUsageLimit" class="usage-limit-close" type="button"
+              aria-label="Close usage limit popup">&times;</button>
+          </div>
+          <div id="usageLimitBody" class="usage-limit-grid" aria-live="polite"></div>
+          <div class="usage-limit-actions">
+            <button id="usageLimitPrimaryBtn" class="theme-action" type="button" hidden>Contact support</button>
+            <button id="usageLimitSecondaryBtn" class="btn-ghost" type="button">Okay</button>
           </div>
         </section>
       </div>

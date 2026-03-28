@@ -124,6 +124,70 @@ export class Renderer {
     };
   }
 
+  formatVoiceDuration(totalSeconds) {
+    const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${minutes}:${String(remainder).padStart(2, "0")}`;
+  }
+
+  getVoiceStatusText(meta, state = {}) {
+    const duration = this.formatVoiceDuration(
+      state.durationSec || meta.durationSec || 0,
+    );
+    const current = this.formatVoiceDuration(state.currentTime || 0);
+
+    switch (state.status) {
+      case "loading":
+        return "Loading voice note...";
+      case "playing":
+        return `${current} / ${duration}`;
+      case "paused":
+        return `Paused • ${duration}`;
+      case "error":
+        return "Voice preview unavailable";
+      default:
+        return `Tap to listen • ${duration}`;
+    }
+  }
+
+  applyVoicePreviewStateToButton(button, meta, state = {}) {
+    if (!button || !meta) return;
+
+    const progress = Math.max(
+      0,
+      Math.min(100, Math.round((Number(state.progress) || 0) * 100)),
+    );
+    const voiceState = state.status || "idle";
+    const statusText = this.getVoiceStatusText(meta, state);
+
+    button.dataset.voiceState = voiceState;
+    button.style.setProperty("--voice-progress", `${progress}%`);
+    button.setAttribute(
+      "aria-label",
+      `${voiceState === "playing" ? "Pause" : "Play"} voice intro for profile ${meta.userId}. ${statusText}`,
+    );
+    button.setAttribute(
+      "aria-pressed",
+      voiceState === "playing" ? "true" : "false",
+    );
+  }
+
+  setVoicePreviewState(userId, state = {}) {
+    const key = String(userId || "");
+    if (!key || typeof document === "undefined") return;
+
+    document.querySelectorAll(".voice-preview-btn").forEach((button) => {
+      if (button.dataset.voiceUserId !== key) return;
+      const meta = {
+        userId: key,
+        label: button.dataset.voiceLabel || "Voice intro",
+        durationSec: Number(button.dataset.voiceDurationSec) || 0,
+      };
+      this.applyVoicePreviewStateToButton(button, meta, state);
+    });
+  }
+
   createUserCard(user) {
     const tone = this.getCardTone(user);
     const card = document.createElement("div");
@@ -171,6 +235,10 @@ export class Renderer {
     const premiumBadge = tone.premium
       ? `<div class="premium-badge premium-badge--${tone.tone}">${escapeHtml(tone.badgeLabel)}</div>`
       : "";
+    const voiceMeta = this.options.getVoicePreviewMeta?.(user, tone) || null;
+    const voiceState = voiceMeta
+      ? this.options.getVoicePreviewState?.(user.id) || null
+      : null;
     const titleHtml = `<h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>`;
     const trustHtml = trustBadges
       ? `<div class="card-trust-row">${trustBadges}</div>`
@@ -191,6 +259,48 @@ export class Renderer {
     const toggleHtml = isLongBody
       ? `<button class="card-toggle-btn" type="button" aria-controls="${bodyId}" aria-expanded="false">Read more</button>`
       : "";
+    const resourceIconsHtml = [
+      user.instagramPostId
+        ? `
+          <button class="card-resource-btn card-resource-btn-instagram" type="button" aria-label="Open Instagram post">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="3.5" y="3.5" width="17" height="17" rx="5"></rect>
+              <circle cx="12" cy="12" r="4"></circle>
+              <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"></circle>
+            </svg>
+          </button>
+        `
+        : "",
+      user.biodataUrl
+        ? `
+          <button class="card-resource-btn card-resource-btn-biodata" type="button" aria-label="Open biodata">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M7 3.5h7l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5z"></path>
+              <path d="M14 3.5V8h4"></path>
+              <path d="M9 12.5h6"></path>
+              <path d="M9 16h6"></path>
+            </svg>
+          </button>
+        `
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
+    const voiceActionHtml = voiceMeta
+      ? `
+        <div class="voice-action-slot">
+          <button class="voice-preview-btn" type="button" data-voice-user-id="${escapeHtml(String(voiceMeta.userId))}" data-voice-id="${escapeHtml(voiceMeta.voiceId)}" data-voice-label="${escapeHtml(voiceMeta.label)}" data-voice-duration-sec="${escapeHtml(String(voiceMeta.durationSec || 0))}" data-voice-state="idle" style="--voice-progress:0%">
+            <span class="voice-preview-halo" aria-hidden="true"></span>
+            <span class="voice-preview-ring" aria-hidden="true"></span>
+            <span class="voice-preview-core" aria-hidden="true">
+              <svg class="voice-icon voice-icon--play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.5v11l9-5.5z"></path></svg>
+              <svg class="voice-icon voice-icon--pause" viewBox="0 0 24 24" fill="currentColor"><path d="M8 6h3v12H8zm5 0h3v12h-3z"></path></svg>
+              <span class="voice-icon voice-icon--loader"></span>
+            </span>
+          </button>
+        </div>
+      `
+      : "";
     const metaHtml = `
       <div class="card-meta">
         <small>IR ID: ${escapeHtml(String(user.id))}</small>
@@ -198,19 +308,28 @@ export class Renderer {
       </div>
     `;
     const actionsHtml = `
-      <div class="card-actions card-actions-primary">
+      <div class="card-actions card-actions-primary${voiceMeta ? " card-actions-with-voice" : ""}">
         <button class="action-btn action-btn-lg contact-btn" data-id="${escapeHtml(String(user.id))}" aria-label="${escapeHtml(primaryActionLabel)} on WhatsApp">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path>
           </svg>
           <span>${escapeHtml(primaryActionLabel)}</span>
         </button>
+        ${voiceActionHtml}
         <button class="action-btn action-btn-lg call-btn" data-id="${escapeHtml(String(user.id))}" aria-label="Call profile">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
           </svg>
           <span>Call</span>
         </button>
+      </div>
+    `;
+    const utilityFooterHtml = `
+      <div class="card-utility-footer">
+        <div class="card-resource-links${resourceIconsHtml ? "" : " is-empty"}">
+          ${resourceIconsHtml}
+        </div>
+        <div class="card-branding">instarishta.me</div>
       </div>
     `;
 
@@ -233,7 +352,7 @@ export class Renderer {
                 ${toggleHtml}
                 ${metaHtml}
                 ${actionsHtml}
-                <div class="card-premium-footer">instarishta.me</div>
+                ${utilityFooterHtml}
         </div>
       `;
     } else {
@@ -245,6 +364,7 @@ export class Renderer {
         ${toggleHtml}
         ${metaHtml}
         ${actionsHtml}
+        ${utilityFooterHtml}
       `;
     }
 
@@ -258,6 +378,22 @@ export class Renderer {
       this.options.onCall(user);
     });
 
+    card
+      .querySelector(".card-resource-btn-instagram")
+      ?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.options.onInstagram?.(user);
+      });
+
+    card
+      .querySelector(".card-resource-btn-biodata")
+      ?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.options.onBiodata?.(user);
+      });
+
     const toggleButton = card.querySelector(".card-toggle-btn");
     if (toggleButton) {
       const bodyElement = card.querySelector(".card-body-urdu");
@@ -266,6 +402,20 @@ export class Renderer {
         const expanded = bodyElement.classList.toggle("is-expanded");
         toggleButton.textContent = expanded ? "Read less" : "Read more";
         toggleButton.setAttribute("aria-expanded", expanded ? "true" : "false");
+      });
+    }
+
+    if (voiceMeta) {
+      const voiceButton = card.querySelector(".voice-preview-btn");
+      this.applyVoicePreviewStateToButton(
+        voiceButton,
+        voiceMeta,
+        voiceState || {},
+      );
+      card.querySelector(".voice-preview-btn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.options.onVoicePreview?.(user);
       });
     }
 
@@ -278,7 +428,9 @@ export class Renderer {
       Boolean(
         target &&
         target.closest &&
-        target.closest(".action-btn, .card-toggle-btn"),
+        target.closest(
+          ".action-btn, .card-toggle-btn, .voice-preview-btn, .card-resource-btn",
+        ),
       );
 
     let lastTapAt = 0;
@@ -892,37 +1044,65 @@ export class Renderer {
     });
   }
 
-  updateContactLimitIndicator(remaining, resetText) {
-    const indicator = $("contactLimitIndicator");
-    const remainingElement = $("remainingContacts");
-    const timerElement = $("resetTimer");
+  applyLimitTone(element, remaining, resetText, maxAttempts) {
+    if (!element) return;
 
-    if (!indicator || !remainingElement || !timerElement) return;
-
-    remainingElement.textContent = String(remaining);
+    const ratio = maxAttempts > 0 ? remaining / maxAttempts : 0;
 
     if (remaining === 0) {
-      timerElement.textContent = `Resets in ${resetText}`;
-      indicator.style.setProperty("--limit-accent", "#dc2626");
-      indicator.style.setProperty("--limit-accent-end", "#ef4444");
-      indicator.style.setProperty("--limit-text-strong", "#dc2626");
-      indicator.style.setProperty("--limit-text", "#991b1b");
-      indicator.style.setProperty("--limit-border", "rgba(239, 68, 68, 0.28)");
-    } else if (remaining <= 3) {
-      timerElement.textContent = `Resets in ${resetText}`;
-      indicator.style.setProperty("--limit-accent", "#d97706");
-      indicator.style.setProperty("--limit-accent-end", "#f59e0b");
-      indicator.style.setProperty("--limit-text-strong", "#d97706");
-      indicator.style.setProperty("--limit-text", "#92400e");
-      indicator.style.setProperty("--limit-border", "rgba(245, 158, 11, 0.28)");
+      element.style.setProperty("--limit-accent", "#dc2626");
+      element.style.setProperty("--limit-accent-end", "#ef4444");
+      element.style.setProperty("--limit-text-strong", "#dc2626");
+      element.style.setProperty("--limit-text", "#991b1b");
+      element.style.setProperty("--limit-border", "rgba(239, 68, 68, 0.28)");
+    } else if (ratio <= 0.34) {
+      element.style.setProperty("--limit-accent", "#d97706");
+      element.style.setProperty("--limit-accent-end", "#f59e0b");
+      element.style.setProperty("--limit-text-strong", "#d97706");
+      element.style.setProperty("--limit-text", "#92400e");
+      element.style.setProperty("--limit-border", "rgba(245, 158, 11, 0.28)");
     } else {
-      timerElement.textContent = "Resets every hour";
-      indicator.style.setProperty("--limit-accent", "#0284c7");
-      indicator.style.setProperty("--limit-accent-end", "#0ea5e9");
-      indicator.style.setProperty("--limit-text-strong", "#0284c7");
-      indicator.style.setProperty("--limit-text", "#0369a1");
-      indicator.style.setProperty("--limit-border", "rgba(14, 165, 233, 0.24)");
+      element.style.setProperty("--limit-accent", "#0284c7");
+      element.style.setProperty("--limit-accent-end", "#0ea5e9");
+      element.style.setProperty("--limit-text-strong", "#0284c7");
+      element.style.setProperty("--limit-text", "#0369a1");
+      element.style.setProperty("--limit-border", "rgba(14, 165, 233, 0.24)");
     }
+
+    const resetNode = element.querySelector(".contact-limit-reset");
+    if (resetNode) {
+      resetNode.textContent =
+        remaining === maxAttempts ? "Resets every hour" : `Resets in ${resetText}`;
+    }
+  }
+
+  updateContactLimitIndicator(limitState) {
+    const indicator = $("contactLimitIndicator");
+    const remainingElement = $("remainingContacts");
+    const audioRemainingElement = $("remainingAudioPreviews");
+    const contactStat = $("contactLimitStat");
+    const audioStat = $("audioLimitStat");
+
+    if (!indicator || !remainingElement || !audioRemainingElement) return;
+
+    const contact = limitState?.contact || {};
+    const audio = limitState?.audio || {};
+
+    remainingElement.textContent = String(contact.remaining ?? 0);
+    audioRemainingElement.textContent = String(audio.remaining ?? 0);
+
+    this.applyLimitTone(
+      contactStat,
+      Number(contact.remaining ?? 0),
+      contact.resetText || "every hour",
+      Number(contact.maxAttempts || 0),
+    );
+    this.applyLimitTone(
+      audioStat,
+      Number(audio.remaining ?? 0),
+      audio.resetText || "every hour",
+      Number(audio.maxAttempts || 0),
+    );
   }
 
   showToast(message) {

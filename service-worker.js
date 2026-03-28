@@ -1,4 +1,4 @@
-const CACHE_NAME = "instarishta-v15";
+const CACHE_NAME = "instarishta-v19";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -31,9 +31,13 @@ const CORE_ASSETS = [
   "./js/app/services/activity-logger.js",
   "./js/app/services/contact-service.js",
   "./js/app/services/data-service.js",
+  "./js/app/services/voice-preview-service.js",
   "./js/app/workers/filter-worker.js",
   "./manifest.webmanifest",
   "./assets/icon.svg",
+  "./assets/voice/sample-voice-a.wav",
+  "./assets/voice/sample-voice-b.wav",
+  "./assets/voice/sample-voice-c.wav",
 ];
 
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
