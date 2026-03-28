@@ -16,3 +16,10 @@ pnpm-debug.log*
 .wrangler/
 .dev.vars
 worker/.dev.vars
+
+dist-protected/
+
+dist-protected-local/
+protected-local-server*.log
+protected-local-server.pid
+tmp-headless-profile*/

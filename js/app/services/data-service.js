@@ -6,14 +6,30 @@
   pickFirst,
   toSafeString,
 } from "../utils.js";
+import { TEST_USERS } from "../security/test-data.js";
 
 export class DataService {
-  constructor(defaultSources) {
+  constructor(defaultSources, options = {}) {
     this.defaultSources = defaultSources;
+    this.options = {
+      allowTestData: Boolean(options.allowTestData),
+      useTestData: Boolean(options.useTestData),
+      secureRuntimeSource: options.secureRuntimeSource || "__secure_runtime__",
+    };
     this.cachePrefix = "InstaRishtaUsersCache:v1";
     this.maxCacheAgeMs = 1000 * 60 * 60 * 24; // 24 hours
     this.localTimeoutMs = 9000;
     this.remoteTimeoutMs = 15000;
+  }
+
+  log(message, details = {}) {
+    if (typeof window === "undefined") return;
+    window.__INSTA_RUNTIME__?.log?.(message, details);
+  }
+
+  warn(message, details = {}) {
+    if (typeof window === "undefined") return;
+    window.__INSTA_RUNTIME__?.warn?.(message, details);
   }
 
   buildSources() {
@@ -33,11 +49,19 @@ export class DataService {
   }
 
   async loadUsers() {
+    const testUsers = this.readInjectedUsers();
+    if (testUsers) {
+      const users = this.processUserData(testUsers);
+      this.log("Loaded test dataset", { rows: users.length });
+      return { users, source: "test:data", errors: [] };
+    }
+
     const sources = this.buildSources();
     const errors = [];
 
     for (const source of sources) {
       try {
+        this.log("Loading user source", { source });
         const raw = await this.fetchSource(source);
         const users = this.processUserData(raw);
         if (!users.length) {
@@ -47,6 +71,7 @@ export class DataService {
         this.writeUsersToCache(source, users);
         return { users, source, errors };
       } catch (error) {
+        this.warn("Source load failed", { source, message: error.message });
         errors.push(`${source}: ${error.message}`);
       }
     }
@@ -58,6 +83,10 @@ export class DataService {
   }
 
   async fetchSource(source) {
+    if (source === this.options.secureRuntimeSource) {
+      return this.readSecureRuntimeSource();
+    }
+
     const prefetched = this.readPrefetchedSource(source);
     if (prefetched) {
       try {
@@ -95,6 +124,38 @@ export class DataService {
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  readInjectedUsers() {
+    if (!this.options.allowTestData || typeof window === "undefined") return null;
+
+    if (Array.isArray(window.__INSTA_TEST_DATA__) && window.__INSTA_TEST_DATA__.length) {
+      return window.__INSTA_TEST_DATA__;
+    }
+
+    if (this.options.useTestData) {
+      return TEST_USERS;
+    }
+
+    return null;
+  }
+
+  async readSecureRuntimeSource() {
+    if (typeof window === "undefined") {
+      throw new Error("Secure runtime data unavailable");
+    }
+
+    const payload = window.__INSTA_SECURE_DATA__;
+
+    if (payload && typeof payload.then === "function") {
+      return payload;
+    }
+
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    throw new Error("Secure runtime data missing");
   }
 
   resolveSourceUrl(source) {

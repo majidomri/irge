@@ -11,7 +11,10 @@ import { TypingController } from "./modules/typing-controller.js";
 import { DrawerController } from "./modules/drawer-controller.js";
 import { Renderer } from "./modules/renderer.js";
 import { AdminController } from "./modules/admin-controller.js";
+import { initRuntimeManager } from "./security/runtime-manager.js";
 import { escapeHtml, toSafeString, toTitleCase } from "./utils.js";
+
+const runtime = initRuntimeManager(config);
 
 class InstaRishtaApp {
   constructor() {
@@ -29,7 +32,12 @@ class InstaRishtaApp {
     this.storage = new StorageService();
     this.logger = new ActivityLogger(this.storage, config.activityLogKey);
     this.contactService = new ContactService(this.storage, config.contactLimit);
-    this.dataService = new DataService(config.dataSources);
+    this.runtime = runtime;
+    this.dataService = new DataService(config.dataSources, {
+      allowTestData: config.allowTestData,
+      useTestData: config.useTestData,
+      secureRuntimeSource: config.secureRuntimeSource,
+    });
 
     this.renderer = new Renderer({
       onContact: (user) => this.handleContact(user),
@@ -57,6 +65,11 @@ class InstaRishtaApp {
   }
 
   init() {
+    this.runtime.log("App init started", {
+      mode: config.mode,
+      sources: config.dataSources,
+    });
+
     this.logger.log("page_load", {
       timestamp: Date.now(),
       referrer: document.referrer || "direct",
@@ -512,6 +525,11 @@ class InstaRishtaApp {
 
     const cached = this.dataService.loadCachedUsers();
     if (cached?.users?.length) {
+      this.runtime.log("Using cached users", {
+        source: cached.source,
+        rows: cached.users.length,
+        expired: cached.expired,
+      });
       this.state.allUsers = cached.users;
       this.state.activeDataSource = `${cached.source} (cache)`;
       this.state.loading = false;
@@ -522,6 +540,9 @@ class InstaRishtaApp {
     }
 
     try {
+      this.runtime.log("Loading users from source", {
+        sources: config.dataSources,
+      });
       const { users, source } = await this.dataService.loadUsers();
       const incomingSignature = this.dataService.getUsersSignature(users);
       const currentSignature = this.dataService.getUsersSignature(
@@ -540,13 +561,14 @@ class InstaRishtaApp {
       }
       void this.syncUsersToWorker();
 
-      console.info(
-        "InstaRishta data loaded from:",
+      this.runtime.log("Users loaded", {
         source,
-        "records:",
-        users.length,
-      );
+        rows: users.length,
+      });
     } catch (error) {
+      this.runtime.error("Failed to load users", error, {
+        sources: config.dataSources,
+      });
       if (!hasRenderedCache) {
         this.state.loading = false;
         this.renderer.showError(`Failed to load user data. ${error.message}`);

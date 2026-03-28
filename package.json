@@ -9,8 +9,17 @@
   "scripts": {
     "start": "node server.js",
     "start:dist": "node -e \"process.env.STATIC_ROOT='dist'; require('./server.js')\"",
+    "start:protected": "node -e \"process.env.STATIC_ROOT='dist-protected'; require('./server.js')\"",
+    "start:protected:local": "node -e \"process.env.STATIC_ROOT='dist-protected-local'; require('./server.js')\"",
     "dev": "nodemon server.js",
-    "build:prod": "node ci/build-static.mjs",
+    "build": "node ci/build-static.mjs",
+    "build:dev": "node ci/build-static.mjs",
+    "protect": "node ci/build-protected.mjs",
+    "protect:local": "node -e \"process.env.PROTECTED_PRESET='local'; process.env.PROTECTED_OUT_DIR='dist-protected-local'; import('./ci/build-protected.mjs')\"",
+    "build:protected": "node ci/build-protected.mjs",
+    "build:protected:local": "node -e \"process.env.PROTECTED_PRESET='local'; process.env.PROTECTED_OUT_DIR='dist-protected-local'; import('./ci/build-protected.mjs')\"",
+    "verify:protected": "node ci/verify-protected.mjs",
+    "verify:protected:local": "node -e \"process.env.PROTECTED_OUT_DIR='dist-protected-local'; import('./ci/verify-protected.mjs')\"",
     "validate:data": "node ci/validate-json.mjs",
     "test:smoke": "node ci/smoke-test.mjs",
     "test": "npm run validate:data && npm run test:smoke"
@@ -25,6 +34,7 @@
   "devDependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "javascript-obfuscator": "^5.4.1",
     "nodemon": "^3.1.10"
   }
 }

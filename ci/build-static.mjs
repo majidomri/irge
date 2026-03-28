@@ -3,7 +3,7 @@ import path from "node:path";
 import { gzipSync } from "node:zlib";
 
 const rootDir = process.cwd();
-const outDir = path.join(rootDir, "dist");
+const outDir = path.join(rootDir, process.env.OUT_DIR || "dist");
 
 const rootFiles = [
   "4.html",
@@ -166,7 +166,7 @@ function minifyByExt(filePath, content) {
 
   if (ext === ".css") return minifyCss(clean);
   if (ext === ".html") return minifyHtml(clean);
-  if (ext === ".js" || ext === ".mjs") return minifyJs(clean);
+  if (ext === ".js" || ext === ".mjs") return clean;
   if (ext === ".json" || ext === ".webmanifest") return minifyJson(clean);
 
   return clean;
@@ -266,7 +266,7 @@ async function run() {
     totalGzip += gzBytes;
   }
 
-  console.log("Build complete: dist/");
+  console.log(`Build complete: ${process.env.OUT_DIR || "dist"}/`);
   console.log(`Files: ${inputFiles.length}`);
   console.log(`Original: ${formatKb(totalOriginal)}`);
   console.log(`Minified: ${formatKb(totalMinified)}`);
