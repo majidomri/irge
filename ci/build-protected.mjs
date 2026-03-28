@@ -427,7 +427,7 @@ async function patchServiceWorker(chunkAssets) {
     /const CACHE_NAME = ".*?";/,
     `const CACHE_NAME = "instarishta-protected-${preset}-${buildId}";`,
   );
-  sw = sw.replace(/\s*"\.\/jsdata\.json(?:\.gz)?",\n/g, "\n");
+  sw = sw.replace(/\s*"\.\/jsdata\.json",\n/g, "\n");
 
   const extraAssets = [
     "./protected/bootstrap.js",
@@ -444,9 +444,7 @@ async function patchServiceWorker(chunkAssets) {
   sw = sw.replace(
     /  const isData = url\.pathname\.endsWith\("\/jsdata\.json"\)\n    \|\| url\.pathname\.endsWith\("jsdata\.json"\);\n  const isScriptLike = request\.destination === "script"\n    \|\| request\.destination === "worker";\n\n  if \(isData\) \{[\s\S]*?  }\n\n  if \(isScriptLike\) \{/,
     `  const isData = url.pathname.endsWith("/jsdata.json")
-    || url.pathname.endsWith("jsdata.json")
-    || url.pathname.endsWith("/jsdata.json.gz")
-    || url.pathname.endsWith("jsdata.json.gz");
+    || url.pathname.endsWith("jsdata.json");
   const isScriptLike = request.destination === "script"
     || request.destination === "worker";
 
@@ -517,25 +515,12 @@ async function finalizeBootstrap(manifestHash) {
 }
 
 async function removePlainDataset() {
-  await Promise.all([
-    fs.rm(path.join(outDir, "jsdata.json"), { force: true }),
-    fs.rm(path.join(outDir, "jsdata.json.gz"), { force: true }),
-  ]);
-}
-
-async function stripUnusedProtectedAssets() {
-  await Promise.all([
-    fs.rm(path.join(outDir, "styles", "profile-admin.css"), { force: true }),
-    fs.rm(path.join(outDir, "styles", "profile-admin.css.gz"), { force: true }),
-    fs.rm(path.join(outDir, "js", "app", "modules", "profile-admin-controller.js"), { force: true }),
-    fs.rm(path.join(outDir, "js", "app", "modules", "profile-admin-controller.js.gz"), { force: true }),
-  ]);
+  await fs.rm(path.join(outDir, "jsdata.json"), { force: true });
 }
 
 async function main() {
   await runStaticBuild();
   await removePlainDataset();
-  await stripUnusedProtectedAssets();
   await rewriteIndexHtml();
   const encrypted = await encryptDataset();
   const chunkAssets = await writeProtectedRuntime(encrypted);

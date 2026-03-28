@@ -22,8 +22,7 @@
     "verify:protected:local": "node -e \"process.env.PROTECTED_OUT_DIR='dist-protected-local'; import('./ci/verify-protected.mjs')\"",
     "validate:data": "node ci/validate-json.mjs",
     "test:smoke": "node ci/smoke-test.mjs",
-    "test": "npm run validate:data && npm run test:smoke",
-    "publish:protected-root": "npm run protect && npm run verify:protected && node ci/publish-protected-root.mjs"
+    "test": "npm run validate:data && npm run test:smoke"
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.1.13",

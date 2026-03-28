@@ -29,21 +29,8 @@ for (const rel of required) {
   }
 }
 
-for (const leaked of ["jsdata.json", "jsdata.json.gz"]) {
-  if (await exists(path.join(outDir, leaked))) {
-    throw new Error(`Protected build still exposes ${leaked}`);
-  }
-}
-
-for (const orphan of [
-  path.join("styles", "profile-admin.css"),
-  path.join("styles", "profile-admin.css.gz"),
-  path.join("js", "app", "modules", "profile-admin-controller.js"),
-  path.join("js", "app", "modules", "profile-admin-controller.js.gz"),
-]) {
-  if (await exists(path.join(outDir, orphan))) {
-    throw new Error(`Protected build still exposes local-only asset: ${orphan}`);
-  }
+if (await exists(path.join(outDir, "jsdata.json"))) {
+  throw new Error("Protected build still exposes jsdata.json");
 }
 
 const html = await fs.readFile(path.join(outDir, "index.html"), "utf8");

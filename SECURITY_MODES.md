@@ -27,12 +27,6 @@ Static build:
 npm run build
 ```
 
-## Protected Publish
-
-- `npm run publish:protected-root` rebuilds `dist-protected/`, verifies it, and mirrors the protected output into the repo root for GitHub Pages publishing.
-- This intentionally overwrites the live root `index.html`, `js/`, `styles/`, and related public files with the protected build.
-- `CNAME` is preserved, and `jsdata.json` / `jsdata.json.gz` are removed from the published root.
-
 ## Protected Mode
 
 ### Strict production preset
