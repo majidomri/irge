@@ -1,4 +1,4 @@
-﻿# InstaRishta Modular App
+# InstaRishta Modular App
 
 Active entrypoint for `4.html`:
 
