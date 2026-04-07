@@ -5,7 +5,9 @@
   copyText,
   escapeHtml,
   formatDate,
+  formatHeightFromInches,
   formatUserText,
+  parseNumericAge,
   toSafeString,
   toTitleCase,
 } from "../utils.js";
@@ -124,6 +126,56 @@ export class Renderer {
     };
   }
 
+  getMetricItems(user) {
+    const items = [];
+    const age = Number(user?.ageValue) || parseNumericAge(user?.age);
+    const heightLabel =
+      formatHeightFromInches(user?.heightInches) || toSafeString(user?.height);
+    const education = toSafeString(user?.education);
+
+    if (Number.isFinite(age) && age > 0) {
+      items.push({
+        kind: "age",
+        label: `Age ${age}`,
+        icon: '<path d="M12 21a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17Z"></path><path d="M12 7.5v4.8l2.8 1.7"></path>',
+      });
+    }
+
+    if (heightLabel) {
+      items.push({
+        kind: "height",
+        label: `Height ${heightLabel}`,
+        icon: '<path d="M12 3v18"></path><path d="M8.5 6.5 12 3l3.5 3.5"></path><path d="M8.5 17.5 12 21l3.5-3.5"></path>',
+      });
+    }
+
+    if (education) {
+      items.push({
+        kind: "education",
+        label: education,
+        icon: '<path d="m4 9 8-4 8 4-8 4-8-4Z"></path><path d="M8 11.5v3.2c0 .9 1.9 1.8 4 1.8s4-.9 4-1.8v-3.2"></path>',
+      });
+    }
+
+    return items;
+  }
+
+  renderMetricChips(user) {
+    const metrics = this.getMetricItems(user);
+    if (!metrics.length) return "";
+
+    return `<div class="card-quick-meta">${metrics
+      .map(
+        (item) => `
+          <span class="card-metric-chip card-metric-chip-${item.kind}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${item.icon}</svg>
+            <span>${escapeHtml(item.label)}</span>
+          </span>
+        `,
+      )
+      .join("")}</div>`;
+  }
+
   formatVoiceDuration(totalSeconds) {
     const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
     const minutes = Math.floor(seconds / 60);
@@ -240,6 +292,7 @@ export class Renderer {
       ? this.options.getVoicePreviewState?.(user.id) || null
       : null;
     const titleHtml = `<h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>`;
+    const metricHtml = this.renderMetricChips(user);
     const trustHtml = trustBadges
       ? `<div class="card-trust-row">${trustBadges}</div>`
       : "";
@@ -346,6 +399,7 @@ export class Renderer {
             <span class="card-premium-rule card-premium-rule--tail" aria-hidden="true"></span>
           </div>
                 ${titleHtml}
+                ${metricHtml}
                 ${trustHtml}
                 ${bodyHtml}
                 ${contactNoteHtml}
@@ -358,6 +412,7 @@ export class Renderer {
     } else {
       card.innerHTML = `
         <h2 class="font-urdu text-lg font-semibold card-title-urdu">${formatUserText(displayTitle)}</h2>
+        ${metricHtml}
         <div class="card-trust-row">${trustBadges}</div>
         ${bodyHtml}
         ${contactNoteHtml}
@@ -1000,27 +1055,115 @@ export class Renderer {
   }
 
   updateStatistics(filteredUsers) {
-    const totalElement = $("totalAds");
-    const maleElement = $("maleProfiles");
-    const femaleElement = $("femaleProfiles");
-    const urgentElement = $("urgentAds");
-
     const total = filteredUsers.length;
     const male = filteredUsers.filter((u) => u.gender === "male").length;
     const female = filteredUsers.filter((u) => u.gender === "female").length;
     const urgent = filteredUsers.filter((u) => u.urgent).length;
+    const statMap = {
+      total,
+      male,
+      female,
+      urgent,
+    };
 
-    if (totalElement) totalElement.textContent = String(total);
-    if (maleElement) maleElement.textContent = String(male);
-    if (femaleElement) femaleElement.textContent = String(female);
-    if (urgentElement) urgentElement.textContent = String(urgent);
+    Object.entries(statMap).forEach(([key, value]) => {
+      document
+        .querySelectorAll(`[data-stat-key="${key}"]`)
+        .forEach((node) => {
+          node.textContent = String(value);
+        });
+    });
   }
 
-  updateFilterChips(appliedFilters, onRemove) {
+  updateDashboardInsights(summary = {}) {
+    const activityValue = $("activityMetricValue");
+    const activityLabel = $("activityMetricLabel");
+    const activityMeta = $("activityMetricMeta");
+    const activityDial = $("activityGaugeFill");
+    const speedValue = $("speedMetricValue");
+    const speedLabel = $("speedMetricLabel");
+    const speedMeta = $("speedMetricMeta");
+    const speedDial = $("speedGaugeFill");
+    const marqueeSpeedValue = $("marqueeSpeedValue");
+    const marqueeActivityValue = $("marqueeActivityValue");
+
+    if (activityValue) activityValue.textContent = String(summary.activityCount ?? 0);
+    if (activityLabel) {
+      activityLabel.textContent = summary.activityLabel || "Profiles active right now";
+    }
+    if (activityMeta) {
+      activityMeta.textContent = summary.activityMeta || "Based on the current live feed";
+    }
+    if (activityDial) {
+      activityDial.style.setProperty(
+        "--gauge-progress",
+        `${Math.max(0, Math.min(100, Number(summary.activityProgress) || 0))}%`,
+      );
+    }
+
+    if (speedValue) speedValue.textContent = summary.speedText || "--";
+    if (speedLabel) speedLabel.textContent = summary.speedLabel || "Checking network quality";
+    if (speedMeta) speedMeta.textContent = summary.speedMeta || "Estimated from your current connection";
+    if (speedDial) {
+      speedDial.style.setProperty(
+        "--gauge-progress",
+        `${Math.max(0, Math.min(100, Number(summary.speedProgress) || 0))}%`,
+      );
+    }
+    if (marqueeSpeedValue) {
+      marqueeSpeedValue.textContent = String(summary.speedNumber ?? "--");
+    }
+    if (marqueeActivityValue) {
+      marqueeActivityValue.textContent = String(summary.activityCount ?? 0);
+    }
+  }
+
+  updateLiveClock(now = new Date()) {
+    const dateNode = $("liveDateValue");
+    const dayNode = $("liveDayValue");
+    const timeNode = $("liveTimeValue");
+    const metaNode = $("liveTimeMeta");
+    const marqueeTimeNode = $("marqueeTimeValue");
+    const marqueeDayNode = $("marqueeDayValue");
+    if (!(now instanceof Date) || Number.isNaN(now.getTime())) return;
+
+    const dayText = now.toLocaleDateString("en-IN", { weekday: "long" });
+    const timeText = now.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    if (dayNode) {
+      dayNode.textContent = dayText;
+    }
+    if (dateNode) {
+      dateNode.textContent = now.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+    }
+    if (timeNode) {
+      timeNode.textContent = timeText;
+    }
+    if (metaNode) {
+      metaNode.textContent = "Asia/Kolkata live time";
+    }
+    if (marqueeTimeNode) {
+      marqueeTimeNode.textContent = timeText;
+    }
+    if (marqueeDayNode) {
+      marqueeDayNode.textContent = dayText;
+    }
+  }
+
+  updateFilterChips(appliedFilters, onRemove, onClearAll = null) {
     const container = $("filterChips");
     if (!container) return;
 
     container.querySelectorAll(".filter-chip").forEach((chip) => chip.remove());
+    container.querySelectorAll(".filter-chip-clear").forEach((chip) => chip.remove());
 
     if (!appliedFilters.length) {
       container.style.display = "none";
@@ -1042,6 +1185,15 @@ export class Renderer {
         ?.addEventListener("click", () => onRemove(filter.name));
       container.appendChild(chip);
     });
+
+    if (typeof onClearAll === "function" && appliedFilters.length > 1) {
+      const clearButton = document.createElement("button");
+      clearButton.className = "filter-chip-clear";
+      clearButton.type = "button";
+      clearButton.textContent = "Clear all";
+      clearButton.addEventListener("click", onClearAll);
+      container.appendChild(clearButton);
+    }
   }
 
   applyLimitTone(element, remaining, resetText, maxAttempts) {

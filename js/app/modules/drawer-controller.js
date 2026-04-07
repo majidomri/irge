@@ -167,7 +167,9 @@ export class DrawerController {
   }
 
   getScrollTop() {
-    return this.scrollContainer?.scrollTop ?? this.drawer?.scrollTop ?? 0;
+    const contentScroll = this.scrollContainer?.scrollTop ?? 0;
+    const drawerScroll = this.drawer?.scrollTop ?? 0;
+    return Math.max(contentScroll, drawerScroll);
   }
 
   syncViewportHeight() {

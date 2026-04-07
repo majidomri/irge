@@ -136,6 +136,53 @@ export function toTitleCase(value) {
   return text ? text.charAt(0).toUpperCase() + text.slice(1).toLowerCase() : "";
 }
 
+export function parseNumericAge(value) {
+  const text = toSafeString(value);
+  if (!text) return null;
+  const match = text.match(/\d{1,2}/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function parseHeightInches(value) {
+  const text = toSafeString(value).replace(/\s+/g, " ");
+  if (!text) return null;
+
+  const patterns = [
+    /(\d)\s*['’]\s*(\d{1,2})/,
+    /(\d)\s*[.\-]\s*(\d{1,2})/,
+    /(\d)\s*ft\.?\s*(\d{1,2})?/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    const feet = Number(match[1]);
+    const inches = Number(match[2] || 0);
+    if (!Number.isFinite(feet) || !Number.isFinite(inches)) continue;
+    if (feet < 3 || feet > 8 || inches > 11) continue;
+    return feet * 12 + inches;
+  }
+
+  const compactMatch = text.match(/\b([4-7])([0-9])\b/);
+  if (compactMatch) {
+    const feet = Number(compactMatch[1]);
+    const inches = Number(compactMatch[2]);
+    if (inches <= 11) return feet * 12 + inches;
+  }
+
+  return null;
+}
+
+export function formatHeightFromInches(value) {
+  const inches = Number(value);
+  if (!Number.isFinite(inches) || inches <= 0) return "";
+  const feet = Math.floor(inches / 12);
+  const remainder = inches % 12;
+  return `${feet}'${remainder}"`;
+}
+
 export function domReady(callback) {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", callback);

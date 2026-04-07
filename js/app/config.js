@@ -41,6 +41,24 @@ function normalizeHosts(hosts) {
   return clean;
 }
 
+function deriveWorkerEndpoint(value, fallbackSuffix) {
+  const explicit = typeof value === "string" ? value.trim() : "";
+  if (explicit) return explicit;
+
+  const candidates = [
+    ...(Array.isArray(runtimeConfig.dataSources) ? runtimeConfig.dataSources : []),
+    runtimeConfig.dataUrl || "",
+  ];
+
+  for (const source of candidates) {
+    const text = typeof source === "string" ? source.trim() : "";
+    if (!text || !text.includes("/api/profiles")) continue;
+    return text.replace(/\/api\/profiles(?:\?.*)?$/, fallbackSuffix);
+  }
+
+  return "";
+}
+
 const mode = runtimeConfig.mode === "protected" ? "protected" : "dev";
 const debug = runtimeConfig.debug !== false && mode !== "protected";
 const allowTestData = runtimeConfig.allowTestData !== false && mode !== "protected";
@@ -88,4 +106,8 @@ export const config = {
   themeStorageKey: runtimeConfig.themeStorageKey || "theme",
   adminCode: runtimeConfig.adminCode || "admin123",
   activityLogKey: runtimeConfig.activityLogKey || "InstaRishtaActivityLog",
+  platformMetricsEndpoint: deriveWorkerEndpoint(
+    runtimeConfig.platformMetricsEndpoint,
+    "/api/platform-metrics",
+  ),
 };

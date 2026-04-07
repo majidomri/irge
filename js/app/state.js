@@ -1,4 +1,4 @@
-﻿export function createState(usersPerPage) {
+export function createState(usersPerPage) {
   return {
     allUsers: [],
     filteredUsers: [],
@@ -7,6 +7,7 @@
     usersPerPage,
     loading: false,
     activeDataSource: "",
+    platformMetrics: null,
 
     filters: {
       search: "",
@@ -14,6 +15,10 @@
       gender: "all",
       education: "",
       sort: "dateDesc",
+      ageMin: 18,
+      ageMax: 60,
+      heightMin: 54,
+      heightMax: 78,
     },
 
     appliedFilters: [],

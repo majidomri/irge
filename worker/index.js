@@ -11,9 +11,16 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 3;
 const MAX_BIO_LENGTH = 3000;
 const MAX_FIELD_LENGTH = 220;
+const DEFAULT_PROFILES_SOURCE_URL = "https://raw.githubusercontent.com/majidomri/irge/main/jsdata.json";
 const PROFILE_CACHE_KEY = "profiles:payload";
 const PROFILE_RAW_KEY = "profiles:raw";
-const PROFILE_CACHE_TTL = 60 * 15;
+const PROFILE_CACHE_TTL = 60 * 5;
+const VISITOR_SUMMARY_KEY = "metrics:visitors:summary";
+const VISITOR_DAILY_PREFIX = "metrics:visitors:daily:";
+const VISITOR_DAILY_UNIQUE_PREFIX = "metrics:visitors:daily-unique:";
+const VISITOR_RECORD_PREFIX = "metrics:visitors:record:";
+const METRICS_TTL = 60 * 60 * 24 * 400;
+const DAILY_UNIQUE_TTL = 60 * 60 * 24 * 8;
 const rateLimitStore = globalThis.__instarishtaLeadRateLimitStore || new Map();
 globalThis.__instarishtaLeadRateLimitStore = rateLimitStore;
 
@@ -22,7 +29,11 @@ function getLeadStore(env) {
 }
 
 function getProfilesSource(env) {
-  return String(env.PROFILES_SOURCE_URL || "").trim();
+  return String(env.PROFILES_SOURCE_URL || DEFAULT_PROFILES_SOURCE_URL).trim();
+}
+
+function useProfilesKvOverride(env) {
+  return normalizeBoolean(env.PROFILES_KV_OVERRIDE);
 }
 
 function parseCsvList(value, fallback = []) {
@@ -119,6 +130,16 @@ function buildCorsHeaders(origin, env) {
   return headers;
 }
 
+function isLocalOrigin(origin) {
+  if (!origin) return false;
+  try {
+    const parsed = new URL(origin);
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
 function jsonResponse(body, status = 200, origin = "", env = null) {
   return new Response(JSON.stringify(body), {
     status,
@@ -132,6 +153,120 @@ function getClientIp(request) {
     || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || "unknown"
   );
+}
+
+async function readStoreJson(store, key) {
+  if (!store || !key) return null;
+
+  try {
+    const raw = await store.get(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function getVisitorFingerprint(request) {
+  const ip = getClientIp(request);
+  const userAgent = request.headers.get("User-Agent") || "";
+  const language = request.headers.get("Accept-Language") || "";
+  return fnv1aHash([ip, userAgent, language].join("|"));
+}
+
+function getDayStamp(now = new Date()) {
+  return now.toISOString().slice(0, 10);
+}
+
+async function trackPlatformMetrics(store, request, origin) {
+  const now = new Date();
+  const dayStamp = getDayStamp(now);
+  const summary = (await readStoreJson(store, VISITOR_SUMMARY_KEY)) || {
+    allTimeVisitors: 0,
+    uniqueVisitors: 0,
+    updatedAt: "",
+  };
+  const dailyKey = `${VISITOR_DAILY_PREFIX}${dayStamp}`;
+  const daily = (await readStoreJson(store, dailyKey)) || {
+    day: dayStamp,
+    visits: 0,
+    uniqueVisitors: 0,
+    newVisitors: 0,
+    returningVisitors: 0,
+    updatedAt: "",
+  };
+
+  if (!store || isLocalOrigin(origin)) {
+    return {
+      allTimeVisitors: Number(summary.allTimeVisitors) || 0,
+      uniqueVisitors: Number(summary.uniqueVisitors) || 0,
+      newVisitorsToday: Number(daily.newVisitors) || 0,
+      returningVisitors: Number(daily.returningVisitors) || 0,
+      generatedAt: now.toISOString(),
+      localPreview: true,
+    };
+  }
+
+  const fingerprint = getVisitorFingerprint(request);
+  const visitorKey = `${VISITOR_RECORD_PREFIX}${fingerprint}`;
+  const dailyUniqueKey = `${VISITOR_DAILY_UNIQUE_PREFIX}${dayStamp}:${fingerprint}`;
+  const visitorRecord = (await readStoreJson(store, visitorKey)) || {
+    firstSeenAt: "",
+    lastSeenAt: "",
+    visitCount: 0,
+  };
+  const dailyUniqueSeen = await store.get(dailyUniqueKey);
+  const isFirstVisitEver = !visitorRecord.firstSeenAt;
+  const isFirstVisitToday = !dailyUniqueSeen;
+
+  summary.allTimeVisitors = (Number(summary.allTimeVisitors) || 0) + 1;
+  summary.updatedAt = now.toISOString();
+
+  daily.visits = (Number(daily.visits) || 0) + 1;
+  daily.updatedAt = summary.updatedAt;
+
+  if (isFirstVisitEver) {
+    summary.uniqueVisitors = (Number(summary.uniqueVisitors) || 0) + 1;
+    visitorRecord.firstSeenAt = summary.updatedAt;
+  }
+
+  if (isFirstVisitToday) {
+    daily.uniqueVisitors = (Number(daily.uniqueVisitors) || 0) + 1;
+    if (isFirstVisitEver) {
+      daily.newVisitors = (Number(daily.newVisitors) || 0) + 1;
+    } else {
+      daily.returningVisitors = (Number(daily.returningVisitors) || 0) + 1;
+    }
+  }
+
+  visitorRecord.lastSeenAt = summary.updatedAt;
+  visitorRecord.visitCount = (Number(visitorRecord.visitCount) || 0) + 1;
+
+  await Promise.all([
+    store.put(VISITOR_SUMMARY_KEY, JSON.stringify(summary), {
+      expirationTtl: METRICS_TTL,
+    }),
+    store.put(dailyKey, JSON.stringify(daily), {
+      expirationTtl: METRICS_TTL,
+    }),
+    store.put(visitorKey, JSON.stringify(visitorRecord), {
+      expirationTtl: METRICS_TTL,
+    }),
+    isFirstVisitToday
+      ? store.put(dailyUniqueKey, visitorRecord.lastSeenAt, {
+        expirationTtl: DAILY_UNIQUE_TTL,
+      })
+      : Promise.resolve(),
+  ]);
+
+  return {
+    allTimeVisitors: Number(summary.allTimeVisitors) || 0,
+    uniqueVisitors: Number(summary.uniqueVisitors) || 0,
+    newVisitorsToday: Number(daily.newVisitors) || 0,
+    returningVisitors: Number(daily.returningVisitors) || 0,
+    generatedAt: summary.updatedAt,
+    localPreview: false,
+  };
 }
 
 function rateLimit(ip, now = Date.now()) {
@@ -276,7 +411,7 @@ function validateSubmission(submission) {
   return "";
 }
 
-async function readCachedProfiles(store) {
+async function readProfilesRaw(store) {
   if (!store) return null;
 
   try {
@@ -289,7 +424,17 @@ async function readCachedProfiles(store) {
         cachedAt: new Date().toISOString(),
       };
     }
+  } catch {
+    return null;
+  }
 
+  return null;
+}
+
+async function readCachedProfiles(store) {
+  if (!store) return null;
+
+  try {
     const cached = await store.get(PROFILE_CACHE_KEY, { type: "json" });
     if (!cached || typeof cached.payload !== "string") return null;
     return cached;
@@ -312,19 +457,27 @@ async function writeCachedProfiles(store, payload, source) {
 
 async function fetchProfilesPayload(env, store) {
   const source = getProfilesSource(env);
+  const rawOverride = await readProfilesRaw(store);
   const cached = await readCachedProfiles(store);
 
-  if (cached?.source === "kv-raw" && cached?.payload) {
-    return { payload: cached.payload, source: cached.source, cached: true, stale: false };
+  if (useProfilesKvOverride(env) && rawOverride?.payload) {
+    return { payload: rawOverride.payload, source: rawOverride.source, cached: true, stale: false };
   }
 
   if (!source) {
+    if (rawOverride?.payload) {
+      return { payload: rawOverride.payload, source: rawOverride.source, cached: true, stale: false };
+    }
     if (cached?.payload) {
       return { payload: cached.payload, source: cached.source || "kv-cache", cached: true, stale: true };
     }
     const error = new Error("Profiles source is not configured.");
     error.statusCode = 503;
     throw error;
+  }
+
+  if (cached?.payload && (!cached.source || cached.source === source)) {
+    return { payload: cached.payload, source, cached: true, stale: false };
   }
 
   try {
@@ -348,6 +501,10 @@ async function fetchProfilesPayload(env, store) {
   } catch (error) {
     if (cached?.payload) {
       return { payload: cached.payload, source: cached.source || source, cached: true, stale: true };
+    }
+
+    if (rawOverride?.payload) {
+      return { payload: rawOverride.payload, source: rawOverride.source, cached: true, stale: true };
     }
 
     if (!error.statusCode) error.statusCode = 502;
@@ -462,14 +619,40 @@ export default {
         return new Response(result.payload, {
           status: 200,
           headers: buildJsonHeaders(origin, env, {
-            "Cache-Control": "public, max-age=300, s-maxage=900",
-            "X-InstaRishta-Source": result.cached ? "worker-cache" : "worker-origin",
+            "Cache-Control": "public, max-age=300, s-maxage=300",
+            "X-InstaRishta-Source": result.cached
+              ? (result.source === "kv-raw" ? "worker-kv-override" : "worker-cache")
+              : "worker-origin",
             "X-InstaRishta-Stale": result.stale ? "true" : "false",
           }),
         });
       } catch (error) {
         return jsonResponse(
           { ok: false, error: error?.message || "Profiles unavailable" },
+          error?.statusCode || 502,
+          origin,
+          env,
+        );
+      }
+    }
+
+    if (url.pathname === "/api/platform-metrics" && request.method === "GET") {
+      if (!isAllowedOrigin(origin, env)) {
+        return jsonResponse({ ok: false, error: "Origin not allowed" }, 403, origin, env);
+      }
+
+      try {
+        const leadStore = getLeadStore(env);
+        const metrics = await trackPlatformMetrics(leadStore, request, origin);
+        return new Response(JSON.stringify({ ok: true, metrics }), {
+          status: 200,
+          headers: buildJsonHeaders(origin, env, {
+            "Cache-Control": "no-store, max-age=0",
+          }),
+        });
+      } catch (error) {
+        return jsonResponse(
+          { ok: false, error: error?.message || "Platform metrics unavailable" },
           error?.statusCode || 502,
           origin,
           env,

@@ -45,8 +45,8 @@ async function run() {
     if (!html.includes("manifest.webmanifest")) {
       throw new Error("Manifest link missing on index route.");
     }
-    if (!html.includes("trustHighlights")) {
-      throw new Error("Trust highlights section missing on index route.");
+    if (!html.includes("hero-marquee")) {
+      throw new Error("Hero marquee section missing on index route.");
     }
     if (!html.includes("contactFlowModal")) {
       throw new Error("Contact flow modal missing on index route.");

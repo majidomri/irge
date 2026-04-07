@@ -1,4 +1,10 @@
-﻿import { toSafeString, toTitleCase } from "../utils.js";
+import {
+  formatHeightFromInches,
+  parseHeightInches,
+  parseNumericAge,
+  toSafeString,
+  toTitleCase,
+} from "../utils.js";
 
 export function applyFilters(users, filters) {
   let filtered = [...users];
@@ -9,6 +15,10 @@ export function applyFilters(users, filters) {
   const gender = toSafeString(filters.gender).toLowerCase() || "all";
   const education = toSafeString(filters.education).toLowerCase();
   const sort = toSafeString(filters.sort) || "dateDesc";
+  const ageMin = Number(filters.ageMin || 18);
+  const ageMax = Number(filters.ageMax || 60);
+  const heightMin = Number(filters.heightMin || 54);
+  const heightMax = Number(filters.heightMax || 78);
 
   if (search) {
     filtered = filtered.filter((user) => {
@@ -45,6 +55,27 @@ export function applyFilters(users, filters) {
       toSafeString(user.education).toLowerCase().includes(education)
     );
     appliedFilters.push({ name: "Education", value: filters.education });
+  }
+
+  if (ageMin > 18 || ageMax < 60) {
+    filtered = filtered.filter((user) => {
+      const age = Number(user.ageValue) || parseNumericAge(user.age);
+      if (!Number.isFinite(age)) return false;
+      return age >= ageMin && age <= ageMax;
+    });
+    appliedFilters.push({ name: "Age", value: `${ageMin}-${ageMax}` });
+  }
+
+  if (heightMin > 54 || heightMax < 78) {
+    filtered = filtered.filter((user) => {
+      const height = Number(user.heightInches) || parseHeightInches(user.height);
+      if (!Number.isFinite(height)) return false;
+      return height >= heightMin && height <= heightMax;
+    });
+    appliedFilters.push({
+      name: "Height",
+      value: `${formatHeightFromInches(heightMin)} - ${formatHeightFromInches(heightMax)}`,
+    });
   }
 
   filtered.sort((a, b) => {

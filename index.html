@@ -71,7 +71,7 @@
               "cssSelector": [
                 ".hero-banner h1",
                 ".hero-subtitle",
-                "#trustHighlights h2",
+                ".hero-marquee",
                 "#seoFaqTitle"
               ]
             }
@@ -285,6 +285,38 @@
       </header>
 
       <main id="mainContent" class="max-w-7xl mx-auto p-4 md:p-4">
+        <section class="hero-marquee" aria-label="Live trust and activity updates">
+          <div class="hero-marquee-track">
+            <span class="hero-marquee-item">Visible verified badges</span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item">Wali and family approval</span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item">Private contact flow</span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item">Internet speed <strong id="marqueeSpeedValue">--</strong></span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item">Platform activity <strong id="marqueeActivityValue">0</strong></span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item">Current time <strong id="marqueeTimeValue">--:--</strong></span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item">Day <strong id="marqueeDayValue">--</strong></span>
+
+            <span class="hero-marquee-item" aria-hidden="true">Visible verified badges</span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item" aria-hidden="true">Wali and family approval</span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item" aria-hidden="true">Private contact flow</span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item" aria-hidden="true">Internet speed <strong>--</strong></span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item" aria-hidden="true">Platform activity <strong>0</strong></span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item" aria-hidden="true">Current time <strong>--:--</strong></span>
+            <span class="hero-marquee-separator" aria-hidden="true">|</span>
+            <span class="hero-marquee-item" aria-hidden="true">Day <strong>--</strong></span>
+          </div>
+        </section>
+
         <!-- Hero -->
         <section class="hero-banner" aria-label="Site introduction">
           <span class="hero-kicker">Trusted Muslim Matrimony Platform</span>
@@ -293,29 +325,44 @@
             and worldwide, with family-controlled contact and private messaging.</p>
         </section>
 
-        <section id="trustHighlights" class="trust-highlights" aria-label="Trust and family-first features">
-          <article class="trust-card">
-            <span class="trust-icon" aria-hidden="true">&#10003;</span>
-            <h2>Visible verified badges</h2>
-            <p>Profiles can carry a clear verified badge so families can spot trusted listings faster.</p>
-          </article>
-          <article class="trust-card">
-            <span class="trust-icon" aria-hidden="true">&#129309;</span>
-            <h2>Wali and family approval</h2>
-            <p>Profiles can be marked for guardian-led contact when the family wants a more controlled introduction.</p>
-          </article>
-          <article class="trust-card">
-            <span class="trust-icon" aria-hidden="true">&#10003;</span>
-            <h2>Private contact flow</h2>
-            <p>The contact flow pre-fills respectful messages and keeps direct details hidden until the user chooses to
-              connect.</p>
-          </article>
+        <section class="stats-strip-wrap mb-5 fade-in" aria-label="Platform totals">
+          <div class="stats-strip" role="list">
+            <div class="stats-strip-track">
+              <article class="stat-strip-card stat-strip-card-total" role="listitem">
+                <span class="stat-strip-accent" aria-hidden="true"></span>
+                <div class="stat-strip-copy">
+                  <strong class="stat-strip-value" id="totalAds" data-stat-key="total">500</strong>
+                  <span class="stat-strip-label">Total Ads</span>
+                </div>
+              </article>
+              <article class="stat-strip-card stat-strip-card-male" role="listitem">
+                <span class="stat-strip-accent" aria-hidden="true"></span>
+                <div class="stat-strip-copy">
+                  <strong class="stat-strip-value" id="maleProfiles" data-stat-key="male">144</strong>
+                  <span class="stat-strip-label">Male Profiles</span>
+                </div>
+              </article>
+              <article class="stat-strip-card stat-strip-card-female" role="listitem">
+                <span class="stat-strip-accent" aria-hidden="true"></span>
+                <div class="stat-strip-copy">
+                  <strong class="stat-strip-value" id="femaleProfiles" data-stat-key="female">356</strong>
+                  <span class="stat-strip-label">Female Profiles</span>
+                </div>
+              </article>
+              <article class="stat-strip-card stat-strip-card-urgent" role="listitem">
+                <span class="stat-strip-accent" aria-hidden="true"></span>
+                <div class="stat-strip-copy">
+                  <strong class="stat-strip-value" id="urgentAds" data-stat-key="urgent">500</strong>
+                  <span class="stat-strip-label">Urgent Ads</span>
+                </div>
+              </article>
+            </div>
+          </div>
         </section>
 
         <!-- Desktop Filters - Single Row -->
         <div id="desktopFilters" class="hidden md:block mb-6 fade-in">
-          <div class="filters-row">
-            <!-- Search -->
+          <div class="filters-row filters-row-primary">
             <div class="search-container">
               <div class="relative search-wrap">
                 <input id="searchInput" type="search" placeholder="Search..." class="w-full">
@@ -326,19 +373,13 @@
                 </svg>
               </div>
             </div>
-
-            <!-- ID Filter -->
             <input id="idFilter" type="number" placeholder="Filter by ID">
-
-            <!-- Sort -->
             <select id="sortOrder">
               <option value="dateDesc">Date (Newest)</option>
               <option value="dateAsc">Date (Oldest)</option>
               <option value="userUrgent">Urgent</option>
               <option value="relevance">Relevance</option>
             </select>
-
-            <!-- Education -->
             <select id="educationFilter">
               <option value="">All Education</option>
               <option value="Preprimary">Preprimary</option>
@@ -354,45 +395,33 @@
               <option value="Hafiz/Aalim">Hafiz/Aalim</option>
               <option value="Diploma">Diploma</option>
             </select>
-
-            <!-- Gender Tabs -->
             <div class="gender-tabs-container">
               <button class="gender-tab active" data-gender="all">All</button>
               <button class="gender-tab" data-gender="male">Male</button>
               <button class="gender-tab" data-gender="female">Female</button>
             </div>
           </div>
-        </div>
-
-        <!-- Statistics -->
-        <div class="stats-grid grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
-          <div class="card p-2 rounded-md text-center">
-            <div
-              style="height:6px; width:40px; background: linear-gradient(90deg,var(--accent-2),var(--accent)); border-radius:4px; margin:6px auto 10px auto">
+          <div class="filters-row filters-row-secondary">
+            <div class="range-filter-panel">
+              <div class="range-filter-head">
+                <span>Age range</span>
+                <strong id="ageRangeValue">18-60</strong>
+              </div>
+              <div class="range-filter-track">
+                <input id="ageMinFilter" type="range" min="18" max="60" step="1" value="18">
+                <input id="ageMaxFilter" type="range" min="18" max="60" step="1" value="60">
+              </div>
             </div>
-            <p class="text-2xl font-bold text-indigo-600" id="totalAds">500</p>
-            <p class="text-gray-600">Total Ads</p>
-          </div>
-          <div class="card p-2 rounded-md text-center">
-            <div
-              style="height:6px; width:40px; background: linear-gradient(90deg,#10b981,#047857); border-radius:4px; margin:6px auto 10px auto">
+            <div class="range-filter-panel">
+              <div class="range-filter-head">
+                <span>Height range</span>
+                <strong id="heightRangeValue">4'6" - 6'6"</strong>
+              </div>
+              <div class="range-filter-track">
+                <input id="heightMinFilter" type="range" min="54" max="78" step="1" value="54">
+                <input id="heightMaxFilter" type="range" min="54" max="78" step="1" value="78">
+              </div>
             </div>
-            <p class="text-2xl font-bold text-green-600" id="maleProfiles">144</p>
-            <p class="text-gray-600">Male Profiles</p>
-          </div>
-          <div class="card p-2 rounded-md text-center">
-            <div
-              style="height:6px; width:40px; background: linear-gradient(90deg,#ec4899,#be185d); border-radius:4px; margin:6px auto 10px auto">
-            </div>
-            <p class="text-2xl font-bold text-pink-600" id="femaleProfiles">356</p>
-            <p class="text-gray-600">Female Profiles</p>
-          </div>
-          <div class="card p-2 rounded-md text-center">
-            <div
-              style="height:6px; width:40px; background: linear-gradient(90deg,var(--urgent),#d97706); border-radius:4px; margin:6px auto 10px auto">
-            </div>
-            <p class="text-2xl font-bold text-urgent" id="urgentAds">500</p>
-            <p class="text-gray-600">Urgent Ads</p>
           </div>
         </div>
 
@@ -545,7 +574,8 @@
       <div id="mobileDrawer"
         class="fixed inset-x-0 bottom-0 shadow-lg transform transition-transform duration-300 ease-in-out md:hidden drawer closed max-w-[100vw] overflow-x-hidden"
         role="dialog" aria-labelledby="drawerTitle" inert>
-        <div class="drawer-shell p-4 h-full flex flex-col w-full box-border pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <div
+          class="drawer-shell p-4 h-full flex flex-col w-full box-border pb-[calc(12px+env(safe-area-inset-bottom))]">
           <div class="drawer-handle"></div>
 
           <div class="drawer-header mb-6">
@@ -556,8 +586,8 @@
             <!-- Search & ID -->
             <div class="drawer-section">
               <div class="filter-row filter-row-search w-full">
-                <input id="mobileSearchInput" class="drawer-field drawer-field-wide" type="search" placeholder="Search..."
-                  aria-label="Search profiles" />
+                <input id="mobileSearchInput" class="drawer-field drawer-field-wide" type="search"
+                  placeholder="Search..." aria-label="Search profiles" />
                 <input id="mobileIdFilter" class="drawer-field" type="number" placeholder="ID"
                   aria-label="Filter by ID" />
               </div>
@@ -588,6 +618,32 @@
                   <option value="Hafiz/Aalim">Hafiz/Aalim</option>
                   <option value="Diploma">Diploma</option>
                 </select>
+              </div>
+            </div>
+
+            <div class="drawer-section">
+              <div class="drawer-range-card">
+                <div class="range-filter-head">
+                  <span>Age range</span>
+                  <strong id="mobileAgeRangeValue">18-60</strong>
+                </div>
+                <div class="range-filter-track">
+                  <input id="mobileAgeMinFilter" type="range" min="18" max="60" step="1" value="18">
+                  <input id="mobileAgeMaxFilter" type="range" min="18" max="60" step="1" value="60">
+                </div>
+              </div>
+            </div>
+
+            <div class="drawer-section">
+              <div class="drawer-range-card">
+                <div class="range-filter-head">
+                  <span>Height range</span>
+                  <strong id="mobileHeightRangeValue">4'6" - 6'6"</strong>
+                </div>
+                <div class="range-filter-track">
+                  <input id="mobileHeightMinFilter" type="range" min="54" max="78" step="1" value="54">
+                  <input id="mobileHeightMaxFilter" type="range" min="54" max="78" step="1" value="78">
+                </div>
               </div>
             </div>
 
@@ -632,12 +688,14 @@
               aria-label="Close contact flow">&times;</button>
           </div>
           <div id="contactFlowBadges" class="contact-flow-badges" aria-label="Contact safety badges"></div>
-          <p id="contactFlowSummary" class="contact-flow-summary"></p>
+          <div id="contactFlowSummary" class="contact-flow-summary" aria-label="Profile contact summary"></div>
           <textarea id="contactFlowMessage" class="contact-flow-message" aria-label="Edit message before sending"
             spellcheck="true"></textarea>
           <div class="contact-flow-actions">
-            <button id="contactFlowPrimaryBtn" class="theme-action" type="button">Open WhatsApp</button>
-            <button id="contactFlowCallBtn" class="btn-ghost" type="button">Call</button>
+            <button id="contactFlowPrimaryBtn" class="contact-flow-action-btn contact-flow-action-btn-whatsapp"
+              type="button">Chat on WhatsApp</button>
+            <button id="contactFlowCallBtn" class="contact-flow-action-btn contact-flow-action-btn-call"
+              type="button">Call now</button>
           </div>
         </section>
       </div>
@@ -687,6 +745,9 @@
     </div>
 
     <script>
+      const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const workerBaseUrl = "https://instarishta-profile-relay.instarishtalead.workers.dev";
+
       window.INSTA_RISHTA_CONFIG = {
         mode: "dev",
         debug: true,
@@ -694,9 +755,13 @@
         useTestData: false,
         // Profiles are loaded through the Cloudflare Worker so the repo/raw JSON URL stays hidden from the client.
         dataSources: [
-          "https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles"
+          `${workerBaseUrl}/api/profiles`,
+          ...(isLocalPreview ? ["./jsdata.json"] : [])
         ],
-        profileAdEndpoint: "https://instarishta-profile-relay.instarishtalead.workers.dev/api/submit-profile-ad"
+        platformMetricsEndpoint: `${workerBaseUrl}/api/platform-metrics`,
+        profileAdEndpoint: `${workerBaseUrl}/api/submit-profile-ad`,
+        businessWhatsApp: "+918886667121",
+        businessPhone: "+918886667121"
       };
 
       (function primeDataPreload() {

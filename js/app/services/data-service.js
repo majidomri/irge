@@ -1,8 +1,10 @@
-﻿import {
+import {
   getQueryParam,
   isArray,
   isObject,
   normalizeDate,
+  parseHeightInches,
+  parseNumericAge,
   pickFirst,
   toSafeString,
 } from "../utils.js";
@@ -323,15 +325,24 @@ export class DataService {
     const verified = this.normalizeBoolean(
       pickFirst(user, ["verified", "isVerified", "verifiedBadge", "trusted"])
     );
+    const ageText = toSafeString(pickFirst(user, ["age"])) || this.extractAge(body);
+    const heightText = toSafeString(
+      pickFirst(user, ["height", "ht", "stature", "heightText", "height_text"])
+    ) || this.extractHeight(body);
+    const ageValue = parseNumericAge(ageText);
+    const heightInches = parseHeightInches(heightText);
 
     return {
       id,
-      title: title || "ضرورت رشتہ",
+      title: title || "\u0636\u0631\u0648\u0631\u062a \u0631\u0634\u062a\u06c1",
       body,
       education: education || this.extractEducation(body),
       phone,
       whatsapp,
-      age: toSafeString(pickFirst(user, ["age"])),
+      age: ageText,
+      ageValue,
+      height: heightText,
+      heightInches,
       gender: this.detectGender({
         explicit: toSafeString(pickFirst(user, ["gender", "sex"])),
         text: `${body} ${title}`,
@@ -455,35 +466,77 @@ export class DataService {
 
   detectGender({ explicit, text }) {
     const gender = toSafeString(explicit).toLowerCase();
-    if (gender.includes("female") || gender.includes("girl") || gender.includes("خاتون")) {
+    if (gender.includes("female") || gender.includes("girl") || gender.includes("?????")) {
       return "female";
     }
-    if (gender.includes("male") || gender.includes("boy") || gender.includes("مرد")) {
+    if (gender.includes("male") || gender.includes("boy") || gender.includes("???")) {
       return "male";
     }
 
     const haystack = toSafeString(text).toLowerCase();
     if (
-      haystack.includes("لڑکی") ||
+      haystack.includes("????") ||
       haystack.includes("girl") ||
       haystack.includes("female") ||
       haystack.includes("daughter") ||
-      haystack.includes("بیٹی")
+      haystack.includes("????")
     ) {
       return "female";
     }
 
     if (
-      haystack.includes("لڑکا") ||
+      haystack.includes("????") ||
       haystack.includes("boy") ||
       haystack.includes("male") ||
       haystack.includes("son") ||
-      haystack.includes("بیٹا")
+      haystack.includes("????")
     ) {
       return "male";
     }
 
     return "unknown";
+  }
+
+  extractAge(text) {
+    const source = toSafeString(text);
+    if (!source) return "";
+
+    const patterns = [
+      /(?:age|\u0639\u0645\u0631)\s*[:\-]?\s*(\d{1,2})/i,
+      /(\d{1,2})\s*years?/i,
+      /(\d{1,2})\s*\u0633\u0627\u0644/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = source.match(pattern);
+      if (!match) continue;
+      const parsed = Number(match[1]);
+      if (Number.isFinite(parsed) && parsed >= 18 && parsed <= 80) {
+        return String(parsed);
+      }
+    }
+
+    return "";
+  }
+
+  extractHeight(text) {
+    const source = toSafeString(text);
+    if (!source) return "";
+
+    const patterns = [
+      /(?:height|ht|\u0642\u062f)\s*[:\-]?\s*([4-7]\s*[\'\u2019.\-]\s*\d{1,2})/i,
+      /(?:height|ht|\u0642\u062f)\s*[:\-]?\s*([4-7]\s*ft\.?\s*\d{0,2})/i,
+      /(?:height|ht|\u0642\u062f)\s*[:\-]?\s*([4-7]\d)\b/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = source.match(pattern);
+      if (!match) continue;
+      const candidate = toSafeString(match[1]);
+      if (parseHeightInches(candidate)) return candidate;
+    }
+
+    return "";
   }
 
   extractEducation(text) {
