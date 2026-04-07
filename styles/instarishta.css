@@ -3905,11 +3905,11 @@ select:focus-visible {
 
 @keyframes heroMarqueeSlide {
   from {
-    transform: translateX(calc(-50% - 7px));
+    transform: translateX(0);
   }
 
   to {
-    transform: translateX(0);
+    transform: translateX(calc(-50% - 7px));
   }
 }
 
