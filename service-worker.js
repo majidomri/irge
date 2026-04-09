@@ -1,4 +1,4 @@
-const CACHE_NAME = "instarishta-v24";
+const CACHE_NAME = "instarishta-v25";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -61,7 +61,10 @@ async function cachePutSafe(request, response) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // Best-effort warm cache: one missing asset should not block SW activation.
+      await Promise.allSettled(CORE_ASSETS.map((asset) => cache.add(asset)));
+    })
   );
   self.skipWaiting();
 });
@@ -89,14 +92,39 @@ self.addEventListener("fetch", (event) => {
 
   if (!isCacheableRequest(request, url)) return;
 
+  const isNavigationRequest =
+    request.mode === "navigate" ||
+    request.destination === "document" ||
+    url.pathname.endsWith(".html");
   const isData = url.pathname.endsWith("/jsdata.json")
     || url.pathname.endsWith("jsdata.json");
   const isScriptLike = request.destination === "script"
     || request.destination === "worker";
 
+  if (isNavigationRequest) {
+    event.respondWith(
+      fetch(request, { cache: "no-store" })
+        .then((response) => {
+          event.waitUntil(cachePutSafe(request, response));
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          const cachedIndex = await caches.match("./index.html");
+          if (cachedIndex) return cachedIndex;
+          return new Response("Offline", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          });
+        })
+    );
+    return;
+  }
+
   if (isData) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "no-store" })
         .then((response) => {
           event.waitUntil(cachePutSafe(request, response));
           return response;
@@ -112,7 +140,7 @@ self.addEventListener("fetch", (event) => {
 
   if (isScriptLike) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "no-store" })
         .then((response) => {
           event.waitUntil(cachePutSafe(request, response));
           return response;

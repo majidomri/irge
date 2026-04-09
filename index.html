@@ -193,6 +193,25 @@
         </div>
       </div>
     </div>
+    <script>
+      (function setupSplashFallback() {
+        const splash = document.getElementById("splashScreen");
+        if (!splash) return;
+
+        let hidden = false;
+        const hideSplash = () => {
+          if (hidden || !splash.isConnected) return;
+          hidden = true;
+          splash.classList.add("is-hidden");
+          window.setTimeout(() => {
+            if (splash.isConnected) splash.remove();
+          }, 420);
+        };
+
+        window.__INSTA_HIDE_SPLASH__ = hideSplash;
+        window.setTimeout(hideSplash, 5000);
+      }());
+    </script>
     <div class="relative">
       <!-- Enhanced header -->
       <header class="site-header">
@@ -293,9 +312,9 @@
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item">Private contact flow</span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Internet speed <strong id="marqueeSpeedValue">--</strong></span>
+            <span class="hero-marquee-item">Net speed <strong id="marqueeSpeedValue">--</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Platform activity <strong id="marqueeActivityValue">0</strong></span>
+            <span class="hero-marquee-item">Live Visitors <strong id="marqueeActivityValue">0</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item">Current time <strong id="marqueeTimeValue">--:--</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
@@ -307,9 +326,9 @@
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item" aria-hidden="true">Private contact flow</span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Internet speed <strong>--</strong></span>
+            <span class="hero-marquee-item" aria-hidden="true">Net speed <strong>--</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Platform activity <strong>0</strong></span>
+            <span class="hero-marquee-item" aria-hidden="true">Live Visitors <strong>0</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item" aria-hidden="true">Current time <strong>--:--</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
@@ -326,30 +345,30 @@
         </section>
 
         <section class="stats-strip-wrap mb-5 fade-in" aria-label="Platform totals">
-          <div class="stats-strip" role="list">
+          <div class="stats-strip">
             <div class="stats-strip-track">
-              <article class="stat-strip-card stat-strip-card-total" role="listitem">
+              <article class="stat-strip-card stat-strip-card-total">
                 <span class="stat-strip-accent" aria-hidden="true"></span>
                 <div class="stat-strip-copy">
                   <strong class="stat-strip-value" id="totalAds" data-stat-key="total">500</strong>
                   <span class="stat-strip-label">Total Ads</span>
                 </div>
               </article>
-              <article class="stat-strip-card stat-strip-card-male" role="listitem">
+              <article class="stat-strip-card stat-strip-card-male">
                 <span class="stat-strip-accent" aria-hidden="true"></span>
                 <div class="stat-strip-copy">
                   <strong class="stat-strip-value" id="maleProfiles" data-stat-key="male">144</strong>
                   <span class="stat-strip-label">Male Profiles</span>
                 </div>
               </article>
-              <article class="stat-strip-card stat-strip-card-female" role="listitem">
+              <article class="stat-strip-card stat-strip-card-female">
                 <span class="stat-strip-accent" aria-hidden="true"></span>
                 <div class="stat-strip-copy">
                   <strong class="stat-strip-value" id="femaleProfiles" data-stat-key="female">356</strong>
                   <span class="stat-strip-label">Female Profiles</span>
                 </div>
               </article>
-              <article class="stat-strip-card stat-strip-card-urgent" role="listitem">
+              <article class="stat-strip-card stat-strip-card-urgent">
                 <span class="stat-strip-accent" aria-hidden="true"></span>
                 <div class="stat-strip-copy">
                   <strong class="stat-strip-value" id="urgentAds" data-stat-key="urgent">500</strong>
@@ -407,9 +426,23 @@
                 <span>Age range</span>
                 <strong id="ageRangeValue">18-60</strong>
               </div>
-              <div class="range-filter-track">
-                <input id="ageMinFilter" type="range" min="18" max="60" step="1" value="18">
-                <input id="ageMaxFilter" type="range" min="18" max="60" step="1" value="60">
+              <div id="ageRangeTrack" class="range-filter-track range-filter-track-ticks" data-range-min="18"
+                data-range-max="60">
+                <div class="range-filter-rail" aria-hidden="true"></div>
+                <div class="range-filter-fill" aria-hidden="true"></div>
+                <div class="range-filter-ticks" aria-hidden="true">
+                  <span>18</span>
+                  <span>25</span>
+                  <span>35</span>
+                  <span>45</span>
+                  <span>60</span>
+                </div>
+                <input id="ageMinFilter" type="range" min="18" max="60" step="1" value="18" aria-label="Minimum age">
+                <input id="ageMaxFilter" type="range" min="18" max="60" step="1" value="60" aria-label="Maximum age">
+              </div>
+              <div class="range-filter-selected" aria-hidden="true">
+                <span id="ageMinValue">18</span>
+                <span id="ageMaxValue">60</span>
               </div>
             </div>
             <div class="range-filter-panel">
@@ -417,9 +450,25 @@
                 <span>Height range</span>
                 <strong id="heightRangeValue">4'6" - 6'6"</strong>
               </div>
-              <div class="range-filter-track">
-                <input id="heightMinFilter" type="range" min="54" max="78" step="1" value="54">
-                <input id="heightMaxFilter" type="range" min="54" max="78" step="1" value="78">
+              <div id="heightRangeTrack" class="range-filter-track range-filter-track-ticks" data-range-min="54"
+                data-range-max="78">
+                <div class="range-filter-rail" aria-hidden="true"></div>
+                <div class="range-filter-fill" aria-hidden="true"></div>
+                <div class="range-filter-ticks" aria-hidden="true">
+                  <span>4'6"</span>
+                  <span>5'0"</span>
+                  <span>5'6"</span>
+                  <span>6'0"</span>
+                  <span>6'6"</span>
+                </div>
+                <input id="heightMinFilter" type="range" min="54" max="78" step="1" value="54"
+                  aria-label="Minimum height">
+                <input id="heightMaxFilter" type="range" min="54" max="78" step="1" value="78"
+                  aria-label="Maximum height">
+              </div>
+              <div class="range-filter-selected" aria-hidden="true">
+                <span id="heightMinValue">4'6"</span>
+                <span id="heightMaxValue">6'6"</span>
               </div>
             </div>
           </div>
@@ -627,9 +676,25 @@
                   <span>Age range</span>
                   <strong id="mobileAgeRangeValue">18-60</strong>
                 </div>
-                <div class="range-filter-track">
-                  <input id="mobileAgeMinFilter" type="range" min="18" max="60" step="1" value="18">
-                  <input id="mobileAgeMaxFilter" type="range" min="18" max="60" step="1" value="60">
+                <div id="mobileAgeRangeTrack" class="range-filter-track range-filter-track-ticks" data-range-min="18"
+                  data-range-max="60">
+                  <div class="range-filter-rail" aria-hidden="true"></div>
+                  <div class="range-filter-fill" aria-hidden="true"></div>
+                  <div class="range-filter-ticks" aria-hidden="true">
+                    <span>18</span>
+                    <span>25</span>
+                    <span>35</span>
+                    <span>45</span>
+                    <span>60</span>
+                  </div>
+                  <input id="mobileAgeMinFilter" type="range" min="18" max="60" step="1" value="18"
+                    aria-label="Minimum age">
+                  <input id="mobileAgeMaxFilter" type="range" min="18" max="60" step="1" value="60"
+                    aria-label="Maximum age">
+                </div>
+                <div class="range-filter-selected" aria-hidden="true">
+                  <span id="mobileAgeMinValue">18</span>
+                  <span id="mobileAgeMaxValue">60</span>
                 </div>
               </div>
             </div>
@@ -640,9 +705,25 @@
                   <span>Height range</span>
                   <strong id="mobileHeightRangeValue">4'6" - 6'6"</strong>
                 </div>
-                <div class="range-filter-track">
-                  <input id="mobileHeightMinFilter" type="range" min="54" max="78" step="1" value="54">
-                  <input id="mobileHeightMaxFilter" type="range" min="54" max="78" step="1" value="78">
+                <div id="mobileHeightRangeTrack" class="range-filter-track range-filter-track-ticks" data-range-min="54"
+                  data-range-max="78">
+                  <div class="range-filter-rail" aria-hidden="true"></div>
+                  <div class="range-filter-fill" aria-hidden="true"></div>
+                  <div class="range-filter-ticks" aria-hidden="true">
+                    <span>4'6"</span>
+                    <span>5'0"</span>
+                    <span>5'6"</span>
+                    <span>6'0"</span>
+                    <span>6'6"</span>
+                  </div>
+                  <input id="mobileHeightMinFilter" type="range" min="54" max="78" step="1" value="54"
+                    aria-label="Minimum height">
+                  <input id="mobileHeightMaxFilter" type="range" min="54" max="78" step="1" value="78"
+                    aria-label="Maximum height">
+                </div>
+                <div class="range-filter-selected" aria-hidden="true">
+                  <span id="mobileHeightMinValue">4'6"</span>
+                  <span id="mobileHeightMaxValue">6'6"</span>
                 </div>
               </div>
             </div>

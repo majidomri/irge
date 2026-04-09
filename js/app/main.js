@@ -340,6 +340,22 @@ class InstaRishtaApp {
     return `${feet}'${remainder}"`;
   }
 
+  updateRangeTrack(trackId, minValue, maxValue) {
+    const track = $(trackId);
+    if (!track) return;
+
+    const absoluteMin = Number(track.dataset.rangeMin);
+    const absoluteMax = Number(track.dataset.rangeMax);
+    if (!Number.isFinite(absoluteMin) || !Number.isFinite(absoluteMax) || absoluteMax <= absoluteMin) {
+      return;
+    }
+
+    const start = ((Number(minValue) - absoluteMin) / (absoluteMax - absoluteMin)) * 100;
+    const end = ((Number(maxValue) - absoluteMin) / (absoluteMax - absoluteMin)) * 100;
+    track.style.setProperty("--range-start", `${Math.max(0, Math.min(100, start))}%`);
+    track.style.setProperty("--range-end", `${Math.max(0, Math.min(100, end))}%`);
+  }
+
   updateRangeDisplays() {
     const ageLabel = `${this.state.filters.ageMin}-${this.state.filters.ageMax}`;
     const heightLabel = `${this.formatHeightLabel(this.state.filters.heightMin)} - ${this.formatHeightLabel(this.state.filters.heightMax)}`;
@@ -351,6 +367,26 @@ class InstaRishtaApp {
       const node = $(id);
       if (node) node.textContent = heightLabel;
     });
+    ["ageMinValue", "mobileAgeMinValue"].forEach((id) => {
+      const node = $(id);
+      if (node) node.textContent = String(this.state.filters.ageMin);
+    });
+    ["ageMaxValue", "mobileAgeMaxValue"].forEach((id) => {
+      const node = $(id);
+      if (node) node.textContent = String(this.state.filters.ageMax);
+    });
+    ["heightMinValue", "mobileHeightMinValue"].forEach((id) => {
+      const node = $(id);
+      if (node) node.textContent = this.formatHeightLabel(this.state.filters.heightMin);
+    });
+    ["heightMaxValue", "mobileHeightMaxValue"].forEach((id) => {
+      const node = $(id);
+      if (node) node.textContent = this.formatHeightLabel(this.state.filters.heightMax);
+    });
+    this.updateRangeTrack("ageRangeTrack", this.state.filters.ageMin, this.state.filters.ageMax);
+    this.updateRangeTrack("mobileAgeRangeTrack", this.state.filters.ageMin, this.state.filters.ageMax);
+    this.updateRangeTrack("heightRangeTrack", this.state.filters.heightMin, this.state.filters.heightMax);
+    this.updateRangeTrack("mobileHeightRangeTrack", this.state.filters.heightMin, this.state.filters.heightMax);
   }
 
   getNetworkSummary() {
@@ -865,15 +901,20 @@ class InstaRishtaApp {
     this.splashDismissScheduled = true;
     const splash = $("splashScreen");
     if (!splash) return;
+    const hideSplash = typeof window.__INSTA_HIDE_SPLASH__ === "function"
+      ? window.__INSTA_HIDE_SPLASH__
+      : () => {
+          splash.classList.add("is-hidden");
+          window.setTimeout(() => splash.remove(), 420);
+        };
 
     const now =
       typeof performance !== "undefined" ? performance.now() : Date.now();
     const elapsed = now - this.splashVisibleAt;
-    const delay = Math.max(0, 950 - elapsed);
+    const delay = Math.max(0, 250 - elapsed);
 
     window.setTimeout(() => {
-      splash.classList.add("is-hidden");
-      window.setTimeout(() => splash.remove(), 420);
+      hideSplash();
     }, delay);
   }
 
