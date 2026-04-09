@@ -106,6 +106,8 @@ export const config = {
   themeStorageKey: runtimeConfig.themeStorageKey || "theme",
   adminCode: runtimeConfig.adminCode || "admin123",
   activityLogKey: runtimeConfig.activityLogKey || "InstaRishtaActivityLog",
+  instagramProfileUrl:
+    runtimeConfig.instagramProfileUrl || "https://www.instagram.com/instarishta/",
   platformMetricsEndpoint: deriveWorkerEndpoint(
     runtimeConfig.platformMetricsEndpoint,
     "/api/platform-metrics",

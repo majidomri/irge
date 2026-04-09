@@ -3398,6 +3398,171 @@ select:focus-visible {
   outline-offset: 3px;
 }
 
+.instagram-viewer-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1330;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+}
+
+.instagram-viewer-modal[hidden] {
+  display: none !important;
+}
+
+.instagram-viewer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+.instagram-viewer-sheet {
+  position: relative;
+  z-index: 1;
+  width: min(920px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface-elevated);
+  box-shadow: 0 26px 56px rgba(2, 6, 23, 0.36);
+  display: grid;
+  gap: 12px;
+}
+
+.instagram-viewer-head {
+  display: grid;
+  gap: 6px;
+}
+
+.instagram-viewer-kicker {
+  margin: 0;
+  color: var(--accent-2);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.instagram-viewer-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.instagram-viewer-head h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 3.2vw, 1.7rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.instagram-viewer-meta,
+.instagram-viewer-post-id {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.instagram-viewer-content {
+  margin: 2px 0 0;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.instagram-viewer-close {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 1.24rem;
+  line-height: 1;
+}
+
+.instagram-viewer-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.instagram-viewer-action {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.instagram-viewer-action-follow {
+  background: linear-gradient(135deg, #fd1d1d, #f56040 34%, #f77737 64%, #833ab4);
+  color: #fff;
+}
+
+.instagram-viewer-action-share {
+  background: linear-gradient(135deg, #25d366, #1faa52 56%, #128c7e);
+  color: #fff;
+}
+
+.instagram-viewer-action-open {
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #fff;
+}
+
+.instagram-viewer-embed-wrap {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.instagram-viewer-embed {
+  display: block;
+  width: 100%;
+  min-height: 560px;
+  border: 0;
+  background: transparent;
+}
+
+[data-theme="dark"] .instagram-viewer-sheet {
+  background: rgba(10, 20, 42, 0.94);
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+[data-theme="dark"] .instagram-viewer-meta,
+[data-theme="dark"] .instagram-viewer-post-id,
+[data-theme="dark"] .instagram-viewer-content {
+  color: rgba(226, 232, 240, 0.84);
+}
+
+[data-theme="dark"] .instagram-viewer-close {
+  background: rgba(15, 28, 57, 0.88);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #dbeafe;
+}
+
+[data-theme="for-you"] .instagram-viewer-sheet {
+  background: rgba(255, 250, 244, 0.96);
+  border-color: rgba(249, 115, 22, 0.22);
+}
+
 .usage-limit-modal {
   position: fixed;
   inset: 0;
@@ -3732,6 +3897,27 @@ select:focus-visible {
     flex-direction: column;
   }
 
+  .instagram-viewer-sheet {
+    width: calc(100vw - 10px);
+    max-height: calc(100dvh - 10px);
+    padding: 12px;
+    border-radius: 18px;
+    gap: 10px;
+  }
+
+  .instagram-viewer-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .instagram-viewer-action {
+    min-height: 42px;
+    font-size: 0.85rem;
+  }
+
+  .instagram-viewer-embed {
+    min-height: 420px;
+  }
+
   .post-ad-modal {
     padding: 4px;
   }
@@ -3761,6 +3947,10 @@ select:focus-visible {
   }
 
   .usage-limit-modal {
+    place-items: center;
+  }
+
+  .instagram-viewer-modal {
     place-items: center;
   }
 

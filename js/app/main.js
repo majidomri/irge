@@ -95,6 +95,7 @@ class InstaRishtaApp {
     this.bindContactFlow();
     this.bindUsageLimitModal();
     this.bindPostAdModal();
+    this.bindInstagramViewerModal();
     this.applyFiltersFromUrl();
     this.bindEvents();
     this.applyFiltersToInputs();
@@ -867,6 +868,37 @@ class InstaRishtaApp {
     });
   }
 
+  bindInstagramViewerModal() {
+    this.instagramViewerModal = $("instagramViewerModal");
+    this.instagramViewerFrame = $("instagramViewerFrame");
+    this.instagramViewerMeta = $("instagramViewerMeta");
+    this.instagramViewerPostId = $("instagramViewerPostId");
+    this.instagramViewerContent = $("instagramViewerContent");
+    this.instagramViewerFollowBtn = $("instagramViewerFollowBtn");
+    this.instagramViewerShareBtn = $("instagramViewerShareBtn");
+    this.instagramViewerOpenBtn = $("instagramViewerOpenBtn");
+    this.closeInstagramViewerBtn = $("closeInstagramViewer");
+    this.instagramViewerReturnFocus = null;
+    this.activeInstagramUser = null;
+    this.activeInstagramResource = null;
+
+    const close = () => this.closeInstagramViewer();
+
+    this.instagramViewerModal?.addEventListener("click", (event) => {
+      if (event.target?.dataset?.instagramViewerClose !== undefined) close();
+    });
+    this.closeInstagramViewerBtn?.addEventListener("click", close);
+    this.instagramViewerShareBtn?.addEventListener("click", () =>
+      this.shareInstagramProfile(),
+    );
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !this.instagramViewerModal?.hidden) {
+        close();
+      }
+    });
+  }
+
   bindUsageLimitModal() {
     this.usageLimitModal = $("usageLimitModal");
     this.usageLimitTitle = $("usageLimitTitle");
@@ -1249,7 +1281,11 @@ class InstaRishtaApp {
     this.usageLimitModal.setAttribute("aria-hidden", "true");
     this.usageLimitSupportAction = null;
 
-    if (this.contactFlowModal?.hidden === false || this.postAdModal?.hidden === false) {
+    if (
+      this.contactFlowModal?.hidden === false ||
+      this.postAdModal?.hidden === false ||
+      this.instagramViewerModal?.hidden === false
+    ) {
       document.body.style.overflow = "hidden";
       return;
     }
@@ -1344,20 +1380,58 @@ class InstaRishtaApp {
     });
   }
 
-  resolveInstagramUrl(user) {
-    const instagramTarget = user.instagramPostId || "";
-    if (!instagramTarget) return "";
-    let url = "";
-    if (instagramTarget) {
-      if (/^https?:\/\//i.test(instagramTarget)) {
-        url = instagramTarget;
-      } else if (/^(p|reel|tv|stories)\//i.test(instagramTarget)) {
-        url = `https://www.instagram.com/${instagramTarget.replace(/^\/+/, "")}`;
-      } else {
-        url = `https://www.instagram.com/p/${encodeURIComponent(instagramTarget)}/`;
+  resolveInstagramResource(user) {
+    const instagramTarget = toSafeString(user?.instagramPostId);
+    if (!instagramTarget) return null;
+
+    const cleanTarget = instagramTarget.trim();
+    const fallbackType = "p";
+    let type = fallbackType;
+    let postId = "";
+    let canonicalUrl = "";
+
+    if (/^https?:\/\//i.test(cleanTarget)) {
+      try {
+        const parsed = new URL(cleanTarget);
+        const host = parsed.hostname.toLowerCase();
+        if (!host.includes("instagram.com")) {
+          return null;
+        }
+
+        const parts = parsed.pathname
+          .split("/")
+          .map((part) => part.trim())
+          .filter(Boolean);
+        const supported = new Set(["p", "reel", "tv"]);
+        if (parts.length >= 2 && supported.has(parts[0].toLowerCase())) {
+          type = parts[0].toLowerCase();
+          postId = parts[1];
+        } else if (parts.length >= 1) {
+          postId = parts[0];
+        }
+      } catch {
+        return null;
       }
+    } else if (/^(p|reel|tv)\//i.test(cleanTarget)) {
+      const parts = cleanTarget.replace(/^\/+/, "").split("/");
+      type = toSafeString(parts[0]).toLowerCase() || fallbackType;
+      postId = toSafeString(parts[1]);
+    } else {
+      postId = cleanTarget.replace(/^\/+|\/+$/g, "");
     }
-    return url;
+
+    postId = postId.replace(/[?#].*$/, "").trim();
+    if (!postId) return null;
+
+    canonicalUrl = `https://www.instagram.com/${type}/${encodeURIComponent(postId)}/`;
+    const embedUrl = `https://www.instagram.com/${type}/${encodeURIComponent(postId)}/embed/`;
+
+    return {
+      type,
+      postId,
+      canonicalUrl,
+      embedUrl,
+    };
   }
 
   resolveBiodataUrl(user) {
@@ -1376,12 +1450,95 @@ class InstaRishtaApp {
   }
 
   handleInstagram(user) {
-    const url = this.resolveInstagramUrl(user);
-    if (!url) {
+    const resource = this.resolveInstagramResource(user);
+    if (!resource) {
       this.renderer.showToast("No Instagram post available");
       return;
     }
-    window.open(url, "_blank");
+    this.openInstagramViewer(user, resource);
+  }
+
+  openInstagramViewer(user, resource) {
+    if (!this.instagramViewerModal) {
+      window.open(resource.canonicalUrl, "_blank");
+      return;
+    }
+
+    this.activeInstagramUser = user;
+    this.activeInstagramResource = resource;
+    const profileTitle = this.getProfileTitle(user);
+    const profileShareUrl = `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(String(user.id || ""))}`;
+    const profileSummary = toSafeString(user?.body).replace(/\s+/g, " ").trim();
+
+    if (this.instagramViewerMeta) {
+      this.instagramViewerMeta.textContent = `LR ${user.id} • ${profileTitle}`;
+    }
+    if (this.instagramViewerPostId) {
+      this.instagramViewerPostId.textContent = `Post ID: ${resource.postId}`;
+    }
+    if (this.instagramViewerContent) {
+      this.instagramViewerContent.textContent = profileSummary
+        ? profileSummary.slice(0, 220)
+        : "Instagram post preview linked with this profile.";
+    }
+    if (this.instagramViewerFrame) {
+      this.instagramViewerFrame.src = resource.embedUrl;
+    }
+    if (this.instagramViewerFollowBtn) {
+      this.instagramViewerFollowBtn.href = config.instagramProfileUrl || "https://www.instagram.com/instarishta/";
+    }
+    if (this.instagramViewerOpenBtn) {
+      this.instagramViewerOpenBtn.href = resource.canonicalUrl;
+    }
+    if (this.instagramViewerShareBtn) {
+      this.instagramViewerShareBtn.dataset.shareUrl = profileShareUrl;
+      this.instagramViewerShareBtn.dataset.postUrl = resource.canonicalUrl;
+    }
+
+    this.instagramViewerReturnFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.instagramViewerModal.hidden = false;
+    this.instagramViewerModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    this.closeInstagramViewerBtn?.focus();
+  }
+
+  shareInstagramProfile() {
+    if (!this.activeInstagramUser) return;
+
+    const shareUrl = toSafeString(this.instagramViewerShareBtn?.dataset?.shareUrl);
+    const postUrl = toSafeString(this.instagramViewerShareBtn?.dataset?.postUrl);
+    const profileTitle = this.getProfileTitle(this.activeInstagramUser);
+    const text = encodeURIComponent(
+      `Check this InstaRishta profile: LR ${this.activeInstagramUser.id} (${profileTitle}) ${shareUrl || window.location.href} Instagram: ${postUrl}`,
+    );
+
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener");
+  }
+
+  closeInstagramViewer() {
+    if (!this.instagramViewerModal) return;
+    this.instagramViewerModal.hidden = true;
+    this.instagramViewerModal.setAttribute("aria-hidden", "true");
+
+    if (this.instagramViewerFrame) {
+      this.instagramViewerFrame.removeAttribute("src");
+    }
+    this.activeInstagramUser = null;
+    this.activeInstagramResource = null;
+
+    document.body.style.overflow =
+      this.usageLimitModal?.hidden === false ||
+      this.contactFlowModal?.hidden === false ||
+      this.postAdModal?.hidden === false
+        ? "hidden"
+        : "";
+
+    const returnFocus = this.instagramViewerReturnFocus;
+    this.instagramViewerReturnFocus = null;
+    if (returnFocus && typeof returnFocus.focus === "function") {
+      returnFocus.focus();
+    }
   }
 
   handleBiodata(user) {
@@ -1735,7 +1892,9 @@ class InstaRishtaApp {
     this.contactFlowActionTaken = false;
     this.setContactFlowActionsDisabled(false);
     document.body.style.overflow =
-      this.usageLimitModal?.hidden === false || this.postAdModal?.hidden === false
+      this.usageLimitModal?.hidden === false ||
+      this.postAdModal?.hidden === false ||
+      this.instagramViewerModal?.hidden === false
         ? "hidden"
         : "";
     const returnFocus = this.contactFlowReturnFocus;
@@ -1764,7 +1923,9 @@ class InstaRishtaApp {
     this.postAdModal.hidden = true;
     this.postAdModal.setAttribute("aria-hidden", "true");
     document.body.style.overflow =
-      this.usageLimitModal?.hidden === false || this.contactFlowModal?.hidden === false
+      this.usageLimitModal?.hidden === false ||
+      this.contactFlowModal?.hidden === false ||
+      this.instagramViewerModal?.hidden === false
         ? "hidden"
         : "";
   }

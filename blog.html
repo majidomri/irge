@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Day He Forgave All His Enemies | Arrasool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  </head>
+
+  <body class="bg-white text-slate-900 selection:bg-emerald-100">
+
+    <div class="fixed top-0 left-0 w-full h-1 z-[60] bg-gray-100">
+      <div id="progress" class="h-full bg-emerald-600 w-0 transition-all duration-150"></div>
+    </div>
+
+    <div class="max-w-3xl mx-auto px-6 pt-12 text-center">
+      <a href="blog-master.html" class="text-emerald-600 text-sm font-bold uppercase tracking-widest hover:underline">←
+        Library</a>
+      <h1 class="text-4xl md:text-5xl font-serif font-bold mt-6 mb-8 leading-tight">The Day He Forgave All His Enemies:
+        A Masterclass in Mercy</h1>
+      <div class="flex items-center justify-center gap-4 mb-8">
+        <img src="https://ui-avatars.com/api/?name=Arrasool+Author&background=047857&color=fff"
+          class="w-10 h-10 rounded-full">
+        <div class="text-left">
+          <p class="text-sm font-bold">Arrasool Team</p>
+          <p class="text-xs text-gray-500">Updated Oct 2024 • 5 min read</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-4 mb-12">
+      <img src="https://images.unsplash.com/photo-1590076215667-875d45469591?w=1200"
+        class="w-full rounded-3xl shadow-2xl h-[400px] object-cover">
+    </div>
+
+    <article class="max-w-2xl mx-auto px-6 prose prose-emerald prose-lg">
+      <p class="text-xl text-gray-600 leading-relaxed mb-8 font-light italic">"He who does not show mercy to others,
+        will not be shown mercy by God."</p>
+
+      <p class="mb-6">For thirteen years, the Prophet Muhammad (PBUH) and his followers were tortured, boycotted, and
+        eventually driven out of their homes in Mecca. Yet, when he returned years later as a conqueror with an army of
+        ten thousand, history expected a bloodbath...</p>
+
+      <h2 class="text-2xl font-bold mt-10 mb-4">The Moment of Truth</h2>
+      <p class="mb-6">Standing at the Kaaba, he looked at those who had killed his relatives and mocked his message. He
+        asked them: "What do you think I am going to do with you?" They replied, "You are a noble brother."</p>
+
+      <blockquote class="border-l-4 border-emerald-600 pl-6 my-8 italic text-2xl font-serif text-slate-700">
+        "Go, for you are all free."
+      </blockquote>
+
+      <p class="mb-10">This act alone converted thousands. It wasn't the sword that conquered Mecca; it was the
+        character (Akhlaq) of the Messenger of Allah.</p>
+
+      <div class="bg-slate-900 rounded-2xl p-4 my-10">
+        <p class="text-white text-xs font-bold uppercase mb-2 tracking-widest text-center">Watch: The 60-Second
+          Explanation</p>
+        <div class="aspect-[9/16] max-w-[280px] mx-auto rounded-xl overflow-hidden">
+          <iframe class="w-full h-full" src="https://www.youtube.com/embed/YOUR_SHORT_ID" frameborder="0"
+            allowfullscreen></iframe>
+        </div>
+      </div>
+    </article>
+
+    <section class="max-w-3xl mx-auto px-6 my-16">
+      <div class="bg-emerald-50 border-2 border-emerald-100 rounded-3xl p-8 text-center">
+        <h3 class="text-2xl font-bold text-emerald-900 mb-4">Did this change your perspective?</h3>
+        <p class="text-emerald-800 mb-8">Prophet Muhammad (PBUH) said: "Convey from me, even if it is one verse." Help
+          us spread this light to those who have been misled by misinformation.</p>
+
+        <div class="flex flex-wrap justify-center gap-4">
+          <button onclick="shareArticle('whatsapp')"
+            class="bg-[#25D366] text-white px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:shadow-lg transition transform hover:-translate-y-1">
+            <i class="fab fa-whatsapp"></i> Share on WhatsApp
+          </button>
+          <button onclick="shareArticle('facebook')"
+            class="bg-[#1877F2] text-white px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:shadow-lg transition transform hover:-translate-y-1">
+            <i class="fab fa-facebook"></i> Share to Facebook
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="bg-slate-900 py-12 text-center">
+      <p class="text-slate-500 text-sm">© 2024 Arrasool.com | Preaching the Truth with Wisdom.</p>
+    </footer>
+
+    <script>
+      // Progress Bar logic
+      window.onscroll = function () {
+        let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        let scrolled = (winScroll / height) * 100;
+        document.getElementById("progress").style.width = scrolled + "%";
+      };
+
+      // Sharing Logic
+      function shareArticle(platform) {
+        const url = window.location.href;
+        const text = "You must read this incredible story about the Prophet's mercy: ";
+
+        if (platform === 'whatsapp') {
+          window.open(`https://wa.me/?text=${encodeURIComponent(text + url)}`, '_blank');
+        } else if (platform === 'facebook') {
+          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+        }
+      }
+    </script>
+  </body>
+
+</html>
