@@ -1076,30 +1076,11 @@ export class Renderer {
   }
 
   updateDashboardInsights(summary = {}) {
-    const activityValue = $("activityMetricValue");
-    const activityLabel = $("activityMetricLabel");
-    const activityMeta = $("activityMetricMeta");
-    const activityDial = $("activityGaugeFill");
     const speedValue = $("speedMetricValue");
     const speedLabel = $("speedMetricLabel");
     const speedMeta = $("speedMetricMeta");
     const speedDial = $("speedGaugeFill");
     const marqueeSpeedValue = $("marqueeSpeedValue");
-    const marqueeActivityValue = $("marqueeActivityValue");
-
-    if (activityValue) activityValue.textContent = String(summary.activityCount ?? 0);
-    if (activityLabel) {
-      activityLabel.textContent = summary.activityLabel || "Profiles active right now";
-    }
-    if (activityMeta) {
-      activityMeta.textContent = summary.activityMeta || "Based on the current live feed";
-    }
-    if (activityDial) {
-      activityDial.style.setProperty(
-        "--gauge-progress",
-        `${Math.max(0, Math.min(100, Number(summary.activityProgress) || 0))}%`,
-      );
-    }
 
     if (speedValue) speedValue.textContent = summary.speedText || "--";
     if (speedLabel) speedLabel.textContent = summary.speedLabel || "Checking network quality";
@@ -1112,9 +1093,6 @@ export class Renderer {
     }
     if (marqueeSpeedValue) {
       marqueeSpeedValue.textContent = String(summary.speedNumber ?? "--");
-    }
-    if (marqueeActivityValue) {
-      marqueeActivityValue.textContent = String(summary.activityCount ?? 0);
     }
   }
 

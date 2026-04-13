@@ -106,7 +106,6 @@ class InstaRishtaApp {
     this.renderer.updateLiveClock(new Date());
     this.bindConnectionMonitor();
     this.loadUsers();
-    void this.loadPlatformMetrics();
     this.requestSplashHide();
 
     setInterval(() => this.updateContactLimitIndicator(), 30000);
@@ -190,6 +189,19 @@ class InstaRishtaApp {
       this.refreshFilters();
     });
 
+    bindChange("profileTypeFilter", () => {
+      this.state.filters.profileType = $("profileTypeFilter")?.value || "";
+      this.syncInput("mobileProfileTypeFilter", this.state.filters.profileType);
+      this.refreshFilters();
+    });
+
+    bindChange("mobileProfileTypeFilter", () => {
+      this.state.filters.profileType =
+        $("mobileProfileTypeFilter")?.value || "";
+      this.syncInput("profileTypeFilter", this.state.filters.profileType);
+      this.refreshFilters();
+    });
+
     const handleAgeRangeChange = (source) => {
       const min = Number($(source === "desktop" ? "ageMinFilter" : "mobileAgeMinFilter")?.value || 18);
       const max = Number($(source === "desktop" ? "ageMaxFilter" : "mobileAgeMaxFilter")?.value || 60);
@@ -264,6 +276,11 @@ class InstaRishtaApp {
   }
 
   sanitizeFilters(filters = {}) {
+    const allowedProfileTypes = [
+      "Never Married",
+      "Divorced/Khula",
+      "Widow",
+    ];
     const next = {
       search: toSafeString(filters.search),
       id: toSafeString(filters.id),
@@ -271,6 +288,9 @@ class InstaRishtaApp {
         ? toSafeString(filters.gender).toLowerCase()
         : "all",
       education: toSafeString(filters.education),
+      profileType: allowedProfileTypes.includes(toSafeString(filters.profileType))
+        ? toSafeString(filters.profileType)
+        : "",
       sort: ["dateDesc", "dateAsc", "userUrgent", "relevance"].includes(toSafeString(filters.sort))
         ? toSafeString(filters.sort)
         : "dateDesc",
@@ -476,10 +496,7 @@ class InstaRishtaApp {
   }
 
   buildDashboardSummary() {
-    return {
-      ...this.getPlatformActivitySummary(),
-      ...this.getNetworkSummary(),
-    };
+    return this.getNetworkSummary();
   }
 
   updateDashboardInsights() {
@@ -641,6 +658,10 @@ class InstaRishtaApp {
   }
 
   async runFilterPipeline() {
+    if (this.state.filters.profileType) {
+      return applyFilters(this.state.allUsers, this.state.filters);
+    }
+
     if (!this.filterWorker || !this.workerReady) {
       return applyFilters(this.state.allUsers, this.state.filters);
     }
@@ -674,6 +695,7 @@ class InstaRishtaApp {
     const id = getQueryParam("id");
     const gender = getQueryParam("gender");
     const education = getQueryParam("education");
+    const profileType = getQueryParam("profileType");
     const sort = getQueryParam("sort");
     const ageMin = Number(getQueryParam("ageMin"));
     const ageMax = Number(getQueryParam("ageMax"));
@@ -683,6 +705,7 @@ class InstaRishtaApp {
     if (search) nextFilters.search = search;
     if (id) nextFilters.id = id;
     if (education) nextFilters.education = education;
+    if (profileType) nextFilters.profileType = profileType;
     if (Number.isFinite(ageMin)) nextFilters.ageMin = ageMin;
     if (Number.isFinite(ageMax)) nextFilters.ageMax = ageMax;
     if (Number.isFinite(heightMin)) nextFilters.heightMin = heightMin;
@@ -709,6 +732,8 @@ class InstaRishtaApp {
     this.syncInput("mobileIdFilter", this.state.filters.id);
     this.syncInput("educationFilter", this.state.filters.education);
     this.syncInput("mobileEducationFilter", this.state.filters.education);
+    this.syncInput("profileTypeFilter", this.state.filters.profileType);
+    this.syncInput("mobileProfileTypeFilter", this.state.filters.profileType);
     this.syncInput("sortOrder", this.state.filters.sort);
     this.syncInput("mobileSortOrder", this.state.filters.sort);
     this.syncInput("ageMinFilter", String(this.state.filters.ageMin));
@@ -729,6 +754,7 @@ class InstaRishtaApp {
       id: "",
       gender: "all",
       education: "",
+      profileType: "",
       sort: "dateDesc",
       ageMin: 18,
       ageMax: 60,
@@ -749,6 +775,11 @@ class InstaRishtaApp {
     applyParam("id", this.state.filters.id, defaults.id);
     applyParam("gender", this.state.filters.gender, defaults.gender);
     applyParam("education", this.state.filters.education, defaults.education);
+    applyParam(
+      "profileType",
+      this.state.filters.profileType,
+      defaults.profileType,
+    );
     applyParam("sort", this.state.filters.sort, defaults.sort);
     applyParam("ageMin", String(this.state.filters.ageMin), String(defaults.ageMin));
     applyParam("ageMax", String(this.state.filters.ageMax), String(defaults.ageMax));
@@ -771,6 +802,14 @@ class InstaRishtaApp {
     $("mobileEducationFilter")?.setAttribute(
       "aria-label",
       "Filter by education",
+    );
+    $("profileTypeFilter")?.setAttribute(
+      "aria-label",
+      "Filter by profile type",
+    );
+    $("mobileProfileTypeFilter")?.setAttribute(
+      "aria-label",
+      "Filter by profile type",
     );
     $("ageMinFilter")?.setAttribute("aria-label", "Minimum age");
     $("ageMaxFilter")?.setAttribute("aria-label", "Maximum age");
@@ -1086,6 +1125,11 @@ class InstaRishtaApp {
         this.syncInput("educationFilter", "");
         this.syncInput("mobileEducationFilter", "");
         break;
+      case "Profile Type":
+        this.state.filters.profileType = "";
+        this.syncInput("profileTypeFilter", "");
+        this.syncInput("mobileProfileTypeFilter", "");
+        break;
       case "Age":
         this.state.filters.ageMin = 18;
         this.state.filters.ageMax = 60;
@@ -1117,6 +1161,7 @@ class InstaRishtaApp {
       id: "",
       gender: "all",
       education: "",
+      profileType: "",
       sort: "dateDesc",
       ageMin: 18,
       ageMax: 60,
@@ -1131,6 +1176,8 @@ class InstaRishtaApp {
     this.syncInput("mobileIdFilter", "");
     this.syncInput("educationFilter", "");
     this.syncInput("mobileEducationFilter", "");
+    this.syncInput("profileTypeFilter", "");
+    this.syncInput("mobileProfileTypeFilter", "");
     this.syncInput("sortOrder", "dateDesc");
     this.syncInput("mobileSortOrder", "dateDesc");
     this.syncInput("ageMinFilter", "18");
@@ -1354,30 +1401,14 @@ class InstaRishtaApp {
       return;
     }
 
-    const mode = this.getContactMode(user);
-    const needsProtectedFlow = mode === "family" || mode === "private";
-    if (
-      needsProtectedFlow &&
-      (user.guardianPhone || user.whatsapp || user.phone)
-    ) {
-      this.openContactFlow(user);
-      this.updateContactLimitIndicator();
-      return;
-    }
-
     const number = this.getPreferredCallNumber(user);
     if (!number) {
       this.renderer.showToast("No phone number available");
       return;
     }
 
-    this.performOutboundAction({
-      user,
-      kind: "call",
-      targetUrl: `tel:${number}`,
-      windowTarget: "_self",
-      supportLabel: "call",
-    });
+    this.openContactFlow(user, { preferredAction: "call" });
+    this.updateContactLimitIndicator();
   }
 
   resolveInstagramResource(user) {
@@ -1786,7 +1817,7 @@ class InstaRishtaApp {
     });
   }
 
-  openContactFlow(user) {
+  openContactFlow(user, { preferredAction = "whatsapp" } = {}) {
     this.activeContactUser = user;
     this.contactFlowActionTaken = false;
     this.contactFlowReturnFocus =
@@ -1803,16 +1834,6 @@ class InstaRishtaApp {
         : mode === "private"
           ? "Private contact"
           : "Contact this ad";
-    const summaryParts = [
-      `LR ${user.id}`,
-      user.verified ? "Verified profile" : "Unverified profile",
-      mode === "family"
-        ? "Guardian contact"
-        : mode === "private"
-          ? "Private contact"
-          : "Direct contact",
-      user.familyApproval ? "Family approval" : "",
-    ].filter(Boolean);
     const badges = [
       user.verified
         ? '<span class="contact-pill contact-pill-verified">Verified</span>'
@@ -1834,7 +1855,7 @@ class InstaRishtaApp {
           ? "You are being redirected to the preferred guardian contact for this ad. Edit the drafted message below if needed."
           : mode === "private"
             ? "This profile prefers a private first contact. Edit the drafted message below before sending."
-            : "We have prepared a respectful message with the full profile details below. Edit it if needed before sending.";
+            : "Choose WhatsApp or call below. Credits are only deducted after the contact app opens successfully.";
     }
     if (this.contactFlowSummary)
       this.contactFlowSummary.innerHTML = this.buildContactSummaryHtml(
@@ -1876,9 +1897,13 @@ class InstaRishtaApp {
     document.body.style.overflow = "hidden";
 
     const focusTarget =
-      this.contactFlowPrimaryBtn && !this.contactFlowPrimaryBtn.hidden
-        ? this.contactFlowPrimaryBtn
-        : this.contactFlowCallBtn && !this.contactFlowCallBtn.hidden
+      preferredAction === "call" &&
+      this.contactFlowCallBtn &&
+      !this.contactFlowCallBtn.hidden
+        ? this.contactFlowCallBtn
+        : this.contactFlowPrimaryBtn && !this.contactFlowPrimaryBtn.hidden
+          ? this.contactFlowPrimaryBtn
+          : this.contactFlowCallBtn && !this.contactFlowCallBtn.hidden
           ? this.contactFlowCallBtn
           : this.closeContactFlowBtn;
     focusTarget?.focus();
@@ -1935,7 +1960,83 @@ class InstaRishtaApp {
     return message || this.buildContactMessage(user);
   }
 
-  performOutboundAction({
+  launchExternalWindow(targetUrl, windowTarget = "_blank") {
+    try {
+      const popup = window.open(
+        targetUrl,
+        windowTarget,
+        windowTarget === "_blank" ? "noopener" : undefined,
+      );
+      return Boolean(popup || windowTarget === "_self");
+    } catch {
+      return false;
+    }
+  }
+
+  launchDialer(targetUrl) {
+    return new Promise((resolve) => {
+      let settled = false;
+      let cleanup = () => {};
+
+      const finish = (launched) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(Boolean(launched));
+      };
+
+      const timeoutId = window.setTimeout(() => {
+        finish(document.visibilityState === "hidden");
+      }, 1600);
+
+      const onVisibilityChange = () => {
+        if (document.visibilityState === "hidden") {
+          finish(true);
+        }
+      };
+      const onBlur = () => finish(true);
+      const onPageHide = () => finish(true);
+
+      document.addEventListener("visibilitychange", onVisibilityChange, true);
+      window.addEventListener("blur", onBlur, true);
+      window.addEventListener("pagehide", onPageHide, true);
+
+      cleanup = () => {
+        window.clearTimeout(timeoutId);
+        document.removeEventListener(
+          "visibilitychange",
+          onVisibilityChange,
+          true,
+        );
+        window.removeEventListener("blur", onBlur, true);
+        window.removeEventListener("pagehide", onPageHide, true);
+      };
+
+      try {
+        const link = document.createElement("a");
+        link.href = targetUrl;
+        link.rel = "noopener";
+        link.style.position = "absolute";
+        link.style.opacity = "0";
+        link.style.pointerEvents = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch {
+        finish(false);
+      }
+    });
+  }
+
+  async launchOutboundTarget(kind, targetUrl, windowTarget) {
+    if (kind === "call") {
+      return this.launchDialer(targetUrl);
+    }
+
+    return this.launchExternalWindow(targetUrl, windowTarget);
+  }
+
+  async performOutboundAction({
     user,
     kind,
     targetUrl,
@@ -1959,27 +2060,55 @@ class InstaRishtaApp {
       return false;
     }
 
-    if (this.activeContactUser && this.activeContactUser.id === user.id) {
-      this.contactFlowActionTaken = true;
+    const inContactFlow =
+      this.activeContactUser && this.activeContactUser.id === user.id;
+    if (inContactFlow) {
       this.setContactFlowActionsDisabled(true);
     }
 
+    const launched = await this.launchOutboundTarget(
+      kind,
+      targetUrl,
+      windowTarget,
+    );
+
+    if (!launched) {
+      if (inContactFlow) {
+        this.setContactFlowActionsDisabled(false);
+      }
+      if (kind === "call") {
+        const fallbackNumber = this.getPreferredCallNumber(user);
+        this.renderer.showToast(
+          fallbackNumber
+            ? `Call did not open. Dial manually: ${fallbackNumber}`
+            : "Call did not open on this device",
+        );
+      } else {
+        this.renderer.showToast("WhatsApp did not open on this device");
+      }
+      return false;
+    }
+
+    if (inContactFlow) {
+      this.contactFlowActionTaken = true;
+    }
+
     this.contactService.recordAttempt();
+    const remainingAfterSuccess = this.contactService.getRemainingAttempts();
     this.logger.log(`${kind}_success`, {
       userId: user.id,
-      remaining: this.contactService.getRemainingAttempts(),
+      remaining: remainingAfterSuccess,
     });
     this.updateContactLimitIndicator();
 
-    const opened = window.open(targetUrl, windowTarget);
-    if (this.activeContactUser && this.activeContactUser.id === user.id) {
+    if (inContactFlow) {
       this.closeContactFlow();
     }
 
-    return Boolean(opened || windowTarget === "_self");
+    return true;
   }
 
-  openPrimaryContact() {
+  async openPrimaryContact() {
     const user = this.activeContactUser;
     if (!user) return;
     const number = this.getPreferredWhatsAppNumber(user);
@@ -1989,7 +2118,7 @@ class InstaRishtaApp {
     }
 
     const message = encodeURIComponent(this.getContactFlowMessage(user));
-    this.performOutboundAction({
+    await this.performOutboundAction({
       user,
       kind: "contact",
       targetUrl: `https://wa.me/${number}?text=${message}`,
@@ -1998,7 +2127,7 @@ class InstaRishtaApp {
     });
   }
 
-  callPrimaryContact() {
+  async callPrimaryContact() {
     const user = this.activeContactUser;
     if (!user) return;
     const number = this.getPreferredCallNumber(user);
@@ -2007,7 +2136,7 @@ class InstaRishtaApp {
       return;
     }
 
-    this.performOutboundAction({
+    await this.performOutboundAction({
       user,
       kind: "call",
       targetUrl: `tel:${number}`,

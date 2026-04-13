@@ -2,6 +2,7 @@
   "https://www.instarishta.me",
   "https://instarishta.me",
   "http://localhost:3000",
+  "http://localhost:5500",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5500",
 ];
@@ -641,23 +642,12 @@ export default {
         return jsonResponse({ ok: false, error: "Origin not allowed" }, 403, origin, env);
       }
 
-      try {
-        const leadStore = getLeadStore(env);
-        const metrics = await trackPlatformMetrics(leadStore, request, origin);
-        return new Response(JSON.stringify({ ok: true, metrics }), {
-          status: 200,
-          headers: buildJsonHeaders(origin, env, {
-            "Cache-Control": "no-store, max-age=0",
-          }),
-        });
-      } catch (error) {
-        return jsonResponse(
-          { ok: false, error: error?.message || "Platform metrics unavailable" },
-          error?.statusCode || 502,
-          origin,
-          env,
-        );
-      }
+      return jsonResponse(
+        { ok: true, metrics: null, disabled: true },
+        200,
+        origin,
+        env,
+      );
     }
 
     if (url.pathname !== "/api/submit-profile-ad") {

@@ -7,13 +7,13 @@ export function createState(usersPerPage) {
     usersPerPage,
     loading: false,
     activeDataSource: "",
-    platformMetrics: null,
 
     filters: {
       search: "",
       id: "",
       gender: "all",
       education: "",
+      profileType: "",
       sort: "dateDesc",
       ageMin: 18,
       ageMax: 60,

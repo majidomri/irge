@@ -314,8 +314,6 @@
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item">Net speed <strong id="marqueeSpeedValue">--</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Live Visitors <strong id="marqueeActivityValue">0</strong></span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item">Current time <strong id="marqueeTimeValue">--:--</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item">Day <strong id="marqueeDayValue">--</strong></span>
@@ -327,8 +325,6 @@
             <span class="hero-marquee-item" aria-hidden="true">Private contact flow</span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item" aria-hidden="true">Net speed <strong>--</strong></span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Live Visitors <strong>0</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
             <span class="hero-marquee-item" aria-hidden="true">Current time <strong>--:--</strong></span>
             <span class="hero-marquee-separator" aria-hidden="true">|</span>
@@ -414,6 +410,12 @@
               <option value="Hafiz/Aalim">Hafiz/Aalim</option>
               <option value="Diploma">Diploma</option>
             </select>
+            <select id="profileTypeFilter">
+              <option value="">All Profile Types</option>
+              <option value="Never Married">Never Married</option>
+              <option value="Divorced/Khula">Divorced/Khula</option>
+              <option value="Widow">Widow</option>
+            </select>
             <div class="gender-tabs-container">
               <button class="gender-tab active" data-gender="all">All</button>
               <button class="gender-tab" data-gender="male">Male</button>
@@ -479,7 +481,7 @@
           <div class="contact-limit-bar"></div>
           <div class="contact-limit-grid">
             <div class="contact-limit-stat" id="contactLimitStat">
-              <p class="contact-limit-value text-lg font-bold" id="remainingContacts">7</p>
+              <p class="contact-limit-value text-lg font-bold" id="remainingContacts">10</p>
               <p class="contact-limit-label text-md">Contacts left</p>
               <p class="contact-limit-reset text-md mt-1" id="resetTimer">Resets every hour</p>
             </div>
@@ -666,6 +668,18 @@
                   <option value="PhD">PhD</option>
                   <option value="Hafiz/Aalim">Hafiz/Aalim</option>
                   <option value="Diploma">Diploma</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="drawer-section">
+              <div class="filter-row filter-row-selects w-full">
+                <select id="mobileProfileTypeFilter" class="drawer-field drawer-field-wide"
+                  aria-label="Filter by profile type">
+                  <option value="">All Profile Types</option>
+                  <option value="Never Married">Never Married</option>
+                  <option value="Divorced/Khula">Divorced/Khula</option>
+                  <option value="Widow">Widow</option>
                 </select>
               </div>
             </div>
@@ -871,7 +885,6 @@
           `${workerBaseUrl}/api/profiles`,
           ...(isLocalPreview ? ["./jsdata.json"] : [])
         ],
-        platformMetricsEndpoint: `${workerBaseUrl}/api/platform-metrics`,
         profileAdEndpoint: `${workerBaseUrl}/api/submit-profile-ad`,
         instagramProfileUrl: "https://www.instagram.com/instarishta/",
         businessWhatsApp: "+918886667121",

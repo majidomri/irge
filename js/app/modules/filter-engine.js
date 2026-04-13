@@ -14,6 +14,7 @@ export function applyFilters(users, filters) {
   const idFilter = toSafeString(filters.id);
   const gender = toSafeString(filters.gender).toLowerCase() || "all";
   const education = toSafeString(filters.education).toLowerCase();
+  const profileType = toSafeString(filters.profileType).toLowerCase();
   const sort = toSafeString(filters.sort) || "dateDesc";
   const ageMin = Number(filters.ageMin || 18);
   const ageMax = Number(filters.ageMax || 60);
@@ -55,6 +56,13 @@ export function applyFilters(users, filters) {
       toSafeString(user.education).toLowerCase().includes(education)
     );
     appliedFilters.push({ name: "Education", value: filters.education });
+  }
+
+  if (profileType) {
+    filtered = filtered.filter(
+      (user) => toSafeString(user.profileType).toLowerCase() === profileType,
+    );
+    appliedFilters.push({ name: "Profile Type", value: filters.profileType });
   }
 
   if (ageMin > 18 || ageMax < 60) {

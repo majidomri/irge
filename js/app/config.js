@@ -86,7 +86,7 @@ export const config = {
         ...DEFAULT_DATA_SOURCES,
       ]),
   contactLimit: {
-    maxAttempts: Number(runtimeConfig.maxContactAttempts) || 7,
+    maxAttempts: Number(runtimeConfig.maxContactAttempts) || 10,
     timeWindowMs: Number(runtimeConfig.contactWindowMs) || 60 * 60 * 1000,
     businessWhatsApp: runtimeConfig.businessWhatsApp || "+923001234567",
     businessPhone: runtimeConfig.businessPhone || "+923001234567",
@@ -108,8 +108,4 @@ export const config = {
   activityLogKey: runtimeConfig.activityLogKey || "InstaRishtaActivityLog",
   instagramProfileUrl:
     runtimeConfig.instagramProfileUrl || "https://www.instagram.com/instarishta/",
-  platformMetricsEndpoint: deriveWorkerEndpoint(
-    runtimeConfig.platformMetricsEndpoint,
-    "/api/platform-metrics",
-  ),
 };

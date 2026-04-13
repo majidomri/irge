@@ -331,6 +331,17 @@ export class DataService {
     ) || this.extractHeight(body);
     const ageValue = parseNumericAge(ageText);
     const heightInches = parseHeightInches(heightText);
+    const profileType = this.normalizeProfileType(
+      pickFirst(user, [
+        "profileType",
+        "profile_type",
+        "maritalStatus",
+        "marital_status",
+        "marriageType",
+        "marriage_type",
+      ]),
+      `${title} ${body}`,
+    );
 
     return {
       id,
@@ -343,6 +354,7 @@ export class DataService {
       ageValue,
       height: heightText,
       heightInches,
+      profileType,
       gender: this.detectGender({
         explicit: toSafeString(pickFirst(user, ["gender", "sex"])),
         text: `${body} ${title}`,
@@ -461,6 +473,40 @@ export class DataService {
     if (text.includes("family") || text.includes("wali") || text.includes("guardian")) return "family";
     if (text.includes("private") || text.includes("hidden") || text.includes("exclusive")) return "private";
     if (text.includes("direct") || text.includes("open")) return "direct";
+    return "";
+  }
+
+  normalizeProfileType(explicitValue, sourceText = "") {
+    const explicit = toSafeString(explicitValue).toLowerCase();
+    const previewText = `${explicit} ${toSafeString(sourceText).slice(0, 180)}`.toLowerCase();
+
+    if (!previewText) return "";
+
+    if (
+      /\b(widow|widower)\b/.test(previewText) ||
+      previewText.includes("بیوہ") ||
+      previewText.includes("بیوا") ||
+      previewText.includes("شوہر کا انتقال")
+    ) {
+      return "Widow";
+    }
+
+    if (
+      /\b(divorc|khula|divorcee)\b/.test(previewText) ||
+      previewText.includes("طلاق") ||
+      previewText.includes("خلع")
+    ) {
+      return "Divorced/Khula";
+    }
+
+    if (
+      /\b(never married|unmarried|single|first marriage)\b/.test(previewText) ||
+      previewText.includes("کنواری") ||
+      previewText.includes("عقد اولی")
+    ) {
+      return "Never Married";
+    }
+
     return "";
   }
 
