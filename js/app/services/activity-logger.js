@@ -12,7 +12,7 @@
         timestamp: new Date().toISOString(),
         action,
         data,
-        url: window.location.href,
+        url: window.location.pathname,
         userAgent: navigator.userAgent,
       });
 

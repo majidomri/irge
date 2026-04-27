@@ -30,6 +30,17 @@
       content="Find verified Muslim marriage proposals and nikah matches on InstaRishta.">
     <meta name="twitter:image" content="https://www.instarishta.me/assets/icon.svg">
     <meta name="theme-color" content="#4f46e5">
+    <meta name="color-scheme" content="light dark">
+    <script>
+      (function(){
+        var t=localStorage.getItem("theme");
+        var d=document.documentElement;
+        if(t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme:dark)").matches))
+          d.setAttribute("data-theme","dark");
+        else if(t&&t!=="light"&&t!=="system")
+          d.setAttribute("data-theme",t);
+      })();
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,9 +80,6 @@
             "speakable": {
               "@type": "SpeakableSpecification",
               "cssSelector": [
-                ".hero-banner h1",
-                ".hero-subtitle",
-                ".hero-marquee",
                 "#seoFaqTitle"
               ]
             }
@@ -304,42 +312,6 @@
       </header>
 
       <main id="mainContent" class="max-w-7xl mx-auto p-4 md:p-4">
-        <section class="hero-marquee" aria-label="Live trust and activity updates">
-          <div class="hero-marquee-track">
-            <span class="hero-marquee-item">Visible verified badges</span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Wali and family approval</span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Private contact flow</span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Net speed <strong id="marqueeSpeedValue">--</strong></span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Current time <strong id="marqueeTimeValue">--:--</strong></span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item">Day <strong id="marqueeDayValue">--</strong></span>
-
-            <span class="hero-marquee-item" aria-hidden="true">Visible verified badges</span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Wali and family approval</span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Private contact flow</span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Net speed <strong>--</strong></span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Current time <strong>--:--</strong></span>
-            <span class="hero-marquee-separator" aria-hidden="true">|</span>
-            <span class="hero-marquee-item" aria-hidden="true">Day <strong>--</strong></span>
-          </div>
-        </section>
-
-        <!-- Hero -->
-        <section class="hero-banner" aria-label="Site introduction">
-          <span class="hero-kicker">Trusted Muslim Matrimony Platform</span>
-          <h1 class="text-xl font-semibold mb-4" id="typingText">Find Verified Muslim Rishta for Nikah</h1>
-          <p class="hero-subtitle">Trusted Muslim matrimony platform for verified bride and groom proposals across India
-            and worldwide, with family-controlled contact and private messaging.</p>
-        </section>
-
         <section class="stats-strip-wrap mb-5 fade-in" aria-label="Platform totals">
           <div class="stats-strip">
             <div class="stats-strip-track">
@@ -493,44 +465,6 @@
           </div>
         </div>
 
-        <!-- Admin Analytics Panel (Hidden by default) -->
-        <div id="adminPanel" class="card p-4 rounded-md mb-4"
-          style="display: none; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b;">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-lg font-bold" style="color: #92400e;">&#128202; Admin Analytics</h3>
-            <button id="closeAdminPanel" class="text-sm px-2 py-1 bg-red-500 text-white rounded">Close</button>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div class="text-center">
-              <p class="text-2xl font-bold" style="color: #92400e;" id="adminTotalActions">0</p>
-              <p class="text-sm">Total Actions</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold" style="color: #92400e;" id="adminUniqueUsers">0</p>
-              <p class="text-sm">Unique Users</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold" style="color: #92400e;" id="adminContactAttempts">0</p>
-              <p class="text-sm">Contact Attempts</p>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <h4 class="font-semibold mb-2">Recent Activity:</h4>
-            <div id="adminRecentActivity" class="bg-white p-2 rounded text-xs max-h-32 overflow-y-auto">
-              Loading...
-            </div>
-          </div>
-
-          <div class="flex gap-2 flex-wrap">
-            <button id="exportAnalytics" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">Export Data</button>
-            <button id="clearAnalytics" class="px-3 py-1 bg-red-500 text-white rounded text-sm">Clear Data</button>
-            <button id="refreshAnalytics" class="px-3 py-1 bg-green-500 text-white rounded text-sm">Refresh</button>
-            <button id="emailAnalytics" class="px-3 py-1 bg-purple-500 text-white rounded text-sm">Email Report</button>
-          </div>
-        </div>
-
         <!-- Active Filter Chips (Desktop & Mobile) -->
         <div id="filterChips" class="filter-chips-container">
           <span class="filter-chips-label">Active filters:</span>
@@ -588,37 +522,9 @@
           </button>
         </div>
 
-        <section class="seo-faq card p-4 rounded-md mt-8" aria-labelledby="seoFaqTitle">
-          <h2 id="seoFaqTitle" class="text-xl font-semibold mb-4">Frequently Asked Questions</h2>
-          <details>
-            <summary>How do I find a Muslim rishta online?</summary>
-            <p>Use search, education, gender, and relevance filters to shortlist suitable verified proposals quickly.
-            </p>
-          </details>
-          <details>
-            <summary>Is InstaRishta safe for marriage proposals?</summary>
-            <p>Yes. InstaRishta supports transparent profile browsing with controlled contact flow, verified badges, and
-              family-first contact options.</p>
-          </details>
-          <details>
-            <summary>How does Muslim nikah matchmaking work on InstaRishta?</summary>
-            <p>Browse profiles, review details, connect with interested families, and proceed with your preferred
-              verified communication channel.</p>
-          </details>
-          <details>
-            <summary>What does family-controlled contact mean?</summary>
-            <p>Family-controlled contact means the profile prefers a guardian or wali to be involved before private
-              details are shared.</p>
-          </details>
-          <div class="seo-link-grid mt-4">
-            <a href="/what-is-instarishta.html">What is InstaRishta</a>
-            <a href="/how-instarishta-works.html">How InstaRishta Works</a>
-            <a href="/muslim-marriage-guide.html">Muslim Marriage Guide</a>
-            <a href="/muslim-matrimony-hyderabad.html">Muslim Matrimony Hyderabad</a>
-            <a href="/muslim-matrimony-delhi.html">Muslim Matrimony Delhi</a>
-            <a href="/muslim-matrimony-mumbai.html">Muslim Matrimony Mumbai</a>
-          </div>
-        </section>
+        <!-- Mobile card stack deck (hidden on desktop, populated by JS) -->
+        <div id="mobileCardDeck" aria-label="Profile cards" role="list"></div>
+
       </main>
 
       <!-- Mobile Drawer (Bottom) -->
@@ -822,7 +728,8 @@
 
           <div class="instagram-viewer-embed-wrap">
             <iframe id="instagramViewerFrame" class="instagram-viewer-embed" title="Instagram post preview"
-              loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+              loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+              allow="encrypted-media; autoplay; clipboard-write" allowfullscreen></iframe>
           </div>
         </section>
       </div>

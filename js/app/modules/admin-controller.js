@@ -1,4 +1,4 @@
-﻿import { $, getQueryParam } from "../utils.js";
+﻿import { $ } from "../utils.js";
 
 export class AdminController {
   constructor({ storage, logger, contactService, adminCode, showToast }) {
@@ -46,20 +46,20 @@ export class AdminController {
   }
 
   checkAccess() {
-    const param = getQueryParam("admin");
+    if (!this.adminCode) return;
     const saved = this.storage.get(this.authKey, "");
-    if (param === this.adminCode || saved === this.adminCode) {
-      this.authorize(this.adminCode);
+    if (saved === "1") {
+      this.showPanel();
     }
   }
 
   authorize(code) {
-    if (code !== this.adminCode) {
+    if (!this.adminCode || code !== this.adminCode) {
       this.showToast("Invalid admin code");
       return false;
     }
 
-    this.storage.set(this.authKey, this.adminCode);
+    this.storage.set(this.authKey, "1");
     this.showPanel();
     return true;
   }
@@ -104,13 +104,19 @@ export class AdminController {
       return;
     }
 
-    target.innerHTML = recent
-      .map((log) => {
-        const time = new Date(log.timestamp).toLocaleTimeString();
-        const extra = log.data?.userId ? ` (User: ${log.data.userId})` : "";
-        return `<div class="mb-1 pb-1 border-b"><strong>${time}</strong> - ${log.action}${extra}</div>`;
-      })
-      .join("");
+    const fragment = document.createDocumentFragment();
+    for (const log of recent) {
+      const div = document.createElement("div");
+      div.className = "mb-1 pb-1 border-b";
+      const time = new Date(log.timestamp).toLocaleTimeString();
+      const extra = log.data?.userId ? ` (User: ${String(log.data.userId)})` : "";
+      const strong = document.createElement("strong");
+      strong.textContent = time;
+      div.appendChild(strong);
+      div.appendChild(document.createTextNode(` - ${String(log.action)}${extra}`));
+      fragment.appendChild(div);
+    }
+    target.replaceChildren(fragment);
   }
 
   exportData() {

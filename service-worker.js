@@ -1,4 +1,4 @@
-const CACHE_NAME = "instarishta-v26";
+const CACHE_NAME = "instarishta-v30";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -26,7 +26,6 @@ const CORE_ASSETS = [
   "./js/app/modules/typing-controller.js",
   "./js/app/modules/drawer-controller.js",
   "./js/app/modules/renderer.js",
-  "./js/app/modules/admin-controller.js",
   "./js/app/services/storage-service.js",
   "./js/app/services/activity-logger.js",
   "./js/app/services/contact-service.js",

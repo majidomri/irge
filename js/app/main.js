@@ -11,7 +11,6 @@ import { ThemeController } from "./modules/theme-controller.js";
 import { TypingController } from "./modules/typing-controller.js";
 import { DrawerController } from "./modules/drawer-controller.js";
 import { Renderer } from "./modules/renderer.js";
-import { AdminController } from "./modules/admin-controller.js";
 import { initRuntimeManager } from "./security/runtime-manager.js";
 import { escapeHtml, toSafeString, toTitleCase } from "./utils.js";
 
@@ -66,13 +65,6 @@ class InstaRishtaApp {
     this.activeContactUser = null;
     this.contactFlowActionTaken = false;
     this.contactFlowReturnFocus = null;
-    this.admin = new AdminController({
-      storage: this.storage,
-      logger: this.logger,
-      contactService: this.contactService,
-      adminCode: config.adminCode,
-      showToast: (message) => this.renderer.showToast(message),
-    });
 
     this.initFilterWorker();
   }
@@ -91,13 +83,13 @@ class InstaRishtaApp {
     this.theme.init();
     this.typing.start();
     this.drawer.init();
-    this.admin.init();
     this.bindContactFlow();
     this.bindUsageLimitModal();
     this.bindPostAdModal();
     this.bindInstagramViewerModal();
     this.applyFiltersFromUrl();
     this.bindEvents();
+    this.initMobileDeck();
     this.applyFiltersToInputs();
     this.updateRangeDisplays();
     this.applyAccessibilityEnhancements();
@@ -108,15 +100,16 @@ class InstaRishtaApp {
     this.loadUsers();
     this.requestSplashHide();
 
-    setInterval(() => this.updateContactLimitIndicator(), 30000);
-    setInterval(() => this.renderer.updateLiveClock(new Date()), 1000);
-    setInterval(() => this.admin.updateStats(), 30000);
-    setInterval(() => {
-      this.logger.log("heartbeat", {
-        scrollPosition: window.scrollY,
-        activeFilters: this.state.appliedFilters.length,
-      });
-    }, 300000);
+    this._intervals = [
+      setInterval(() => this.updateContactLimitIndicator(), 30000),
+      setInterval(() => this.renderer.updateLiveClock(new Date()), 1000),
+      setInterval(() => {
+        this.logger.log("heartbeat", {
+          scrollPosition: window.scrollY,
+          activeFilters: this.state.appliedFilters.length,
+        });
+      }, 300000),
+    ];
 
     this.registerServiceWorker();
   }
@@ -137,7 +130,7 @@ class InstaRishtaApp {
     const bindRange = (id, handler) => {
       const element = $(id);
       if (!element) return;
-      element.addEventListener("input", handler);
+      element.addEventListener("input", debounce(handler, 60));
       element.addEventListener("change", handler);
     };
 
@@ -371,10 +364,12 @@ class InstaRishtaApp {
       return;
     }
 
-    const start = ((Number(minValue) - absoluteMin) / (absoluteMax - absoluteMin)) * 100;
-    const end = ((Number(maxValue) - absoluteMin) / (absoluteMax - absoluteMin)) * 100;
-    track.style.setProperty("--range-start", `${Math.max(0, Math.min(100, start))}%`);
-    track.style.setProperty("--range-end", `${Math.max(0, Math.min(100, end))}%`);
+    const start = Math.max(0, Math.min(100, ((Number(minValue) - absoluteMin) / (absoluteMax - absoluteMin)) * 100));
+    const end = Math.max(0, Math.min(100, ((Number(maxValue) - absoluteMin) / (absoluteMax - absoluteMin)) * 100));
+    track.style.setProperty("--range-start", `${start}%`);
+    track.style.setProperty("--range-end", `${end}%`);
+    track.style.setProperty("--a", String(start));
+    track.style.setProperty("--b", String(end));
   }
 
   updateRangeDisplays() {
@@ -1091,10 +1086,16 @@ class InstaRishtaApp {
   }
 
   updateDisplayedUsers() {
-    const endIndex = this.state.currentPage * this.state.usersPerPage;
-    this.state.displayedUsers = this.state.filteredUsers.slice(0, endIndex);
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
 
-    this.renderer.renderUsers(this.state.displayedUsers);
+    if (isMobile) {
+      this.renderMobileDeck(this.state.filteredUsers);
+    } else {
+      const endIndex = this.state.currentPage * this.state.usersPerPage;
+      this.state.displayedUsers = this.state.filteredUsers.slice(0, endIndex);
+      this.renderer.renderUsers(this.state.displayedUsers);
+    }
+
     this.renderer.updateStatistics(this.state.filteredUsers);
     this.updateDashboardInsights();
     this.renderer.updateFilterChips(
@@ -1195,6 +1196,7 @@ class InstaRishtaApp {
 
   handleScroll() {
     if (this.state.loading) return;
+    if (window.matchMedia("(max-width: 767px)").matches) return;
 
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
     const windowHeight =
@@ -1356,6 +1358,7 @@ class InstaRishtaApp {
         window.open(
           `https://wa.me/${number}?text=${encodeURIComponent("Hi! I need unlimited access to InstaRishta contacts.")}`,
           "_blank",
+          "noopener,noreferrer",
         );
       }
     }
@@ -1469,7 +1472,7 @@ class InstaRishtaApp {
     const target = toSafeString(user?.biodataUrl);
     if (!target) return "";
 
-    if (/^(https?:|mailto:|tel:|blob:|data:)/i.test(target)) {
+    if (/^(https?:|mailto:|tel:)/i.test(target)) {
       return target;
     }
 
@@ -1491,7 +1494,7 @@ class InstaRishtaApp {
 
   openInstagramViewer(user, resource) {
     if (!this.instagramViewerModal) {
-      window.open(resource.canonicalUrl, "_blank");
+      window.open(resource.canonicalUrl, "_blank", "noopener,noreferrer");
       return;
     }
 
@@ -1544,7 +1547,7 @@ class InstaRishtaApp {
       `Check this InstaRishta profile: LR ${this.activeInstagramUser.id} (${profileTitle}) ${shareUrl || window.location.href} Instagram: ${postUrl}`,
     );
 
-    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener");
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
   }
 
   closeInstagramViewer() {
@@ -1578,7 +1581,7 @@ class InstaRishtaApp {
       this.renderer.showToast("No biodata available");
       return;
     }
-    window.open(url, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async handleShareCard(user, card) {
@@ -1965,7 +1968,7 @@ class InstaRishtaApp {
       const popup = window.open(
         targetUrl,
         windowTarget,
-        windowTarget === "_blank" ? "noopener" : undefined,
+        windowTarget === "_blank" ? "noopener,noreferrer" : undefined,
       );
       return Boolean(popup || windowTarget === "_self");
     } catch {
@@ -2144,6 +2147,162 @@ class InstaRishtaApp {
       supportLabel: "call",
     });
   }
+
+  // ─── Mobile card stack deck ─────────────────────────────────────────────
+
+  initMobileDeck() {
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+
+    const deck = document.getElementById("mobileCardDeck");
+    if (!deck) return;
+
+    this._deckUsers = [];
+    this._deckIndex = 0;
+    this._deckDragging = false;
+    this._deckStartY = 0;
+    this._deckSwipeInProgress = false;
+
+    const getTopCard = () => deck.querySelector(".deck-card-0");
+
+    const isActionTarget = (el) =>
+      Boolean(el?.closest?.(".action-btn, .card-toggle-btn, .voice-preview-btn, .card-resource-btn"));
+
+    deck.addEventListener("touchstart", (e) => {
+      if (isActionTarget(e.target)) return;
+      const card = getTopCard();
+      if (!card || !card.contains(e.target)) return;
+      this._deckStartY = e.touches[0].clientY;
+      this._deckDragging = true;
+      card.style.transition = "none";
+    }, { passive: true });
+
+    deck.addEventListener("touchmove", (e) => {
+      if (!this._deckDragging) return;
+      const dy = e.touches[0].clientY - this._deckStartY;
+      const card = getTopCard();
+      if (!card) return;
+      if (dy < 0) {
+        card.style.transform = `translateY(${dy}px) scale(${Math.max(0.92, 1 + dy * 0.0004)})`;
+      } else {
+        card.style.transform = `translateY(${Math.round(dy * 0.18)}px)`;
+      }
+    }, { passive: true });
+
+    deck.addEventListener("touchend", (e) => {
+      if (!this._deckDragging) return;
+      this._deckDragging = false;
+      const dy = e.changedTouches[0].clientY - this._deckStartY;
+      const card = getTopCard();
+      if (card) card.style.transition = "";
+
+      if (dy < -55 && !this._deckSwipeInProgress) {
+        this._deckNext();
+      } else if (dy > 55 && !this._deckSwipeInProgress) {
+        this._deckPrev();
+      } else {
+        if (card) card.style.transform = "";
+      }
+    }, { passive: true });
+
+    deck.addEventListener("touchcancel", () => {
+      this._deckDragging = false;
+      const card = getTopCard();
+      if (card) { card.style.transition = ""; card.style.transform = ""; }
+    }, { passive: true });
+  }
+
+  renderMobileDeck(users) {
+    const deck = document.getElementById("mobileCardDeck");
+    const userList = document.getElementById("userList");
+    const noResults = document.getElementById("noResults");
+
+    if (!users.length) {
+      if (deck) deck.classList.add("hidden");
+      if (userList) { userList.classList.remove("hidden"); userList.innerHTML = ""; }
+      if (noResults) noResults.classList.remove("hidden");
+      return;
+    }
+
+    if (deck) deck.classList.remove("hidden");
+    if (userList) userList.classList.add("hidden");
+    if (noResults) noResults.classList.add("hidden");
+
+    this._deckUsers = users;
+    this._deckIndex = 0;
+    this._populateDeck();
+  }
+
+  _populateDeck() {
+    const deck = document.getElementById("mobileCardDeck");
+    if (!deck) return;
+
+    deck.innerHTML = "";
+    const users = this._deckUsers || [];
+    const start = this._deckIndex;
+    const count = Math.min(4, users.length - start);
+
+    for (let i = 0; i < count; i++) {
+      const card = this.renderer.createUserCard(users[start + i]);
+      card.classList.add(`deck-card-${i}`);
+      card.setAttribute("role", "listitem");
+      if (i > 0) card.style.pointerEvents = "none";
+      deck.appendChild(card);
+    }
+  }
+
+  _deckNext() {
+    const deck = document.getElementById("mobileCardDeck");
+    if (!deck || this._deckSwipeInProgress) return;
+
+    const users = this._deckUsers || [];
+    const nextIndex = this._deckIndex + 1;
+
+    if (nextIndex >= users.length) {
+      const card = deck.querySelector(".deck-card-0");
+      if (card) card.style.transform = "";
+      return;
+    }
+
+    this._deckSwipeInProgress = true;
+    const topCard = deck.querySelector(".deck-card-0");
+    if (!topCard) { this._deckSwipeInProgress = false; return; }
+
+    topCard.style.transition = "transform 0.3s ease, opacity 0.3s ease";
+    topCard.style.transform = "translateY(-110%) scale(0.92)";
+    topCard.style.opacity = "0";
+
+    for (let i = 1; i <= 3; i++) {
+      const card = deck.querySelector(`.deck-card-${i}`);
+      if (!card) continue;
+      card.classList.replace(`deck-card-${i}`, `deck-card-${i - 1}`);
+      if (i === 1) card.style.pointerEvents = "";
+    }
+
+    const newUser = users[this._deckIndex + 4];
+    if (newUser) {
+      const newCard = this.renderer.createUserCard(newUser);
+      newCard.classList.add("deck-card-3");
+      newCard.style.transition = "none";
+      newCard.style.pointerEvents = "none";
+      newCard.setAttribute("role", "listitem");
+      deck.appendChild(newCard);
+      newCard.getBoundingClientRect();
+      newCard.style.transition = "";
+    }
+
+    setTimeout(() => {
+      topCard.remove();
+      this._deckIndex = nextIndex;
+      this._deckSwipeInProgress = false;
+    }, 310);
+  }
+
+  _deckPrev() {
+    if ((this._deckIndex || 0) <= 0) return;
+    this._deckIndex -= 1;
+    this._populateDeck();
+  }
+
 }
 
 domReady(() => {
