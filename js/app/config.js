@@ -104,7 +104,7 @@ export const config = {
       "InstaRishtaAudioPreviewUsage:session",
   },
   themeStorageKey: runtimeConfig.themeStorageKey || "theme",
-  adminCode: runtimeConfig.adminCode || "admin123",
+  adminCode: runtimeConfig.adminCode || "",
   activityLogKey: runtimeConfig.activityLogKey || "InstaRishtaActivityLog",
   instagramProfileUrl:
     runtimeConfig.instagramProfileUrl || "https://www.instagram.com/instarishta/",

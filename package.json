@@ -25,6 +25,7 @@
     "test": "npm run validate:data && npm run test:smoke"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.82",
     "@tailwindcss/cli": "^4.1.13",
     "@tailwindcss/postcss": "^4.1.13",
     "postcss": "^8.5.6",

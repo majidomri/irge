@@ -64,17 +64,17 @@ export class ThemeController {
   }
 
   applyTheme(theme) {
-    const body = document.body;
-    body.removeAttribute("data-theme");
+    const root = document.documentElement;
+    root.removeAttribute("data-theme");
 
     if (theme === "system") {
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
-      if (prefersDark) body.setAttribute("data-theme", "dark");
+      if (prefersDark) root.setAttribute("data-theme", "dark");
       return;
     }
 
     if (theme !== "light") {
-      body.setAttribute("data-theme", theme);
+      root.setAttribute("data-theme", theme);
     }
   }
 

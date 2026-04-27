@@ -1,10 +1,20 @@
 ﻿import {
-  $, addClass, removeClass, copyText, debounce, domReady, escapeHtml, normalizeDate, toSafeString,
+  $,
+  addClass,
+  removeClass,
+  copyText,
+  debounce,
+  domReady,
+  escapeHtml,
+  normalizeDate,
+  toSafeString,
 } from "../utils.js";
 import { StorageService } from "../services/storage-service.js";
 import { DataService } from "../services/data-service.js";
+import { InvoiceGenerator } from "./invoice-generator.js";
 
-const DEFAULT_REMOTE_URL = "https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles";
+const DEFAULT_REMOTE_URL =
+  "https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles";
 const DRAFT_STORAGE_KEY = "InstaRishtaProfileStudioDraft:v1";
 const SOURCE_STORAGE_KEY = "InstaRishtaProfileStudioSource:v1";
 
@@ -26,7 +36,11 @@ function normalizeId(value) {
   if (!text) return "";
 
   const numeric = Number(text);
-  if (!Number.isNaN(numeric) && `${numeric}` === text.replace(/^0+/, "") && String(Math.trunc(numeric)).length) {
+  if (
+    !Number.isNaN(numeric) &&
+    `${numeric}` === text.replace(/^0+/, "") &&
+    String(Math.trunc(numeric)).length
+  ) {
     return Math.trunc(numeric);
   }
 
@@ -52,9 +66,10 @@ function addDaysIso(iso, days) {
 }
 
 export class ProfileAdminController {
-  constructor() {
+  constructor(dataService = null, invoiceGenerator = null) {
     this.storage = new StorageService();
-    this.dataService = new DataService([]);
+    this.dataService = dataService || new DataService([]);
+    this.invoiceGenerator = invoiceGenerator || new InvoiceGenerator();
     this.state = {
       profiles: [],
       selectedId: "",
@@ -65,6 +80,7 @@ export class ProfileAdminController {
     this.pendingDraft = null;
     this.draftKey = DRAFT_STORAGE_KEY;
     this.sourceKey = SOURCE_STORAGE_KEY;
+    this.currentInvoiceGenerator = null;
   }
 
   init() {
@@ -82,8 +98,13 @@ export class ProfileAdminController {
     if (draft?.profiles?.length) {
       this.pendingDraft = draft;
       this.showDraftBanner();
-      this.setStatus("Local draft found. Resume it or discard it and reload the live JSON.", "success");
-      this.setPreview(JSON.stringify(this.buildExportProfiles(draft.profiles), null, 2));
+      this.setStatus(
+        "Local draft found. Resume it or discard it and reload the live JSON.",
+        "success",
+      );
+      this.setPreview(
+        JSON.stringify(this.buildExportProfiles(draft.profiles), null, 2),
+      );
       return;
     }
 
@@ -97,14 +118,11 @@ export class ProfileAdminController {
     this.discardDraftBtn = $("discardDraftBtn");
     this.fetchRemoteBtn = $("fetchRemoteBtn");
     this.importJsonFile = $("importJsonFile");
-    this.exportJsonBtn = $("exportJsonBtn");
-    this.copyJsonBtn = $("copyJsonBtn");
     this.downloadJsonPanelBtn = $("downloadJsonPanelBtn");
     this.copyJsonPanelBtn = $("copyJsonPanelBtn");
     this.clearDraftBtn = $("clearDraftBtn");
     this.sourceUrlInput = $("sourceUrlInput");
     this.loadSourceBtn = $("loadSourceBtn");
-    this.refreshViewBtn = $("refreshViewBtn");
     this.profilesSearch = $("profilesSearch");
     this.profilesSort = $("profilesSort");
     this.totalCount = $("totalCount");
@@ -142,6 +160,9 @@ export class ProfileAdminController {
     this.profileExpiresAt = $("profileExpiresAt");
     this.renewDays = $("renewDays");
     this.profileNotes = $("profileNotes");
+    this.profileVoiceId = $("profileVoiceId");
+    this.profileVoiceDurationSec = $("profileVoiceDurationSec");
+    this.profileVoiceEnabled = $("profileVoiceEnabled");
     this.saveProfileBtn = $("saveProfileBtn");
     this.newProfileBtn = $("newProfileBtn");
     this.duplicateProfileBtn = $("duplicateProfileBtn");
@@ -152,18 +173,25 @@ export class ProfileAdminController {
   bindEvents() {
     this.fetchRemoteBtn?.addEventListener("click", () => this.loadFromSource());
     this.loadSourceBtn?.addEventListener("click", () => this.loadFromSource());
-    this.refreshViewBtn?.addEventListener("click", () => this.renderAll("View refreshed."));
-    this.exportJsonBtn?.addEventListener("click", () => this.downloadJson());
-    this.copyJsonBtn?.addEventListener("click", () => this.copyJson());
-    this.downloadJsonPanelBtn?.addEventListener("click", () => this.downloadJson());
+    this.downloadJsonPanelBtn?.addEventListener("click", () =>
+      this.downloadJson(),
+    );
     this.copyJsonPanelBtn?.addEventListener("click", () => this.copyJson());
     this.clearDraftBtn?.addEventListener("click", () => this.clearDraft());
     this.resumeDraftBtn?.addEventListener("click", () => this.resumeDraft());
-    this.discardDraftBtn?.addEventListener("click", () => this.discardDraftAndReload());
+    this.discardDraftBtn?.addEventListener("click", () =>
+      this.discardDraftAndReload(),
+    );
     this.newProfileBtn?.addEventListener("click", () => this.startNewProfile());
-    this.duplicateProfileBtn?.addEventListener("click", () => this.duplicateSelectedProfile());
-    this.renewProfileBtn?.addEventListener("click", () => this.renewSelectedProfile());
-    this.deleteProfileBtn?.addEventListener("click", () => this.deleteSelectedProfile());
+    this.duplicateProfileBtn?.addEventListener("click", () =>
+      this.duplicateSelectedProfile(),
+    );
+    this.renewProfileBtn?.addEventListener("click", () =>
+      this.renewSelectedProfile(),
+    );
+    this.deleteProfileBtn?.addEventListener("click", () =>
+      this.deleteSelectedProfile(),
+    );
     this.profileForm?.addEventListener("submit", (event) => {
       event.preventDefault();
       this.saveProfile();
@@ -183,7 +211,7 @@ export class ProfileAdminController {
       debounce(() => {
         this.state.search = this.profilesSearch?.value.trim() || "";
         this.renderAll();
-      }, 160)
+      }, 160),
     );
 
     this.profilesSort?.addEventListener("change", () => {
@@ -192,7 +220,8 @@ export class ProfileAdminController {
     });
 
     this.sourceUrlInput?.addEventListener("change", () => {
-      this.state.sourceUrl = this.sourceUrlInput?.value.trim() || DEFAULT_REMOTE_URL;
+      this.state.sourceUrl =
+        this.sourceUrlInput?.value.trim() || DEFAULT_REMOTE_URL;
       this.storage.set(this.sourceKey, this.state.sourceUrl);
     });
 
@@ -210,6 +239,8 @@ export class ProfileAdminController {
         } else if (action === "duplicate") {
           this.selectProfile(rowId);
           this.duplicateSelectedProfile();
+        } else if (action === "invoice") {
+          this.openInvoiceModal(rowId);
         } else if (action === "renew") {
           this.selectProfile(rowId);
           this.renewSelectedProfile();
@@ -232,6 +263,205 @@ export class ProfileAdminController {
       event.preventDefault();
       this.downloadJson();
     });
+
+    // Modal event listeners
+    this.setupModalEvents();
+    this.setupVoiceUploadEvents();
+    this.setupInvoiceModalEvents();
+  }
+
+  setupModalEvents() {
+    // Modal elements
+    this.editModal = $("editModal");
+    this.editModalOverlay = $("editModalOverlay");
+    this.modalTitle = $("modalTitle");
+    this.closeModalBtn = $("closeModalBtn");
+    this.voiceFileBtn = $("voiceFileBtn");
+    this.voiceFileInput = $("voiceFileInput");
+
+    // Tab switching
+    const tabs = document.querySelectorAll(".edit-modal-tab");
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", (e) =>
+        this.switchTab(e.target.closest("button").dataset.tab),
+      );
+    });
+
+    // Close modal
+    this.closeModalBtn?.addEventListener("click", () => this.closeModal());
+    this.editModalOverlay?.addEventListener("click", () => this.closeModal());
+
+    // Modal keyboard
+    this.editModal?.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        this.closeModal();
+      }
+    });
+  }
+
+  setupVoiceUploadEvents() {
+    const uploadZone = $("voiceUploadZone");
+    const voiceFileBtn = $("voiceFileBtn");
+    const voiceFileInput = $("voiceFileInput");
+    const voiceFileClearBtn = $("voiceFileClearBtn");
+
+    if (!uploadZone) return;
+
+    // Drag and drop
+    uploadZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      addClass(uploadZone, "drag-over");
+    });
+
+    uploadZone.addEventListener("dragleave", () => {
+      removeClass(uploadZone, "drag-over");
+    });
+
+    uploadZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      removeClass(uploadZone, "drag-over");
+      const files = e.dataTransfer?.files;
+      if (files?.length) {
+        this.handleVoiceFileSelect(files[0]);
+      }
+    });
+
+    // File input click
+    voiceFileBtn?.addEventListener("click", () => voiceFileInput?.click());
+    voiceFileInput?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        this.handleVoiceFileSelect(file);
+      }
+    });
+
+    // Clear file
+    voiceFileClearBtn?.addEventListener("click", () => this.clearVoiceFile());
+  }
+
+  switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll(".edit-modal-tab").forEach((tab) => {
+      const tabId = tab.dataset.tab;
+      if (tabId === tabName) {
+        addClass(tab, "active");
+        tab.setAttribute("aria-selected", "true");
+      } else {
+        removeClass(tab, "active");
+        tab.setAttribute("aria-selected", "false");
+      }
+    });
+
+    // Update tab content
+    document.querySelectorAll(".edit-modal-tab-content").forEach((content) => {
+      if (content.dataset.tab === tabName) {
+        addClass(content, "active");
+      } else {
+        removeClass(content, "active");
+      }
+    });
+  }
+
+  openModal(profileId) {
+    if (!this.editModal) return;
+    this.state.selectedId = profileId;
+    const profile = this.state.profiles.find(
+      (p) => String(p.id) === String(profileId),
+    );
+
+    if (profile) {
+      this.fillForm(profile);
+      this.modalTitle.textContent = `Edit Profile #${String(profileId).padStart(5, "0")}`;
+    } else {
+      this.startNewProfile();
+      this.modalTitle.textContent = "Create Profile";
+    }
+
+    // Reset to Details tab
+    this.switchTab("details");
+    this.clearVoiceFile();
+
+    this.editModal.showModal();
+    this.editModalOverlay?.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  closeModal() {
+    this.editModal?.close();
+    this.editModalOverlay?.setAttribute("hidden", "");
+    document.body.style.overflow = "";
+  }
+
+  handleVoiceFileSelect(file) {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const validTypes = ["audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg"];
+
+    if (!validTypes.includes(file.type)) {
+      this.setStatus(
+        "Invalid audio format. Supported: MP3, M4A, WAV, OGG",
+        "error",
+      );
+      return;
+    }
+
+    if (file.size > maxSize) {
+      this.setStatus("File too large. Maximum 5MB allowed.", "error");
+      return;
+    }
+
+    // Show file info
+    const fileInfo = $("voiceFileInfo");
+    const fileName = $("voiceFileName");
+    const fileMeta = $("voiceFileMeta");
+    const previewContainer = $("voicePreviewContainer");
+    const previewPlayer = $("voicePreviewPlayer");
+
+    if (fileInfo && fileName) {
+      fileName.textContent = file.name;
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      fileMeta.textContent = `${sizeMB}MB`;
+      fileInfo.removeAttribute("hidden");
+
+      // Show preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (previewPlayer) {
+          previewPlayer.src = e.target.result;
+          previewContainer.removeAttribute("hidden");
+
+          // Get audio duration
+          previewPlayer.addEventListener(
+            "loadedmetadata",
+            () => {
+              const duration = Math.round(previewPlayer.duration);
+              this.profileVoiceDurationSec.value = duration;
+              this.profileVoiceId.value = file.name;
+            },
+            { once: true },
+          );
+        }
+      };
+      reader.readAsDataURL(file);
+
+      this.setStatus("Voice file loaded. Preview ready.", "success");
+    }
+  }
+
+  clearVoiceFile() {
+    const fileInfo = $("voiceFileInfo");
+    const previewContainer = $("voicePreviewContainer");
+    const previewPlayer = $("voicePreviewPlayer");
+    const voiceFileInput = $("voiceFileInput");
+
+    fileInfo?.setAttribute("hidden", "");
+    previewContainer?.setAttribute("hidden", "");
+    if (previewPlayer) {
+      previewPlayer.src = "";
+    }
+    if (voiceFileInput) {
+      voiceFileInput.value = "";
+    }
   }
 
   showDraftBanner() {
@@ -269,7 +499,10 @@ export class ProfileAdminController {
       this.pendingDraft = null;
       this.hideDraftBanner();
       this.applyRecords(records, url);
-      this.setStatus(`Loaded ${records.length} profiles from live JSON.`, "success");
+      this.setStatus(
+        `Loaded ${records.length} profiles from live JSON.`,
+        "success",
+      );
     } catch (error) {
       this.setStatus(`Could not load source JSON: ${error.message}`, "error");
     }
@@ -349,10 +582,15 @@ export class ProfileAdminController {
 
   sanitizeProfile(profile) {
     const record = profile && typeof profile === "object" ? profile : {};
-    const urgent = Boolean(record.urgent) || toSafeString(record.priority).toLowerCase() === "urgent";
+    const urgent =
+      Boolean(record.urgent) ||
+      toSafeString(record.priority).toLowerCase() === "urgent";
     const contactMode = this.normalizeContactMode(record.contactMode);
-    const familyApproval = Boolean(record.familyApproval) || contactMode === "family";
-    const normalizedContactMode = familyApproval ? "family" : (contactMode || "direct");
+    const familyApproval =
+      Boolean(record.familyApproval) || contactMode === "family";
+    const normalizedContactMode = familyApproval
+      ? "family"
+      : contactMode || "direct";
 
     return {
       id: normalizeId(record.id),
@@ -392,8 +630,18 @@ export class ProfileAdminController {
   normalizeContactMode(value) {
     const text = toSafeString(value).toLowerCase();
     if (!text) return "";
-    if (text.includes("family") || text.includes("wali") || text.includes("guardian")) return "family";
-    if (text.includes("private") || text.includes("hidden") || text.includes("exclusive")) return "private";
+    if (
+      text.includes("family") ||
+      text.includes("wali") ||
+      text.includes("guardian")
+    )
+      return "family";
+    if (
+      text.includes("private") ||
+      text.includes("hidden") ||
+      text.includes("exclusive")
+    )
+      return "private";
     if (text.includes("direct") || text.includes("open")) return "direct";
     return "";
   }
@@ -459,7 +707,9 @@ export class ProfileAdminController {
       case "idDesc":
         return bId - aId || bDate - aDate;
       case "urgentFirst":
-        return Number(b.urgent) - Number(a.urgent) || bDate - aDate || bId - aId;
+        return (
+          Number(b.urgent) - Number(a.urgent) || bDate - aDate || bId - aId
+        );
       case "dateDesc":
       default:
         return bDate - aDate || bId - aId;
@@ -484,17 +734,25 @@ export class ProfileAdminController {
   renderStats() {
     const { filtered, idCounts } = this.getFilteredProfiles();
     const now = Date.now();
-    const activeCount = filtered.filter((profile) => !this.isExpired(profile, now)).length;
-    const expiredCount = filtered.filter((profile) => this.isExpired(profile, now)).length;
+    const activeCount = filtered.filter(
+      (profile) => !this.isExpired(profile, now),
+    ).length;
+    const expiredCount = filtered.filter((profile) =>
+      this.isExpired(profile, now),
+    ).length;
     const urgentCount = filtered.filter((profile) => profile.urgent).length;
-    const duplicateCount = filtered.filter((profile) => (idCounts.get(String(profile.id)) || 0) > 1).length;
+    const duplicateCount = filtered.filter(
+      (profile) => (idCounts.get(String(profile.id)) || 0) > 1,
+    ).length;
 
     if (this.totalCount) this.totalCount.textContent = String(filtered.length);
     if (this.urgentCount) this.urgentCount.textContent = String(urgentCount);
     if (this.activeCount) this.activeCount.textContent = String(activeCount);
     if (this.expiredCount) this.expiredCount.textContent = String(expiredCount);
-    if (this.duplicateCount) this.duplicateCount.textContent = String(duplicateCount);
-    if (this.selectedCount) this.selectedCount.textContent = this.state.selectedId ? "1" : "0";
+    if (this.duplicateCount)
+      this.duplicateCount.textContent = String(duplicateCount);
+    if (this.selectedCount)
+      this.selectedCount.textContent = this.state.selectedId ? "1" : "0";
   }
 
   renderTable() {
@@ -517,12 +775,21 @@ export class ProfileAdminController {
       const expired = this.isExpired(profile);
       const duplicate = (idCounts.get(String(profile.id)) || 0) > 1;
       const activeBadge = expired ? "Expired" : "Active";
-      const contactMode = profile.contactMode || (profile.familyApproval ? "family" : "direct");
+      const contactMode =
+        profile.contactMode || (profile.familyApproval ? "family" : "direct");
       const trustBadges = [
-        profile.verified ? '<span class="badge badge-verified">Verified</span>' : "",
-        profile.familyApproval ? '<span class="badge badge-family">Family</span>' : "",
-        contactMode !== "direct" ? `<span class="badge badge-private">${escapeHtml(contactMode === "family" ? "Wali" : "Private")}</span>` : "",
-      ].filter(Boolean).join("");
+        profile.verified
+          ? '<span class="badge badge-verified">Verified</span>'
+          : "",
+        profile.familyApproval
+          ? '<span class="badge badge-family">Family</span>'
+          : "",
+        contactMode !== "direct"
+          ? `<span class="badge badge-private">${escapeHtml(contactMode === "family" ? "Wali" : "Private")}</span>`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("");
       const safeId = escapeHtml(String(profile.id));
       return `
         <tr data-id="${safeId}" class="${selected ? "is-selected" : ""} ${expired ? "is-expired" : ""}">
@@ -573,6 +840,7 @@ export class ProfileAdminController {
             <div class="row-actions">
               <button class="row-btn" type="button" data-action="edit" data-id="${safeId}">Edit</button>
               <button class="row-btn" type="button" data-action="duplicate" data-id="${safeId}">Copy</button>
+              <button class="row-btn" type="button" data-action="invoice" data-id="${safeId}">Invoice</button>
               <button class="row-btn" type="button" data-action="renew" data-id="${safeId}">Renew</button>
               <button class="row-btn danger" type="button" data-action="delete" data-id="${safeId}">Delete</button>
             </div>
@@ -586,7 +854,11 @@ export class ProfileAdminController {
 
   updatePreview() {
     if (!this.jsonPreview) return;
-    this.jsonPreview.value = JSON.stringify(this.buildExportProfiles(), null, 2);
+    this.jsonPreview.value = JSON.stringify(
+      this.buildExportProfiles(),
+      null,
+      2,
+    );
   }
 
   buildExportProfiles(source = this.state.profiles) {
@@ -613,7 +885,9 @@ export class ProfileAdminController {
       values: toSafeString(profile.values),
       verified: Boolean(profile.verified),
       familyApproval: Boolean(profile.familyApproval),
-      contactMode: Boolean(profile.familyApproval) ? "family" : (this.normalizeContactMode(profile.contactMode) || "direct"),
+      contactMode: Boolean(profile.familyApproval)
+        ? "family"
+        : this.normalizeContactMode(profile.contactMode) || "direct",
       guardianName: toSafeString(profile.guardianName),
       guardianPhone: normalizePhone(profile.guardianPhone),
       contactNotes: toSafeString(profile.contactNotes),
@@ -621,18 +895,25 @@ export class ProfileAdminController {
       priority: Boolean(profile.urgent) ? "Urgent" : "normal",
       date: normalizeDate(profile.date || now),
       expiresAt: this.dataService.normalizeOptionalDate(profile.expiresAt),
-      updatedAt: this.dataService.normalizeOptionalDate(profile.updatedAt || now),
+      updatedAt: this.dataService.normalizeOptionalDate(
+        profile.updatedAt || now,
+      ),
     };
   }
 
   updateActionState() {
-    const hasSelection = Boolean(this.state.selectedId && this.getProfileById(this.state.selectedId));
-    if (this.duplicateProfileBtn) this.duplicateProfileBtn.disabled = !hasSelection;
+    const hasSelection = Boolean(
+      this.state.selectedId && this.getProfileById(this.state.selectedId),
+    );
+    if (this.duplicateProfileBtn)
+      this.duplicateProfileBtn.disabled = !hasSelection;
     if (this.renewProfileBtn) this.renewProfileBtn.disabled = !hasSelection;
     if (this.deleteProfileBtn) this.deleteProfileBtn.disabled = !hasSelection;
 
     if (this.formTitle) {
-      this.formTitle.textContent = hasSelection ? `Edit Profile #${this.state.selectedId}` : "Create Profile";
+      this.formTitle.textContent = hasSelection
+        ? `Edit Profile #${this.state.selectedId}`
+        : "Create Profile";
     }
     if (this.formSubtitle) {
       this.formSubtitle.textContent = hasSelection
@@ -640,7 +921,9 @@ export class ProfileAdminController {
         : "Create a new profile or load an existing one from the table.";
     }
     if (this.saveProfileBtn) {
-      this.saveProfileBtn.textContent = hasSelection ? "Update profile" : "Save profile";
+      this.saveProfileBtn.textContent = hasSelection
+        ? "Update profile"
+        : "Save profile";
     }
   }
 
@@ -671,18 +954,33 @@ export class ProfileAdminController {
       date: new Date().toISOString(),
       expiresAt: "",
     });
-    this.updateActionState();
     this.setStatus(`Ready to create a new profile with ID ${nextId}.`, "");
+
+    // Open modal for new profile
+    this.editModal?.showModal();
+    this.editModalOverlay?.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+    this.modalTitle.textContent = "Create Profile";
+    this.switchTab("details");
+    this.clearVoiceFile();
   }
 
   resumeDraft() {
     if (!this.pendingDraft?.profiles?.length) return;
-    const sourceUrl = this.pendingDraft?.sourceUrl || this.state.sourceUrl || DEFAULT_REMOTE_URL;
-    const profiles = this.pendingDraft.profiles.map((profile) => this.sanitizeProfile(profile));
+    const sourceUrl =
+      this.pendingDraft?.sourceUrl ||
+      this.state.sourceUrl ||
+      DEFAULT_REMOTE_URL;
+    const profiles = this.pendingDraft.profiles.map((profile) =>
+      this.sanitizeProfile(profile),
+    );
     this.hideDraftBanner();
     this.pendingDraft = null;
     this.applyRecords(profiles, sourceUrl);
-    this.setStatus(`Local draft restored with ${profiles.length} profiles.`, "success");
+    this.setStatus(
+      `Local draft restored with ${profiles.length} profiles.`,
+      "success",
+    );
   }
 
   discardDraftAndReload() {
@@ -696,7 +994,10 @@ export class ProfileAdminController {
     this.storage.remove(this.draftKey);
     this.pendingDraft = null;
     this.hideDraftBanner();
-    this.setStatus("Local draft cleared. The current working set stays in memory.", "success");
+    this.setStatus(
+      "Local draft cleared. The current working set stays in memory.",
+      "success",
+    );
   }
 
   importFile() {
@@ -714,7 +1015,10 @@ export class ProfileAdminController {
         this.pendingDraft = null;
         this.hideDraftBanner();
         this.applyRecords(records, file.name);
-        this.setStatus(`Imported ${records.length} profiles from ${file.name}.`, "success");
+        this.setStatus(
+          `Imported ${records.length} profiles from ${file.name}.`,
+          "success",
+        );
       } catch (error) {
         this.setStatus(`Could not import file: ${error.message}`, "error");
       } finally {
@@ -728,13 +1032,19 @@ export class ProfileAdminController {
     const profile = this.readFormProfile();
     if (!profile) return;
 
-    const existingIndex = this.state.profiles.findIndex((item) => String(item.id) === String(this.state.selectedId));
+    const existingIndex = this.state.profiles.findIndex(
+      (item) => String(item.id) === String(this.state.selectedId),
+    );
     const duplicateIndex = this.state.profiles.findIndex(
-      (item, index) => String(item.id) === String(profile.id) && index !== existingIndex
+      (item, index) =>
+        String(item.id) === String(profile.id) && index !== existingIndex,
     );
 
     if (duplicateIndex !== -1) {
-      this.setStatus(`Profile ID ${profile.id} already exists. Choose a different ID.`, "error");
+      this.setStatus(
+        `Profile ID ${profile.id} already exists. Choose a different ID.`,
+        "error",
+      );
       this.profileId?.focus();
       return;
     }
@@ -756,6 +1066,9 @@ export class ProfileAdminController {
     this.persistDraft();
     this.renderAll();
     this.setStatus(actionMessage, "success");
+
+    // Close modal after successful save
+    this.closeModal();
   }
 
   readFormProfile() {
@@ -776,13 +1089,17 @@ export class ProfileAdminController {
     const familyApproval = Boolean(this.profileFamilyApproval?.checked);
     const contactMode = familyApproval
       ? "family"
-      : (this.normalizeContactMode(this.profileContactMode?.value) || "direct");
+      : this.normalizeContactMode(this.profileContactMode?.value) || "direct";
     const guardianName = toSafeString(this.profileGuardianName?.value);
     const guardianPhone = normalizePhone(this.profileGuardianPhone?.value);
     const contactNotes = toSafeString(this.profileContactNotes?.value);
     const urgent = Boolean(this.profileUrgent?.checked);
-    const date = this.profileDate?.value ? new Date(this.profileDate.value).toISOString() : new Date().toISOString();
-    const expiresAt = this.profileExpiresAt?.value ? new Date(this.profileExpiresAt.value).toISOString() : "";
+    const date = this.profileDate?.value
+      ? new Date(this.profileDate.value).toISOString()
+      : new Date().toISOString();
+    const expiresAt = this.profileExpiresAt?.value
+      ? new Date(this.profileExpiresAt.value).toISOString()
+      : "";
 
     if (!title) {
       this.setStatus("Title is required.", "error");
@@ -821,6 +1138,9 @@ export class ProfileAdminController {
       urgent,
       date,
       expiresAt,
+      voiceId: toSafeString(this.profileVoiceId?.value),
+      voiceDurationSec: Number(this.profileVoiceDurationSec?.value) || 0,
+      voiceEnabled: Boolean(this.profileVoiceEnabled?.checked),
     });
   }
 
@@ -831,24 +1151,44 @@ export class ProfileAdminController {
     if (this.profileTitle) this.profileTitle.value = record.title ?? "";
     if (this.profileBody) this.profileBody.value = record.body ?? "";
     if (this.profilePhone) this.profilePhone.value = record.phone ?? "";
-    if (this.profileWhatsapp) this.profileWhatsapp.value = record.whatsapp ?? "";
-    if (this.profileInstagramPostId) this.profileInstagramPostId.value = record.instagramPostId ?? "";
-    if (this.profileBiodataUrl) this.profileBiodataUrl.value = record.biodataUrl ?? "";
+    if (this.profileWhatsapp)
+      this.profileWhatsapp.value = record.whatsapp ?? "";
+    if (this.profileInstagramPostId)
+      this.profileInstagramPostId.value = record.instagramPostId ?? "";
+    if (this.profileBiodataUrl)
+      this.profileBiodataUrl.value = record.biodataUrl ?? "";
     if (this.profileAge) this.profileAge.value = record.age ?? "";
-    if (this.profileGender) this.profileGender.value = record.gender || "unknown";
-    if (this.profileEducation) this.profileEducation.value = record.education ?? "";
+    if (this.profileGender)
+      this.profileGender.value = record.gender || "unknown";
+    if (this.profileEducation)
+      this.profileEducation.value = record.education ?? "";
     if (this.profileUrgent) this.profileUrgent.checked = Boolean(record.urgent);
-    if (this.profileVerified) this.profileVerified.checked = Boolean(record.verified);
-    if (this.profileFamilyApproval) this.profileFamilyApproval.checked = Boolean(record.familyApproval);
-    if (this.profileContactMode) this.profileContactMode.value = record.familyApproval ? "family" : (record.contactMode || "direct");
-    if (this.profileLocation) this.profileLocation.value = record.location ?? "";
-    if (this.profileGuardianName) this.profileGuardianName.value = record.guardianName ?? "";
-    if (this.profileGuardianPhone) this.profileGuardianPhone.value = record.guardianPhone ?? "";
+    if (this.profileVerified)
+      this.profileVerified.checked = Boolean(record.verified);
+    if (this.profileFamilyApproval)
+      this.profileFamilyApproval.checked = Boolean(record.familyApproval);
+    if (this.profileContactMode)
+      this.profileContactMode.value = record.familyApproval
+        ? "family"
+        : record.contactMode || "direct";
+    if (this.profileLocation)
+      this.profileLocation.value = record.location ?? "";
+    if (this.profileGuardianName)
+      this.profileGuardianName.value = record.guardianName ?? "";
+    if (this.profileGuardianPhone)
+      this.profileGuardianPhone.value = record.guardianPhone ?? "";
     if (this.profileValues) this.profileValues.value = record.values ?? "";
-    if (this.profileContactNotes) this.profileContactNotes.value = record.contactNotes ?? "";
+    if (this.profileContactNotes)
+      this.profileContactNotes.value = record.contactNotes ?? "";
     if (this.profileDate) this.profileDate.value = toLocalDateTime(record.date);
-    if (this.profileExpiresAt) this.profileExpiresAt.value = toLocalDateTime(record.expiresAt);
+    if (this.profileExpiresAt)
+      this.profileExpiresAt.value = toLocalDateTime(record.expiresAt);
     if (this.profileNotes) this.profileNotes.value = record.notes ?? "";
+    if (this.profileVoiceId) this.profileVoiceId.value = record.voiceId ?? "";
+    if (this.profileVoiceDurationSec)
+      this.profileVoiceDurationSec.value = record.voiceDurationSec ?? "";
+    if (this.profileVoiceEnabled)
+      this.profileVoiceEnabled.checked = Boolean(record.voiceEnabled);
   }
 
   selectProfile(id, { silent = false } = {}) {
@@ -856,16 +1196,18 @@ export class ProfileAdminController {
     if (!profile) return;
 
     this.state.selectedId = String(profile.id);
-    this.fillForm(profile);
-    this.renderTable();
-    this.updateActionState();
+    this.openModal(String(profile.id));
     if (!silent) {
       this.setStatus(`Selected profile #${profile.id}.`, "");
     }
   }
 
   getProfileById(id) {
-    return this.state.profiles.find((profile) => String(profile.id) === String(id)) || null;
+    return (
+      this.state.profiles.find(
+        (profile) => String(profile.id) === String(id),
+      ) || null
+    );
   }
 
   duplicateSelectedProfile() {
@@ -887,7 +1229,10 @@ export class ProfileAdminController {
     this.fillForm(duplicate);
     this.persistDraft();
     this.renderAll();
-    this.setStatus(`Duplicated profile #${profile.id} into #${duplicate.id}.`, "success");
+    this.setStatus(
+      `Duplicated profile #${profile.id} into #${duplicate.id}.`,
+      "success",
+    );
   }
 
   renewSelectedProfile() {
@@ -903,14 +1248,19 @@ export class ProfileAdminController {
       updatedAt: nowIso,
     });
 
-    const index = this.state.profiles.findIndex((item) => String(item.id) === String(profile.id));
+    const index = this.state.profiles.findIndex(
+      (item) => String(item.id) === String(profile.id),
+    );
     if (index === -1) return;
 
     this.state.profiles[index] = renewed;
     this.fillForm(renewed);
     this.persistDraft();
     this.renderAll();
-    this.setStatus(`Renewed profile #${renewed.id} for ${renewDays} day${renewDays === 1 ? "" : "s"}.`, "success");
+    this.setStatus(
+      `Renewed profile #${renewed.id} for ${renewDays} day${renewDays === 1 ? "" : "s"}.`,
+      "success",
+    );
   }
 
   deleteSelectedProfile() {
@@ -918,7 +1268,9 @@ export class ProfileAdminController {
     if (!profile) return;
     if (!confirm(`Delete profile #${profile.id}?`)) return;
 
-    this.state.profiles = this.state.profiles.filter((item) => String(item.id) !== String(profile.id));
+    this.state.profiles = this.state.profiles.filter(
+      (item) => String(item.id) !== String(profile.id),
+    );
     this.state.selectedId = "";
     this.persistDraft();
 
@@ -963,7 +1315,9 @@ export class ProfileAdminController {
 
   downloadJson() {
     const payload = this.buildExportProfiles();
-    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
+    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -976,8 +1330,522 @@ export class ProfileAdminController {
   }
 
   async copyJson() {
-    const ok = await copyText(JSON.stringify(this.buildExportProfiles(), null, 2));
-    this.setStatus(ok ? "JSON copied to clipboard." : "Could not copy JSON.", ok ? "success" : "error");
+    const ok = await copyText(
+      JSON.stringify(this.buildExportProfiles(), null, 2),
+    );
+    this.setStatus(
+      ok ? "JSON copied to clipboard." : "Could not copy JSON.",
+      ok ? "success" : "error",
+    );
+  }
+
+  // ========== INVOICE GENERATOR METHODS ==========
+
+  setupInvoiceModalEvents() {
+    const invoiceModal = $("invoiceModal");
+    const invoiceModalOverlay = $("invoiceModalOverlay");
+    const closeInvoiceBtn = $("closeInvoiceBtn");
+    const closeInvoiceFormBtn = $("closeInvoiceFormBtn");
+    const addInvoiceItemBtn = $("addInvoiceItemBtn");
+    const generateInvoicePdfBtn = $("generateInvoicePdfBtn");
+    const previewInvoiceBtn = $("previewInvoiceBtn");
+    const invoiceForm = $("invoiceForm");
+
+    // Close handlers
+    closeInvoiceBtn?.addEventListener("click", () => this.closeInvoiceModal());
+    closeInvoiceFormBtn?.addEventListener("click", () =>
+      this.closeInvoiceModal(),
+    );
+    invoiceModalOverlay?.addEventListener("click", () =>
+      this.closeInvoiceModal(),
+    );
+
+    // Add item handler
+    addInvoiceItemBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.addInvoiceItem();
+    });
+
+    // Generate PDF handler
+    generateInvoicePdfBtn?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      await this.generateAndDownloadInvoicePDF();
+    });
+
+    // Preview handler
+    previewInvoiceBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.previewInvoice();
+    });
+
+    // Form submission
+    invoiceForm?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      this.generateAndDownloadInvoicePDF();
+    });
+
+    // Logo upload handlers
+    const uploadLogoBtn = $("uploadLogoBtn");
+    const logoFileInput = $("logoFileInput");
+    const clearLogoBtn = $("clearLogoBtn");
+
+    uploadLogoBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      logoFileInput?.click();
+    });
+
+    logoFileInput?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        this.handleLogoUpload(file);
+      }
+    });
+
+    clearLogoBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.clearLogo();
+    });
+
+    // Invoice items container event delegation
+    const itemsContainer = $("invoiceItemsContainer");
+    itemsContainer?.addEventListener("click", (e) => {
+      if (e.target.closest(".invoice-btn-remove")) {
+        e.preventDefault();
+        const item = e.target.closest(".invoice-item");
+        const itemCount =
+          itemsContainer.querySelectorAll(".invoice-item").length;
+        if (itemCount > 1) {
+          item?.remove();
+          this.updateInvoiceSummary();
+        } else {
+          this.setStatus("At least one invoice item is required.", "error");
+        }
+      }
+    });
+
+    // Item inputs change handlers
+    itemsContainer?.addEventListener("change", () =>
+      this.updateInvoiceSummary(),
+    );
+    itemsContainer?.addEventListener("input", () =>
+      this.updateInvoiceSummary(),
+    );
+
+    // Due date calculation
+    const daysInput = $("invoiceDaysUntilDue");
+    daysInput?.addEventListener("change", () => this.updateInvoiceDueDate());
+
+    // Preview modal close
+    const previewOverlay = $("invoicePreviewOverlay");
+    const closePreviewBtn = $("closePreviewBtn");
+    const printPreviewBtn = $("printPreviewBtn");
+    const downloadFromPreviewBtn = $("downloadFromPreviewBtn");
+
+    closePreviewBtn?.addEventListener("click", () =>
+      this.closeInvoicePreviewModal(),
+    );
+    previewOverlay?.addEventListener("click", () =>
+      this.closeInvoicePreviewModal(),
+    );
+
+    printPreviewBtn?.addEventListener("click", () => {
+      if (this.currentInvoiceGenerator) {
+        this.currentInvoiceGenerator.printInvoice();
+      }
+    });
+
+    downloadFromPreviewBtn?.addEventListener("click", async () => {
+      if (this.currentInvoiceGenerator) {
+        await this.currentInvoiceGenerator.generatePDF();
+      }
+    });
+  }
+
+  openInvoiceModal(profileId) {
+    const profile = this.getProfileById(profileId);
+    if (!profile) return;
+
+    const invoiceModal = $("invoiceModal");
+    const invoiceModalOverlay = $("invoiceModalOverlay");
+
+    // Set up invoice generator
+    this.currentInvoiceGenerator = new InvoiceGenerator();
+    this.currentInvoiceGenerator.initWithProfile(profile);
+
+    // Fill form with profile data
+    const invoiceNumber = $("invoiceNumber");
+    const billToName = $("invoiceBillToName");
+    const billToPhone = $("invoiceBillToPhone");
+    const issueDate = $("invoiceIssueDate");
+    const dueDate = $("invoiceDueDate");
+
+    if (invoiceNumber)
+      invoiceNumber.value =
+        this.currentInvoiceGenerator.invoiceData.invoiceNumber;
+    if (billToName)
+      billToName.value = this.currentInvoiceGenerator.invoiceData.billTo.name;
+    if (billToPhone)
+      billToPhone.value = this.currentInvoiceGenerator.invoiceData.billTo.phone;
+    if (issueDate) issueDate.value = new Date().toISOString().split("T")[0];
+    if (dueDate) {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      dueDate.value = d.toISOString().split("T")[0];
+    }
+
+    // Reset logo preview
+    const logoImage = $("logoImage");
+    const logoPlaceholder = $("logoPlaceholder");
+    const clearLogoBtn = $("clearLogoBtn");
+    const logoFileInput = $("logoFileInput");
+
+    if (logoImage && logoPlaceholder) {
+      logoImage.src = "";
+      logoImage.style.display = "none";
+      logoPlaceholder.style.display = "block";
+      clearLogoBtn.style.display = "none";
+    }
+    if (logoFileInput) {
+      logoFileInput.value = "";
+    }
+
+    // Clear T&C and person info fields
+    const termsInput = $("invoiceTermsConditions");
+    const personNameInput = $("invoicePersonName");
+    const personNumberInput = $("invoicePersonNumber");
+
+    if (termsInput) {
+      termsInput.value = `**Payment Terms**
+1. Payment due within 30 days
+2. Late fees apply after due date
+
+**Cancellation Policy**
+1. Cancellations must be in writing
+2. Refunds processed within 7 days`;
+    }
+    if (personNameInput) personNameInput.value = "";
+    if (personNumberInput) personNumberInput.value = "";
+
+    this.updateInvoiceSummary();
+
+    invoiceModal?.showModal?.();
+    invoiceModalOverlay?.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  closeInvoiceModal() {
+    const invoiceModal = $("invoiceModal");
+    const invoiceModalOverlay = $("invoiceModalOverlay");
+
+    invoiceModal?.close?.();
+    invoiceModalOverlay?.setAttribute("hidden", "");
+    document.body.style.overflow = "";
+
+    this.currentInvoiceGenerator = null;
+  }
+
+  closeInvoicePreviewModal() {
+    const previewModal = $("invoicePreviewModal");
+    const previewOverlay = $("invoicePreviewOverlay");
+
+    previewModal?.close?.();
+    previewOverlay?.setAttribute("hidden", "");
+    document.body.style.overflow = "";
+  }
+
+  addInvoiceItem() {
+    const container = $("invoiceItemsContainer");
+    if (!container) return;
+
+    const itemHTML = `
+      <div class="invoice-item">
+        <div class="invoice-item-grid">
+          <div class="invoice-item-field">
+            <label>Description</label>
+            <input type="text" class="invoice-item-input item-description" placeholder="Service description">
+          </div>
+          <div class="invoice-item-field">
+            <label>Qty</label>
+            <input type="number" class="invoice-item-input item-quantity" value="1" min="1" style="width: 60px;">
+          </div>
+          <div class="invoice-item-field">
+            <label>Unit Price (₹)</label>
+            <input type="number" class="invoice-item-input item-price" placeholder="0.00" min="0" step="0.01" style="width: 90px;">
+          </div>
+          <div class="invoice-item-field">
+            <label>GST %</label>
+            <select class="invoice-item-input item-gst" style="width: 70px;">
+              <option value="0">0%</option>
+              <option value="5">5%</option>
+              <option value="12">12%</option>
+              <option value="18" selected>18%</option>
+              <option value="28">28%</option>
+            </select>
+          </div>
+          <div class="invoice-item-field">
+            <label>Total</label>
+            <div class="invoice-item-total">₹0.00</div>
+          </div>
+          <button type="button" class="invoice-btn-remove" aria-label="Remove item" style="align-self: flex-end;">×</button>
+        </div>
+      </div>
+    `;
+
+    const newItem = document.createElement("div");
+    newItem.innerHTML = itemHTML;
+    container.appendChild(newItem.firstElementChild);
+    this.updateInvoiceSummary();
+  }
+
+  updateInvoiceSummary() {
+    const container = $("invoiceItemsContainer");
+    if (!container) return;
+
+    const items = container.querySelectorAll(".invoice-item");
+    let subtotal = 0;
+    let totalGst = 0;
+
+    items.forEach((item) => {
+      const qty = parseFloat(item.querySelector(".item-quantity")?.value || 0);
+      const price = parseFloat(item.querySelector(".item-price")?.value || 0);
+      const gstPercent = parseFloat(
+        item.querySelector(".item-gst")?.value || 0,
+      );
+
+      const itemSubtotal = qty * price;
+      const itemGst = (itemSubtotal * gstPercent) / 100;
+      const itemTotal = itemSubtotal + itemGst;
+
+      subtotal += itemSubtotal;
+      totalGst += itemGst;
+
+      const totalSpan = item.querySelector(".invoice-item-total");
+      if (totalSpan) {
+        totalSpan.textContent = this.formatInvoiceCurrency(itemTotal);
+      }
+    });
+
+    const totalAmount = subtotal + totalGst;
+
+    const subtotalEl = $("invoiceSubtotal");
+    const gstEl = $("invoiceTotalGst");
+    const totalEl = $("invoiceTotalAmount");
+
+    if (subtotalEl)
+      subtotalEl.textContent = this.formatInvoiceCurrency(subtotal);
+    if (gstEl) gstEl.textContent = this.formatInvoiceCurrency(totalGst);
+    if (totalEl) totalEl.textContent = this.formatInvoiceCurrency(totalAmount);
+
+    // Update invoice generator items
+    if (this.currentInvoiceGenerator) {
+      const items = [];
+      container.querySelectorAll(".invoice-item").forEach((item, index) => {
+        items.push({
+          description: item.querySelector(".item-description")?.value || "",
+          quantity: parseFloat(
+            item.querySelector(".item-quantity")?.value || 1,
+          ),
+          unitPrice: parseFloat(item.querySelector(".item-price")?.value || 0),
+          gstPercent: parseFloat(item.querySelector(".item-gst")?.value || 18),
+        });
+      });
+      this.currentInvoiceGenerator.setItems(items);
+    }
+  }
+
+  updateInvoiceDueDate() {
+    const daysInput = $("invoiceDaysUntilDue");
+    const dueDateInput = $("invoiceDueDate");
+
+    if (daysInput && dueDateInput) {
+      const days = parseInt(daysInput.value || 30);
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      dueDateInput.value = d.toISOString().split("T")[0];
+    }
+  }
+
+  formatInvoiceCurrency(amount) {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
+  handleLogoUpload(file) {
+    const maxSize = 1024 * 1024; // 1MB
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/svg+xml",
+    ];
+
+    if (!validTypes.includes(file.type)) {
+      this.setStatus(
+        "Invalid image format. Supported: JPG, PNG, WebP, SVG",
+        "error",
+      );
+      return;
+    }
+
+    if (file.size > maxSize) {
+      this.setStatus("Logo file too large. Maximum 1MB allowed.", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64Data = e.target.result;
+      if (this.currentInvoiceGenerator) {
+        this.currentInvoiceGenerator.invoiceData.logo = base64Data;
+      }
+
+      // Update preview
+      const logoImage = $("logoImage");
+      const logoPlaceholder = $("logoPlaceholder");
+      const clearLogoBtn = $("clearLogoBtn");
+
+      if (logoImage && logoPlaceholder) {
+        logoImage.src = base64Data;
+        logoImage.style.display = "block";
+        logoPlaceholder.style.display = "none";
+        clearLogoBtn.style.display = "inline-block";
+      }
+
+      this.setStatus("Logo uploaded successfully! 📸", "success");
+    };
+
+    reader.onerror = () => {
+      this.setStatus("Failed to read logo file.", "error");
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  clearLogo() {
+    if (this.currentInvoiceGenerator) {
+      this.currentInvoiceGenerator.invoiceData.logo = null;
+    }
+
+    const logoImage = $("logoImage");
+    const logoPlaceholder = $("logoPlaceholder");
+    const clearLogoBtn = $("clearLogoBtn");
+    const logoFileInput = $("logoFileInput");
+
+    if (logoImage && logoPlaceholder) {
+      logoImage.src = "";
+      logoImage.style.display = "none";
+      logoPlaceholder.style.display = "block";
+      clearLogoBtn.style.display = "none";
+    }
+
+    if (logoFileInput) {
+      logoFileInput.value = "";
+    }
+
+    this.setStatus("Logo cleared.", "success");
+  }
+
+  previewInvoice() {
+    if (!this.currentInvoiceGenerator) return;
+
+    // Update invoice data from form
+    this.updateInvoiceDataFromForm();
+
+    const previewModal = $("invoicePreviewModal");
+    const previewOverlay = $("invoicePreviewOverlay");
+    const previewContainer = $("invoicePreviewContainer");
+
+    if (previewContainer) {
+      previewContainer.innerHTML =
+        this.currentInvoiceGenerator.generateInvoiceHTML();
+    }
+
+    previewModal?.showModal?.();
+    previewOverlay?.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  async generateAndDownloadInvoicePDF() {
+    if (!this.currentInvoiceGenerator) return;
+
+    // Update invoice data from form
+    this.updateInvoiceDataFromForm();
+
+    this.setStatus("Generating PDF...", "");
+
+    try {
+      await this.currentInvoiceGenerator.generatePDF();
+      this.setStatus("Invoice PDF downloaded successfully!", "success");
+      this.closeInvoiceModal();
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      this.setStatus(
+        "Failed to generate PDF. Please try again or use the Print option.",
+        "error",
+      );
+    }
+  }
+
+  updateInvoiceDataFromForm() {
+    if (!this.currentInvoiceGenerator) return;
+
+    // Update from section
+    this.currentInvoiceGenerator.invoiceData.from.name =
+      $("invoiceFromName")?.value || "InstaRishta";
+    this.currentInvoiceGenerator.invoiceData.from.email =
+      $("invoiceFromEmail")?.value || "";
+    this.currentInvoiceGenerator.invoiceData.from.address =
+      $("invoiceFromAddress")?.value || "";
+    this.currentInvoiceGenerator.invoiceData.from.phone =
+      $("invoiceFromPhone")?.value || "";
+
+    // Update bill to section
+    this.currentInvoiceGenerator.invoiceData.billTo.name =
+      $("invoiceBillToName")?.value || "";
+    this.currentInvoiceGenerator.invoiceData.billTo.email =
+      $("invoiceBillToEmail")?.value || "";
+    this.currentInvoiceGenerator.invoiceData.billTo.address =
+      $("invoiceBillToAddress")?.value || "";
+    this.currentInvoiceGenerator.invoiceData.billTo.phone =
+      $("invoiceBillToPhone")?.value || "";
+
+    // Update invoice dates
+    this.currentInvoiceGenerator.invoiceData.invoiceDate = new Date(
+      $("invoiceIssueDate")?.value || new Date(),
+    ).toLocaleDateString("en-GB", { dateStyle: "medium" });
+    this.currentInvoiceGenerator.invoiceData.dueDate = new Date(
+      $("invoiceDueDate")?.value || new Date(),
+    ).toLocaleDateString("en-GB", { dateStyle: "medium" });
+
+    // Update invoice items from form
+    const itemsContainer = $("invoiceItemsContainer");
+    if (itemsContainer) {
+      const items = [];
+      itemsContainer.querySelectorAll(".invoice-item").forEach((item) => {
+        items.push({
+          description: item.querySelector(".item-description")?.value || "",
+          quantity: parseFloat(
+            item.querySelector(".item-quantity")?.value || 1,
+          ),
+          unitPrice: parseFloat(item.querySelector(".item-price")?.value || 0),
+          gstPercent: parseFloat(item.querySelector(".item-gst")?.value || 18),
+        });
+      });
+      this.currentInvoiceGenerator.setItems(items);
+    }
+
+    // Update terms and conditions
+    this.currentInvoiceGenerator.invoiceData.termsAndConditions =
+      $("invoiceTermsConditions")?.value || "";
+
+    // Update person info
+    this.currentInvoiceGenerator.invoiceData.personName =
+      $("invoicePersonName")?.value || "";
+    this.currentInvoiceGenerator.invoiceData.personNumber =
+      $("invoicePersonNumber")?.value || "";
   }
 }
 
@@ -986,5 +1854,3 @@ domReady(() => {
   app.init();
   window.profileAdminApp = app;
 });
-
-
