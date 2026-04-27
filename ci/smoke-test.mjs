@@ -38,21 +38,22 @@ async function run() {
     await waitForServer();
 
     const html = await fetchText("/");
-    if (!html.includes('type="module" src="js/app/main.js"')) {
-      throw new Error("index route is not wired to module entrypoint.");
+    if (!html.includes('id="hero-heading"')) {
+      throw new Error("Landing page hero section missing on index route.");
     }
 
-    if (!html.includes("manifest.webmanifest")) {
-      throw new Error("Manifest link missing on index route.");
+    const profilesHtml = await fetchText("/profiles.html");
+    if (!profilesHtml.includes('type="module" src="js/app/main.js"')) {
+      throw new Error("profiles.html is not wired to module entrypoint.");
     }
-    if (!html.includes("hero-marquee")) {
-      throw new Error("Hero marquee section missing on index route.");
+    if (!profilesHtml.includes("manifest.webmanifest")) {
+      throw new Error("Manifest link missing on profiles page.");
     }
-    if (!html.includes("contactFlowModal")) {
-      throw new Error("Contact flow modal missing on index route.");
+    if (!profilesHtml.includes("contactFlowModal")) {
+      throw new Error("Contact flow modal missing on profiles page.");
     }
-    if (!html.includes("seoFaqTitle")) {
-      throw new Error("FAQ section missing on index route.");
+    if (!profilesHtml.includes("seoFaqTitle")) {
+      throw new Error("FAQ section missing on profiles page.");
     }
 
     const mainJs = await fetchText("/js/app/main.js");
