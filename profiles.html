@@ -32,13 +32,13 @@
     <meta name="theme-color" content="#4f46e5">
     <meta name="color-scheme" content="light dark">
     <script>
-      (function(){
-        var t=localStorage.getItem("theme");
-        var d=document.documentElement;
-        if(t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme:dark)").matches))
-          d.setAttribute("data-theme","dark");
-        else if(t&&t!=="light"&&t!=="system")
-          d.setAttribute("data-theme",t);
+      (function () {
+        var t = localStorage.getItem("theme");
+        var d = document.documentElement;
+        if (t === "dark" || ((!t || t === "system") && window.matchMedia("(prefers-color-scheme:dark)").matches))
+          d.setAttribute("data-theme", "dark");
+        else if (t && t !== "light" && t !== "system")
+          d.setAttribute("data-theme", t);
       })();
     </script>
 
@@ -226,7 +226,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-              <a href="/" class="site-logo" style="text-decoration:none;">InstaRishta</a>
+              <a href="/" class="site-logo" style="text-decoration:none;">Insta<span
+                  class="site-logo-accent">Rishta</span></a>
             </div>
 
             <div class="flex items-center gap-3">
@@ -311,7 +312,7 @@
         </div>
       </header>
 
-      <main id="mainContent" class="max-w-7xl mx-auto p-4 md:p-4">
+      <main id="mainContent" class="max-w-7xl mx-auto py-4 md:py-2">
         <section class="stats-strip-wrap mb-5 fade-in" aria-label="Platform totals">
           <div class="stats-strip">
             <div class="stats-strip-track">
@@ -517,7 +518,7 @@
           <h3 class="text-lg font-semibold text-gray-800 mb-2">No profiles found</h3>
           <p class="text-gray-600 mb-4">Try adjusting your search criteria or filters.</p>
           <button id="clearAllFilters"
-            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+            class="bg-indigo-600 text-white px-4 p-4 rounded-md hover:bg-indigo-700 transition-colors">
             Clear All Filters
           </button>
         </div>
@@ -599,36 +600,92 @@
               <div class="filter-row filter-row-selects w-full">
                 <select id="mobileAgeMinFilter" class="drawer-field" aria-label="Minimum age">
                   <option value="18">Min Age: 18</option>
-                  <option value="19">19</option><option value="20">20</option><option value="21">21</option>
-                  <option value="22">22</option><option value="23">23</option><option value="24">24</option>
-                  <option value="25">25</option><option value="26">26</option><option value="27">27</option>
-                  <option value="28">28</option><option value="29">29</option><option value="30">30</option>
-                  <option value="31">31</option><option value="32">32</option><option value="33">33</option>
-                  <option value="34">34</option><option value="35">35</option><option value="36">36</option>
-                  <option value="37">37</option><option value="38">38</option><option value="39">39</option>
-                  <option value="40">40</option><option value="41">41</option><option value="42">42</option>
-                  <option value="43">43</option><option value="44">44</option><option value="45">45</option>
-                  <option value="46">46</option><option value="47">47</option><option value="48">48</option>
-                  <option value="49">49</option><option value="50">50</option><option value="51">51</option>
-                  <option value="52">52</option><option value="53">53</option><option value="54">54</option>
-                  <option value="55">55</option><option value="56">56</option><option value="57">57</option>
-                  <option value="58">58</option><option value="59">59</option><option value="60">60</option>
+                  <option value="19">19</option>
+                  <option value="20">20</option>
+                  <option value="21">21</option>
+                  <option value="22">22</option>
+                  <option value="23">23</option>
+                  <option value="24">24</option>
+                  <option value="25">25</option>
+                  <option value="26">26</option>
+                  <option value="27">27</option>
+                  <option value="28">28</option>
+                  <option value="29">29</option>
+                  <option value="30">30</option>
+                  <option value="31">31</option>
+                  <option value="32">32</option>
+                  <option value="33">33</option>
+                  <option value="34">34</option>
+                  <option value="35">35</option>
+                  <option value="36">36</option>
+                  <option value="37">37</option>
+                  <option value="38">38</option>
+                  <option value="39">39</option>
+                  <option value="40">40</option>
+                  <option value="41">41</option>
+                  <option value="42">42</option>
+                  <option value="43">43</option>
+                  <option value="44">44</option>
+                  <option value="45">45</option>
+                  <option value="46">46</option>
+                  <option value="47">47</option>
+                  <option value="48">48</option>
+                  <option value="49">49</option>
+                  <option value="50">50</option>
+                  <option value="51">51</option>
+                  <option value="52">52</option>
+                  <option value="53">53</option>
+                  <option value="54">54</option>
+                  <option value="55">55</option>
+                  <option value="56">56</option>
+                  <option value="57">57</option>
+                  <option value="58">58</option>
+                  <option value="59">59</option>
+                  <option value="60">60</option>
                 </select>
                 <select id="mobileAgeMaxFilter" class="drawer-field" aria-label="Maximum age">
-                  <option value="18">18</option><option value="19">19</option><option value="20">20</option>
-                  <option value="21">21</option><option value="22">22</option><option value="23">23</option>
-                  <option value="24">24</option><option value="25">25</option><option value="26">26</option>
-                  <option value="27">27</option><option value="28">28</option><option value="29">29</option>
-                  <option value="30">30</option><option value="31">31</option><option value="32">32</option>
-                  <option value="33">33</option><option value="34">34</option><option value="35">35</option>
-                  <option value="36">36</option><option value="37">37</option><option value="38">38</option>
-                  <option value="39">39</option><option value="40">40</option><option value="41">41</option>
-                  <option value="42">42</option><option value="43">43</option><option value="44">44</option>
-                  <option value="45">45</option><option value="46">46</option><option value="47">47</option>
-                  <option value="48">48</option><option value="49">49</option><option value="50">50</option>
-                  <option value="51">51</option><option value="52">52</option><option value="53">53</option>
-                  <option value="54">54</option><option value="55">55</option><option value="56">56</option>
-                  <option value="57">57</option><option value="58">58</option><option value="59">59</option>
+                  <option value="18">18</option>
+                  <option value="19">19</option>
+                  <option value="20">20</option>
+                  <option value="21">21</option>
+                  <option value="22">22</option>
+                  <option value="23">23</option>
+                  <option value="24">24</option>
+                  <option value="25">25</option>
+                  <option value="26">26</option>
+                  <option value="27">27</option>
+                  <option value="28">28</option>
+                  <option value="29">29</option>
+                  <option value="30">30</option>
+                  <option value="31">31</option>
+                  <option value="32">32</option>
+                  <option value="33">33</option>
+                  <option value="34">34</option>
+                  <option value="35">35</option>
+                  <option value="36">36</option>
+                  <option value="37">37</option>
+                  <option value="38">38</option>
+                  <option value="39">39</option>
+                  <option value="40">40</option>
+                  <option value="41">41</option>
+                  <option value="42">42</option>
+                  <option value="43">43</option>
+                  <option value="44">44</option>
+                  <option value="45">45</option>
+                  <option value="46">46</option>
+                  <option value="47">47</option>
+                  <option value="48">48</option>
+                  <option value="49">49</option>
+                  <option value="50">50</option>
+                  <option value="51">51</option>
+                  <option value="52">52</option>
+                  <option value="53">53</option>
+                  <option value="54">54</option>
+                  <option value="55">55</option>
+                  <option value="56">56</option>
+                  <option value="57">57</option>
+                  <option value="58">58</option>
+                  <option value="59">59</option>
                   <option value="60" selected>Max Age: 60</option>
                 </select>
               </div>
@@ -834,23 +891,15 @@
     <script type="module" src="js/app/main.js"></script>
 
     <!-- Footer -->
-    <footer class="mx-auto mt-32 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="border-t border-slate-900/5 py-10">
-        <a href="https://InstaRishta.me" class="inline-flex items-center justify-center">
-          <span class="ml-2 mx-auto font-bold tracking-wide text-red-600 uppercase">InstaRishta.me</span>
-        </a>
-        <p class="mt-5 text-center text-sm leading-6 text-slate-500">
-          &copy; 2024 InstaRishta Matrimonial & Matchmaking. All rights reserved.
-        </p>
-        <div class="mt-16 flex items-center justify-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
-          <a href="https://InstaRishta.me/privacy">Privacy policy</a>
-          <div class="h-4 w-px bg-slate-500/20"></div>
-          <a href="https://InstaRishta.me/terms">Terms & Conditions</a>
-          <div class="h-4 w-px bg-slate-500/20"></div>
-          <a href="https://InstaRishta.me/refund-policy">Refund Policy</a>
-          <div class="h-4 w-px bg-slate-500/20"></div>
-          <a href="/about-instarishta.html">About InstaRishta</a>
-        </div>
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <a href="https://InstaRishta.me" class="site-logo" style="text-decoration:none;">Insta<span
+            class="site-logo-accent">Rishta</span></a>
+        <p class="site-footer-copy">&copy; 2024 InstaRishta Matrimonial &amp; Matchmaking</p>
+        <nav class="site-footer-links" aria-label="Footer links">
+          <a href="https://InstaRishta.me/privacy">Privacy</a>
+          <a href="/about-instarishta.html">About</a>
+        </nav>
       </div>
     </footer>
   </body>

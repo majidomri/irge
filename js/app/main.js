@@ -2267,6 +2267,11 @@ class InstaRishtaApp {
       if (i > 0) card.style.pointerEvents = "none";
       deck.appendChild(card);
     }
+
+    requestAnimationFrame(() => {
+      const topCard = deck.querySelector(".deck-card-0");
+      if (topCard) deck.style.height = (topCard.offsetHeight + 52) + "px";
+    });
   }
 
   _deckNext() {
@@ -2313,6 +2318,8 @@ class InstaRishtaApp {
       topCard.remove();
       this._deckIndex = nextIndex;
       this._deckSwipeInProgress = false;
+      const newTop = deck.querySelector(".deck-card-0");
+      if (newTop) deck.style.height = (newTop.offsetHeight + 52) + "px";
     }, 310);
   }
 

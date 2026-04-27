@@ -6,10 +6,8 @@
 @font-face {
   font-family: "FaizResolved";
   src:
-    local("Faiz Lahori Nastaleeq"),
-    local("Faiz Nastaleeq"),
-    local("Faiz Nastaliq"),
-    local("Faiz Noori Nastaleeq"),
+    local("Faiz Lahori Nastaleeq"), local("Faiz Nastaleeq"),
+    local("Faiz Nastaliq"), local("Faiz Noori Nastaleeq"),
     local("Jameel Noori Nastaleeq");
   font-weight: 400;
   font-style: normal;
@@ -54,12 +52,10 @@
   --profile-card-border: rgba(24, 24, 27, 0.08);
   --profile-card-hover-border: rgba(251, 146, 60, 0.28);
   --profile-card-shadow:
-    0 24px 56px rgba(15, 23, 42, 0.08),
-    0 8px 20px rgba(15, 23, 42, 0.04),
+    0 24px 56px rgba(15, 23, 42, 0.08), 0 8px 20px rgba(15, 23, 42, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
   --profile-card-shadow-hover:
-    0 28px 64px rgba(15, 23, 42, 0.1),
-    0 10px 22px rgba(15, 23, 42, 0.05),
+    0 28px 64px rgba(15, 23, 42, 0.1), 0 10px 22px rgba(15, 23, 42, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.94);
   --muted: #64748b;
   --accent: #6d28d9;
@@ -73,16 +69,27 @@
   --skeleton-base: #e9eef6;
   --skeleton-highlight: #f8fbff;
   --card-shadow: 0 12px 32px rgba(2, 6, 23, 0.06);
-  --premium-shell-bg:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.2));
+  --premium-shell-bg: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.52),
+    rgba(255, 255, 255, 0.2)
+  );
   --premium-shell-border: rgba(255, 255, 255, 0.56);
   --premium-shell-shadow:
-    0 18px 44px rgba(79, 70, 229, 0.12),
-    0 10px 24px rgba(15, 23, 42, 0.08),
+    0 18px 44px rgba(79, 70, 229, 0.12), 0 10px 24px rgba(15, 23, 42, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
   --premium-panel-bg:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 38%),
-    linear-gradient(160deg, rgba(255, 253, 247, 0.98), rgba(244, 241, 255, 0.96) 58%, rgba(238, 244, 255, 0.96));
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.92),
+      transparent 38%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(255, 253, 247, 0.98),
+      rgba(244, 241, 255, 0.96) 58%,
+      rgba(238, 244, 255, 0.96)
+    );
   --premium-panel-border: rgba(255, 255, 255, 0.82);
   --premium-panel-shadow:
     18px 18px 34px rgba(148, 163, 184, 0.18),
@@ -92,15 +99,21 @@
   --premium-muted: #5b6b84;
   --premium-glow-warm: rgba(255, 176, 32, 0.22);
   --premium-glow-cool: rgba(79, 70, 229, 0.16);
-  --balanced-shell-bg:
-    linear-gradient(150deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.26));
+  --balanced-shell-bg: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.56),
+    rgba(255, 255, 255, 0.26)
+  );
   --balanced-shell-border: rgba(255, 255, 255, 0.58);
   --balanced-shell-shadow:
-    0 18px 42px rgba(79, 70, 229, 0.08),
-    0 10px 22px rgba(15, 23, 42, 0.08),
+    0 18px 42px rgba(79, 70, 229, 0.08), 0 10px 22px rgba(15, 23, 42, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
   --balanced-panel-bg:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.86), transparent 40%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.86),
+      transparent 40%
+    ),
     linear-gradient(155deg, rgba(255, 255, 255, 0.94), rgba(243, 247, 255, 0.9));
   --balanced-panel-border: rgba(255, 255, 255, 0.84);
   --balanced-panel-shadow:
@@ -115,8 +128,11 @@
   --voice-accent-end: #6d28d9;
   --voice-track: rgba(203, 213, 225, 0.44);
   --voice-glow: rgba(109, 40, 217, 0.22);
-  --voice-pill-bg:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 247, 255, 0.94));
+  --voice-pill-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(245, 247, 255, 0.94)
+  );
   --voice-pill-border: rgba(203, 213, 225, 0.78);
   --voice-pill-shadow: 0 14px 30px rgba(148, 163, 184, 0.14);
   --voice-title-color: var(--text);
@@ -168,12 +184,10 @@
   --profile-card-border: rgba(148, 163, 184, 0.24);
   --profile-card-hover-border: rgba(251, 191, 36, 0.32);
   --profile-card-shadow:
-    0 28px 64px rgba(2, 6, 23, 0.72),
-    0 10px 24px rgba(124, 58, 237, 0.08),
+    0 28px 64px rgba(2, 6, 23, 0.72), 0 10px 24px rgba(124, 58, 237, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --profile-card-shadow-hover:
-    0 32px 70px rgba(2, 6, 23, 0.78),
-    0 14px 28px rgba(251, 191, 36, 0.12),
+    0 32px 70px rgba(2, 6, 23, 0.78), 0 14px 28px rgba(251, 191, 36, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   --muted: #a8b7d3;
   --accent: #8b5cf6;
@@ -187,39 +201,54 @@
   --skeleton-base: #1a2a4d;
   --skeleton-highlight: #2a3e67;
   --card-shadow: 0 16px 44px rgba(2, 6, 23, 0.62);
-  --premium-shell-bg:
-    linear-gradient(145deg, rgba(20, 28, 52, 0.72), rgba(7, 12, 24, 0.48));
+  --premium-shell-bg: linear-gradient(
+    145deg,
+    rgba(20, 28, 52, 0.72),
+    rgba(7, 12, 24, 0.48)
+  );
   --premium-shell-border: rgba(148, 163, 184, 0.22);
   --premium-shell-shadow:
-    0 24px 58px rgba(2, 6, 23, 0.66),
-    0 12px 28px rgba(124, 58, 237, 0.12),
+    0 24px 58px rgba(2, 6, 23, 0.66), 0 12px 28px rgba(124, 58, 237, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --premium-panel-bg:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 38%),
-    linear-gradient(160deg, rgba(20, 29, 55, 0.96), rgba(11, 18, 36, 0.95) 60%, rgba(8, 13, 27, 0.96));
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.08),
+      transparent 38%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(20, 29, 55, 0.96),
+      rgba(11, 18, 36, 0.95) 60%,
+      rgba(8, 13, 27, 0.96)
+    );
   --premium-panel-border: rgba(148, 163, 184, 0.18);
   --premium-panel-shadow:
-    18px 18px 36px rgba(2, 6, 23, 0.56),
-    -8px -8px 18px rgba(45, 60, 92, 0.22),
+    18px 18px 36px rgba(2, 6, 23, 0.56), -8px -8px 18px rgba(45, 60, 92, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset 0 -10px 16px rgba(0, 0, 0, 0.22);
   --premium-muted: #aebedd;
   --premium-glow-warm: rgba(251, 191, 36, 0.18);
   --premium-glow-cool: rgba(124, 58, 237, 0.16);
-  --balanced-shell-bg:
-    linear-gradient(150deg, rgba(19, 28, 53, 0.72), rgba(7, 12, 24, 0.48));
+  --balanced-shell-bg: linear-gradient(
+    150deg,
+    rgba(19, 28, 53, 0.72),
+    rgba(7, 12, 24, 0.48)
+  );
   --balanced-shell-border: rgba(148, 163, 184, 0.24);
   --balanced-shell-shadow:
-    0 22px 52px rgba(2, 6, 23, 0.66),
-    0 12px 26px rgba(124, 58, 237, 0.08),
+    0 22px 52px rgba(2, 6, 23, 0.66), 0 12px 26px rgba(124, 58, 237, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --balanced-panel-bg:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 38%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.08),
+      transparent 38%
+    ),
     linear-gradient(155deg, rgba(20, 29, 55, 0.94), rgba(11, 18, 36, 0.94));
   --balanced-panel-border: rgba(148, 163, 184, 0.18);
   --balanced-panel-shadow:
-    16px 16px 32px rgba(2, 6, 23, 0.52),
-    -8px -8px 16px rgba(45, 60, 92, 0.18),
+    16px 16px 32px rgba(2, 6, 23, 0.52), -8px -8px 16px rgba(45, 60, 92, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset 0 -10px 18px rgba(0, 0, 0, 0.18);
   --balanced-input-bg: rgba(9, 15, 31, 0.78);
@@ -229,8 +258,11 @@
   --voice-accent-end: #8b5cf6;
   --voice-track: rgba(148, 163, 184, 0.28);
   --voice-glow: rgba(139, 92, 246, 0.3);
-  --voice-pill-bg:
-    linear-gradient(180deg, rgba(16, 24, 44, 0.96), rgba(11, 18, 36, 0.94));
+  --voice-pill-bg: linear-gradient(
+    180deg,
+    rgba(16, 24, 44, 0.96),
+    rgba(11, 18, 36, 0.94)
+  );
   --voice-pill-border: rgba(148, 163, 184, 0.2);
   --voice-pill-shadow: 0 18px 34px rgba(2, 6, 23, 0.4);
   --voice-title-color: #eef2ff;
@@ -278,12 +310,10 @@
   --profile-card-border: rgba(251, 146, 60, 0.16);
   --profile-card-hover-border: rgba(234, 88, 12, 0.28);
   --profile-card-shadow:
-    0 24px 54px rgba(234, 88, 12, 0.12),
-    0 8px 20px rgba(120, 53, 15, 0.05),
+    0 24px 54px rgba(234, 88, 12, 0.12), 0 8px 20px rgba(120, 53, 15, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
   --profile-card-shadow-hover:
-    0 28px 60px rgba(234, 88, 12, 0.16),
-    0 10px 22px rgba(120, 53, 15, 0.08),
+    0 28px 60px rgba(234, 88, 12, 0.16), 0 10px 22px rgba(120, 53, 15, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.94);
   --muted: #8b5a3c;
   --accent: #ea580c;
@@ -292,16 +322,27 @@
   --glass: rgba(255, 255, 255, 0.7);
   --text: #1c1917;
   --card-shadow: 0 12px 32px rgba(234, 88, 12, 0.08);
-  --premium-shell-bg:
-    linear-gradient(145deg, rgba(255, 247, 240, 0.56), rgba(255, 240, 225, 0.24));
+  --premium-shell-bg: linear-gradient(
+    145deg,
+    rgba(255, 247, 240, 0.56),
+    rgba(255, 240, 225, 0.24)
+  );
   --premium-shell-border: rgba(255, 255, 255, 0.58);
   --premium-shell-shadow:
-    0 20px 48px rgba(234, 88, 12, 0.12),
-    0 12px 26px rgba(245, 158, 11, 0.1),
+    0 20px 48px rgba(234, 88, 12, 0.12), 0 12px 26px rgba(245, 158, 11, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
   --premium-panel-bg:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 40%),
-    linear-gradient(160deg, rgba(255, 251, 245, 0.98), rgba(255, 240, 225, 0.96) 58%, rgba(255, 234, 214, 0.96));
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.92),
+      transparent 40%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(255, 251, 245, 0.98),
+      rgba(255, 240, 225, 0.96) 58%,
+      rgba(255, 234, 214, 0.96)
+    );
   --premium-panel-border: rgba(255, 255, 255, 0.84);
   --premium-panel-shadow:
     18px 18px 34px rgba(251, 146, 60, 0.16),
@@ -311,16 +352,26 @@
   --premium-muted: #9a3412;
   --premium-glow-warm: rgba(234, 88, 12, 0.18);
   --premium-glow-cool: rgba(217, 119, 6, 0.14);
-  --balanced-shell-bg:
-    linear-gradient(150deg, rgba(255, 247, 240, 0.58), rgba(255, 240, 225, 0.28));
+  --balanced-shell-bg: linear-gradient(
+    150deg,
+    rgba(255, 247, 240, 0.58),
+    rgba(255, 240, 225, 0.28)
+  );
   --balanced-shell-border: rgba(255, 255, 255, 0.62);
   --balanced-shell-shadow:
-    0 18px 44px rgba(234, 88, 12, 0.1),
-    0 10px 22px rgba(120, 53, 15, 0.08),
+    0 18px 44px rgba(234, 88, 12, 0.1), 0 10px 22px rgba(120, 53, 15, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.74);
   --balanced-panel-bg:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.88), transparent 40%),
-    linear-gradient(155deg, rgba(255, 252, 247, 0.96), rgba(255, 240, 226, 0.92));
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.88),
+      transparent 40%
+    ),
+    linear-gradient(
+      155deg,
+      rgba(255, 252, 247, 0.96),
+      rgba(255, 240, 226, 0.92)
+    );
   --balanced-panel-border: rgba(255, 255, 255, 0.84);
   --balanced-panel-shadow:
     14px 14px 28px rgba(251, 146, 60, 0.12),
@@ -334,8 +385,11 @@
   --voice-accent-end: #ea580c;
   --voice-track: rgba(251, 146, 60, 0.2);
   --voice-glow: rgba(234, 88, 12, 0.24);
-  --voice-pill-bg:
-    linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 244, 236, 0.94));
+  --voice-pill-bg: linear-gradient(
+    180deg,
+    rgba(255, 252, 248, 0.98),
+    rgba(255, 244, 236, 0.94)
+  );
   --voice-pill-border: rgba(251, 191, 36, 0.24);
   --voice-pill-shadow: 0 16px 30px rgba(234, 88, 12, 0.12);
   --voice-title-color: #7c2d12;
@@ -350,12 +404,51 @@
 }
 .site-header {
   background: transparent;
-  padding: 20px 0;
+  padding: 10px 0;
 }
 .site-logo {
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+.site-logo-accent {
+  color: var(--accent);
+}
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: transparent;
+  padding: 10px 0;
+}
+.site-footer-inner {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.site-footer-copy {
+  font-size: 0.8rem;
+  color: var(--muted);
+  flex: 1;
+  text-align: center;
+}
+.site-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.site-footer-links a {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.site-footer-links a:hover {
+  color: var(--text);
 }
 .icon-btn {
   display: inline-flex;
@@ -458,18 +551,14 @@ body {
 }
 .font-urdu {
   font-family:
-    "FaizResolved",
-    "Faiz Lahori Nastaleeq",
-    "Faiz Nastaleeq",
-    "Faiz Nastaliq",
-    "Jameel Noori Nastaleeq",
-    "Noto Nastaliq Urdu",
-    "Noto Naskh Arabic",
-    "Arial",
-    serif;
+    "FaizResolved", "Faiz Lahori Nastaleeq", "Faiz Nastaleeq", "Faiz Nastaliq",
+    "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", "Noto Naskh Arabic",
+    "Arial", serif;
   font-weight: 400;
   font-style: normal;
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-feature-settings:
+    "liga" 1,
+    "calt" 1;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   direction: rtl;
@@ -1729,7 +1818,10 @@ select:focus-visible {
   height: auto !important;
   max-height: min(
     560px,
-    calc(var(--drawer-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 8px)
+    calc(
+      var(--drawer-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) -
+        8px
+    )
   ) !important;
   border-radius: 24px 24px 0 0 !important;
   overflow-x: hidden !important;
@@ -1738,8 +1830,16 @@ select:focus-visible {
   overscroll-behavior: contain;
   border: 1px solid var(--balanced-shell-border);
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.32), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.12), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.32),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 255, 255, 0.12),
+      transparent 42%
+    ),
     var(--balanced-shell-bg);
   -webkit-backdrop-filter: blur(16px) saturate(155%);
   backdrop-filter: blur(16px) saturate(155%);
@@ -1873,7 +1973,9 @@ select:focus-visible {
   background-position:
     calc(100% - 16px) calc(50% + 1px),
     calc(100% - 10px) calc(50% + 1px);
-  background-size: 6px 6px, 6px 6px;
+  background-size:
+    6px 6px,
+    6px 6px;
   background-repeat: no-repeat;
   padding-right: 32px;
   cursor: pointer;
@@ -1981,8 +2083,16 @@ select:focus-visible {
 
 [data-theme="dark"] #mobileDrawer {
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.04), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.08),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 255, 255, 0.04),
+      transparent 42%
+    ),
     var(--balanced-shell-bg) !important;
   border-color: var(--balanced-shell-border) !important;
   box-shadow: var(--balanced-shell-shadow), var(--card-shadow) !important;
@@ -2021,8 +2131,16 @@ select:focus-visible {
 
 [data-theme="for-you"] #mobileDrawer {
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.3), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.12), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.3),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 255, 255, 0.12),
+      transparent 42%
+    ),
     var(--balanced-shell-bg) !important;
   border-color: var(--balanced-shell-border) !important;
 }
@@ -2052,7 +2170,9 @@ select:focus-visible {
   background-position:
     calc(100% - 16px) calc(50% + 1px),
     calc(100% - 10px) calc(50% + 1px);
-  background-size: 6px 6px, 6px 6px;
+  background-size:
+    6px 6px,
+    6px 6px;
   background-repeat: no-repeat;
 }
 
@@ -2071,7 +2191,10 @@ select:focus-visible {
 
 @media (max-height: 760px) {
   #mobileDrawer {
-    max-height: calc(var(--drawer-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 8px) !important;
+    max-height: calc(
+      var(--drawer-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) -
+        8px
+    ) !important;
   }
 
   #mobileDrawer .drawer-shell {
@@ -2245,19 +2368,29 @@ select:focus-visible {
 }
 
 .card.card-hover.card-premium .premium-badge--urgent {
-  background-image: linear-gradient(180deg, #fff3b0 0%, #facc15 38%, #f59e0b 100%);
+  background-image: linear-gradient(
+    180deg,
+    #fff3b0 0%,
+    #facc15 38%,
+    #f59e0b 100%
+  );
   filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.28));
 }
 
 .card.card-hover.card-premium .premium-badge--featured {
-  background-image: linear-gradient(180deg, #f5d0fe 0%, #c084fc 42%, #7c3aed 100%);
+  background-image: linear-gradient(
+    180deg,
+    #f5d0fe 0%,
+    #c084fc 42%,
+    #7c3aed 100%
+  );
   filter: drop-shadow(0 0 10px rgba(124, 58, 237, 0.24));
 }
 
 .card.card-hover.card-premium .font-urdu {
-  font-family: "FaizResolved", "Faiz Lahori Nastaleeq", "Faiz Nastaleeq",
-    "Faiz Nastaliq", "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu",
-    "Noto Naskh Arabic", serif;
+  font-family:
+    "FaizResolved", "Faiz Lahori Nastaleeq", "Faiz Nastaleeq", "Faiz Nastaliq",
+    "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif;
   color: var(--text);
   font-size: clamp(1.2rem, 1.08rem + 0.3vw, 1.28rem);
   line-height: 2.3;
@@ -2401,7 +2534,11 @@ select:focus-visible {
   position: absolute;
   inset: 1px;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.34),
+    rgba(255, 255, 255, 0.06)
+  );
   pointer-events: none;
 }
 
@@ -2424,14 +2561,19 @@ select:focus-visible {
 
 .card .card-voice-row:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--voice-button-end) 18%, var(--voice-pill-border));
+  border-color: color-mix(
+    in srgb,
+    var(--voice-button-end) 18%,
+    var(--voice-pill-border)
+  );
   box-shadow:
     0 18px 34px rgba(148, 163, 184, 0.18),
     0 0 0 1px color-mix(in srgb, var(--voice-button-end) 8%, transparent);
 }
 
 .card .card-voice-row:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--voice-button-end) 32%, transparent);
+  outline: 2px solid
+    color-mix(in srgb, var(--voice-button-end) 32%, transparent);
   outline-offset: 4px;
 }
 
@@ -2463,14 +2605,24 @@ select:focus-visible {
 .card .voice-preview-halo {
   inset: -7px;
   border-radius: 999px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--voice-glow) 92%, white 8%), transparent 70%);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--voice-glow) 92%, white 8%),
+    transparent 70%
+  );
   opacity: 0.38;
   filter: blur(6px);
-  transition: opacity 220ms ease, transform 220ms ease;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
 }
 
 .card .voice-preview-ring {
-  background: linear-gradient(145deg, var(--voice-button-start), var(--voice-button-end));
+  background: linear-gradient(
+    145deg,
+    var(--voice-button-start),
+    var(--voice-button-end)
+  );
   box-shadow:
     0 0 14px var(--voice-glow),
     0 14px 22px color-mix(in srgb, var(--voice-glow) 56%, transparent),
@@ -2493,7 +2645,9 @@ select:focus-visible {
   height: 24px;
   opacity: 0;
   transform: scale(0.8);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
   color: var(--voice-icon-color);
 }
 
@@ -2653,7 +2807,11 @@ select:focus-visible {
   cursor: pointer;
   color: var(--premium-muted);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(240, 245, 255, 0.82)),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.92),
+      rgba(240, 245, 255, 0.82)
+    ),
     rgba(255, 255, 255, 0.72);
   box-shadow:
     8px 8px 16px rgba(148, 163, 184, 0.12),
@@ -2729,7 +2887,12 @@ select:focus-visible {
 }
 
 [data-theme="dark"] .card.card-hover.card-premium .premium-badge--featured {
-  background-image: linear-gradient(180deg, #ede9fe 0%, #c084fc 42%, #8b5cf6 100%);
+  background-image: linear-gradient(
+    180deg,
+    #ede9fe 0%,
+    #c084fc 42%,
+    #8b5cf6 100%
+  );
 }
 
 [data-theme="dark"] .card.card-hover.card-premium {
@@ -2796,7 +2959,12 @@ select:focus-visible {
 }
 
 [data-theme="dark"] .card.card-hover.card-premium .premium-badge--urgent {
-  background-image: linear-gradient(180deg, #fff6c8 0%, #facc15 42%, #f59e0b 100%);
+  background-image: linear-gradient(
+    180deg,
+    #fff6c8 0%,
+    #facc15 42%,
+    #f59e0b 100%
+  );
   filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.36));
 }
 
@@ -2837,7 +3005,12 @@ select:focus-visible {
 }
 
 [data-theme="for-you"] .card.card-hover.card-premium .premium-badge--urgent {
-  background-image: linear-gradient(180deg, #fff1b8 0%, #facc15 42%, #f59e0b 100%);
+  background-image: linear-gradient(
+    180deg,
+    #fff1b8 0%,
+    #facc15 42%,
+    #f59e0b 100%
+  );
 }
 
 [data-theme="for-you"] .card.card-hover.card-premium .card-premium-rule {
@@ -2880,7 +3053,11 @@ select:focus-visible {
 [data-theme="for-you"] .card .card-resource-btn {
   border-color: rgba(251, 191, 36, 0.24);
   background:
-    linear-gradient(145deg, rgba(255, 252, 247, 0.94), rgba(255, 241, 226, 0.86)),
+    linear-gradient(
+      145deg,
+      rgba(255, 252, 247, 0.94),
+      rgba(255, 241, 226, 0.86)
+    ),
     rgba(255, 247, 237, 0.82);
   box-shadow:
     10px 10px 18px rgba(234, 88, 12, 0.12),
@@ -2985,8 +3162,16 @@ select:focus-visible {
   border-radius: 20px;
   border: 1px solid var(--balanced-shell-border);
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.34), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.16), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.34),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 255, 255, 0.16),
+      transparent 42%
+    ),
     var(--balanced-shell-bg);
   -webkit-backdrop-filter: blur(16px) saturate(155%);
   backdrop-filter: blur(16px) saturate(155%);
@@ -3071,7 +3256,11 @@ select:focus-visible {
   width: 30px;
   margin: 4px auto 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--limit-accent-end), var(--limit-accent));
+  background: linear-gradient(
+    90deg,
+    var(--limit-accent-end),
+    var(--limit-accent)
+  );
   box-shadow: 0 8px 20px rgba(14, 165, 233, 0.18);
 }
 
@@ -3091,7 +3280,11 @@ select:focus-visible {
   border-radius: 16px;
   border: 1px solid var(--limit-border);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(243, 247, 255, 0.52)),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.68),
+      rgba(243, 247, 255, 0.52)
+    ),
     rgba(255, 255, 255, 0.54);
   box-shadow:
     10px 10px 18px rgba(148, 163, 184, 0.12),
@@ -3114,8 +3307,16 @@ select:focus-visible {
 [data-theme="dark"] .trust-card,
 [data-theme="dark"] #contactLimitIndicator {
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.04), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.08),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 255, 255, 0.04),
+      transparent 42%
+    ),
     var(--balanced-shell-bg) !important;
   border-color: var(--balanced-shell-border) !important;
   box-shadow: var(--balanced-shell-shadow), var(--card-shadow) !important;
@@ -3148,8 +3349,16 @@ select:focus-visible {
 [data-theme="for-you"] .trust-card,
 [data-theme="for-you"] #contactLimitIndicator {
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.34), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.12), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.34),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 255, 255, 0.12),
+      transparent 42%
+    ),
     var(--balanced-shell-bg) !important;
   border-color: var(--balanced-shell-border) !important;
 }
@@ -3163,7 +3372,11 @@ select:focus-visible {
 
 [data-theme="for-you"] #contactLimitIndicator .contact-limit-stat {
   background:
-    linear-gradient(145deg, rgba(255, 252, 247, 0.92), rgba(255, 241, 226, 0.84)),
+    linear-gradient(
+      145deg,
+      rgba(255, 252, 247, 0.92),
+      rgba(255, 241, 226, 0.84)
+    ),
     rgba(255, 247, 237, 0.82);
   box-shadow:
     10px 10px 18px rgba(234, 88, 12, 0.12),
@@ -3321,7 +3534,11 @@ select:focus-visible {
   padding: 7px 12px;
   border-radius: 999px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(244, 247, 255, 0.6)),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.78),
+      rgba(244, 247, 255, 0.6)
+    ),
     rgba(255, 255, 255, 0.54);
   border: 1px solid rgba(148, 163, 184, 0.2);
   box-shadow:
@@ -3496,7 +3713,11 @@ select:focus-visible {
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 16px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(244, 247, 255, 0.8)),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.94),
+      rgba(244, 247, 255, 0.8)
+    ),
     rgba(255, 255, 255, 0.72);
   color: var(--text-soft);
   font-size: 1.25rem;
@@ -3612,7 +3833,10 @@ select:focus-visible {
   cursor: pointer;
   font-size: 1.24rem;
   line-height: 1;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 .instagram-viewer-close:hover {
   background: var(--border);
@@ -3642,7 +3866,13 @@ select:focus-visible {
 }
 
 .instagram-viewer-action-follow {
-  background: linear-gradient(135deg, #fd1d1d, #f56040 34%, #f77737 64%, #833ab4);
+  background: linear-gradient(
+    135deg,
+    #fd1d1d,
+    #f56040 34%,
+    #f77737 64%,
+    #833ab4
+  );
   color: #fff;
 }
 
@@ -3790,7 +4020,11 @@ select:focus-visible {
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(244, 247, 255, 0.68)),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.82),
+      rgba(244, 247, 255, 0.68)
+    ),
     rgba(255, 255, 255, 0.66);
   box-shadow:
     10px 10px 18px rgba(148, 163, 184, 0.12),
@@ -3878,7 +4112,11 @@ select:focus-visible {
 
 [data-theme="for-you"] .contact-summary-item {
   background:
-    linear-gradient(145deg, rgba(255, 252, 247, 0.92), rgba(255, 241, 226, 0.82)),
+    linear-gradient(
+      145deg,
+      rgba(255, 252, 247, 0.92),
+      rgba(255, 241, 226, 0.82)
+    ),
     rgba(255, 247, 237, 0.78);
   border-color: rgba(251, 191, 36, 0.18);
   box-shadow:
@@ -3894,7 +4132,11 @@ select:focus-visible {
 
 [data-theme="for-you"] .contact-flow-close {
   background:
-    linear-gradient(145deg, rgba(255, 252, 247, 0.94), rgba(255, 241, 226, 0.86)),
+    linear-gradient(
+      145deg,
+      rgba(255, 252, 247, 0.94),
+      rgba(255, 241, 226, 0.86)
+    ),
     rgba(255, 247, 237, 0.8);
   border-color: rgba(251, 191, 36, 0.2);
   color: #7c2d12;
@@ -4121,7 +4363,9 @@ select:focus-visible {
     8px 8px 18px rgba(148, 163, 184, 0.1),
     -4px -4px 12px rgba(255, 255, 255, 0.62),
     inset 0 1px 0 rgba(255, 255, 255, 0.62);
-  transition: filter 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    filter 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .range-filter-panel:hover,
@@ -4181,11 +4425,12 @@ select:focus-visible {
 }
 
 .range-filter-rail {
-  background:
-    linear-gradient(90deg,
-      rgba(148, 163, 184, 0.14) 0%,
-      rgba(148, 163, 184, 0.26) 50%,
-      rgba(148, 163, 184, 0.14) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.14) 0%,
+    rgba(148, 163, 184, 0.26) 50%,
+    rgba(148, 163, 184, 0.14) 100%
+  );
   box-shadow:
     inset 0 1px 3px rgba(15, 23, 42, 0.12),
     inset 0 -1px 2px rgba(255, 255, 255, 0.5);
@@ -4214,8 +4459,12 @@ select:focus-visible {
   pointer-events: none;
 }
 
-.range-filter-track input[id*="MinFilter"] { z-index: 2; }
-.range-filter-track input[id*="MaxFilter"] { z-index: 3; }
+.range-filter-track input[id*="MinFilter"] {
+  z-index: 2;
+}
+.range-filter-track input[id*="MaxFilter"] {
+  z-index: 3;
+}
 
 .range-filter-track input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
@@ -4245,11 +4494,12 @@ select:focus-visible {
   border: 3px solid transparent;
   background:
     radial-gradient(
-      circle at 38% 30%,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(255, 255, 255, 0.86) 48%,
-      rgba(220, 228, 248, 0.94) 100%
-    ) padding-box,
+        circle at 38% 30%,
+        rgba(255, 255, 255, 0.98) 0%,
+        rgba(255, 255, 255, 0.86) 48%,
+        rgba(220, 228, 248, 0.94) 100%
+      )
+      padding-box,
     linear-gradient(140deg, var(--accent-2), var(--accent)) border-box;
 
   box-shadow:
@@ -4258,8 +4508,9 @@ select:focus-visible {
     0 1px 3px rgba(15, 23, 42, 0.12),
     inset 0 1px 2px rgba(255, 255, 255, 0.9);
 
-  transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1),
-              box-shadow 0.12s cubic-bezier(0.2, 0.9, 0.3, 1);
+  transition:
+    transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1),
+    box-shadow 0.12s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 .range-filter-track input[type="range"]:hover::-webkit-slider-thumb,
@@ -4282,11 +4533,12 @@ select:focus-visible {
   border: 3px solid transparent;
   background:
     radial-gradient(
-      circle at 38% 30%,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(255, 255, 255, 0.86) 48%,
-      rgba(220, 228, 248, 0.94) 100%
-    ) padding-box,
+        circle at 38% 30%,
+        rgba(255, 255, 255, 0.98) 0%,
+        rgba(255, 255, 255, 0.86) 48%,
+        rgba(220, 228, 248, 0.94) 100%
+      )
+      padding-box,
     linear-gradient(140deg, var(--accent-2), var(--accent)) border-box;
   box-shadow:
     0 0 0 3px rgba(79, 70, 229, 0.1),
@@ -4313,14 +4565,17 @@ select:focus-visible {
 }
 
 /* Dark mode thumbs */
-[data-theme="dark"] .range-filter-track input[type="range"]::-webkit-slider-thumb {
+[data-theme="dark"]
+  .range-filter-track
+  input[type="range"]::-webkit-slider-thumb {
   background:
     radial-gradient(
-      circle at 38% 30%,
-      rgba(140, 160, 220, 0.18) 0%,
-      rgba(9, 15, 31, 0.96) 42%,
-      rgba(4, 8, 20, 0.98) 100%
-    ) padding-box,
+        circle at 38% 30%,
+        rgba(140, 160, 220, 0.18) 0%,
+        rgba(9, 15, 31, 0.96) 42%,
+        rgba(4, 8, 20, 0.98) 100%
+      )
+      padding-box,
     linear-gradient(140deg, var(--accent-2), var(--accent)) border-box;
   box-shadow:
     0 0 0 3px rgba(139, 92, 246, 0.12),
@@ -4329,8 +4584,12 @@ select:focus-visible {
     inset 0 1px 2px rgba(255, 255, 255, 0.08);
 }
 
-[data-theme="dark"] .range-filter-track input[type="range"]:hover::-webkit-slider-thumb,
-[data-theme="dark"] .range-filter-track input[type="range"]:active::-webkit-slider-thumb {
+[data-theme="dark"]
+  .range-filter-track
+  input[type="range"]:hover::-webkit-slider-thumb,
+[data-theme="dark"]
+  .range-filter-track
+  input[type="range"]:active::-webkit-slider-thumb {
   box-shadow:
     0 0 0 5px rgba(139, 92, 246, 0.16),
     0 6px 20px rgba(139, 92, 246, 0.42),
@@ -4341,33 +4600,38 @@ select:focus-visible {
 [data-theme="dark"] .range-filter-track input[type="range"]::-moz-range-thumb {
   background:
     radial-gradient(
-      circle at 38% 30%,
-      rgba(140, 160, 220, 0.18) 0%,
-      rgba(9, 15, 31, 0.96) 42%,
-      rgba(4, 8, 20, 0.98) 100%
-    ) padding-box,
+        circle at 38% 30%,
+        rgba(140, 160, 220, 0.18) 0%,
+        rgba(9, 15, 31, 0.96) 42%,
+        rgba(4, 8, 20, 0.98) 100%
+      )
+      padding-box,
     linear-gradient(140deg, var(--accent-2), var(--accent)) border-box;
 }
 
 [data-theme="dark"] .range-filter-rail {
-  background:
-    linear-gradient(90deg,
-      rgba(148, 163, 184, 0.1) 0%,
-      rgba(148, 163, 184, 0.2) 50%,
-      rgba(148, 163, 184, 0.1) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.1) 0%,
+    rgba(148, 163, 184, 0.2) 50%,
+    rgba(148, 163, 184, 0.1) 100%
+  );
   box-shadow:
     inset 0 1px 3px rgba(0, 0, 0, 0.4),
     inset 0 -1px 2px rgba(255, 255, 255, 0.04);
 }
 
-[data-theme="for-you"] .range-filter-track input[type="range"]::-webkit-slider-thumb {
+[data-theme="for-you"]
+  .range-filter-track
+  input[type="range"]::-webkit-slider-thumb {
   background:
     radial-gradient(
-      circle at 38% 30%,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(255, 255, 255, 0.88) 50%,
-      rgba(255, 235, 210, 0.95) 100%
-    ) padding-box,
+        circle at 38% 30%,
+        rgba(255, 255, 255, 0.98) 0%,
+        rgba(255, 255, 255, 0.88) 50%,
+        rgba(255, 235, 210, 0.95) 100%
+      )
+      padding-box,
     linear-gradient(140deg, var(--accent-2), var(--accent)) border-box;
 }
 
@@ -4422,8 +4686,11 @@ select:focus-visible {
   padding: 4px 12px;
   border-radius: 999px;
   border: 1.5px solid rgba(99, 102, 241, 0.16);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(238, 236, 255, 0.82));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(238, 236, 255, 0.82)
+  );
   color: var(--accent-2);
   font-size: 0.76rem;
   font-weight: 800;
@@ -4435,8 +4702,11 @@ select:focus-visible {
 }
 
 [data-theme="dark"] .range-filter-selected span {
-  background:
-    linear-gradient(135deg, rgba(20, 32, 60, 0.92), rgba(15, 24, 48, 0.86));
+  background: linear-gradient(
+    135deg,
+    rgba(20, 32, 60, 0.92),
+    rgba(15, 24, 48, 0.86)
+  );
   border-color: rgba(139, 92, 246, 0.28);
   color: var(--accent);
   box-shadow:
@@ -4445,8 +4715,11 @@ select:focus-visible {
 }
 
 [data-theme="for-you"] .range-filter-selected span {
-  background:
-    linear-gradient(135deg, rgba(255, 251, 245, 0.95), rgba(255, 237, 214, 0.86));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 251, 245, 0.95),
+    rgba(255, 237, 214, 0.86)
+  );
   border-color: rgba(234, 88, 12, 0.18);
   color: var(--accent-2);
 }
@@ -4513,12 +4786,16 @@ select:focus-visible {
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.62);
   background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.36)),
+    linear-gradient(
+      140deg,
+      rgba(255, 255, 255, 0.62),
+      rgba(255, 255, 255, 0.36)
+    ),
     rgba(255, 255, 255, 0.32);
   -webkit-backdrop-filter: blur(18px) saturate(170%);
   backdrop-filter: blur(18px) saturate(170%);
   box-shadow:
-    0 18px 44px rgba(99, 102, 241, 0.10),
+    0 18px 44px rgba(99, 102, 241, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
@@ -4528,8 +4805,16 @@ select:focus-visible {
   inset: 1px;
   border-radius: inherit;
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.74), transparent 32%),
-    linear-gradient(140deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.12));
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.74),
+      transparent 32%
+    ),
+    linear-gradient(
+      140deg,
+      rgba(255, 255, 255, 0.38),
+      rgba(255, 255, 255, 0.12)
+    );
   border: 1px solid rgba(255, 255, 255, 0.48);
   pointer-events: none;
 }
@@ -4555,8 +4840,16 @@ select:focus-visible {
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.62);
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.38), transparent 34%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(243, 244, 255, 0.64));
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.38),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.86),
+      rgba(243, 244, 255, 0.64)
+    );
   box-shadow:
     10px 12px 24px rgba(99, 102, 241, 0.08),
     -8px -8px 18px rgba(255, 255, 255, 0.62),
@@ -4619,8 +4912,16 @@ select:focus-visible {
   border-radius: 24px;
   border: 1px solid var(--balanced-shell-border);
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.26), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.10), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.26),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 255, 255, 0.1),
+      transparent 42%
+    ),
     var(--balanced-shell-bg);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
   backdrop-filter: blur(16px) saturate(160%);
@@ -4687,8 +4988,16 @@ select:focus-visible {
   border-radius: 50%;
   flex: 0 0 auto;
   background:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.94) 0 45%, transparent 46%),
-    conic-gradient(from 220deg, var(--accent-2) 0 var(--gauge-progress), rgba(148, 163, 184, 0.18) var(--gauge-progress) 100%);
+    radial-gradient(
+      circle at center,
+      rgba(255, 255, 255, 0.94) 0 45%,
+      transparent 46%
+    ),
+    conic-gradient(
+      from 220deg,
+      var(--accent-2) 0 var(--gauge-progress),
+      rgba(148, 163, 184, 0.18) var(--gauge-progress) 100%
+    );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.76),
     0 0 18px color-mix(in srgb, var(--accent) 22%, transparent);
@@ -4815,7 +5124,11 @@ select:focus-visible {
 [data-theme="for-you"] .insight-card,
 [data-theme="for-you"] .card-metric-chip {
   background:
-    linear-gradient(145deg, rgba(255, 251, 247, 0.95), rgba(255, 241, 226, 0.82)),
+    linear-gradient(
+      145deg,
+      rgba(255, 251, 247, 0.95),
+      rgba(255, 241, 226, 0.82)
+    ),
     rgba(255, 247, 237, 0.82) !important;
 }
 
@@ -4931,7 +5244,10 @@ select:focus-visible {
   padding: 8px 12px;
   border-radius: 999px;
   cursor: pointer;
-  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
 }
 
 .filter-chip-clear:hover,
@@ -4956,7 +5272,10 @@ select:focus-visible {
   #mobileDrawer {
     max-height: min(
       86dvh,
-      calc(var(--drawer-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - 8px)
+      calc(
+        var(--drawer-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) -
+          8px
+      )
     ) !important;
     border-radius: 20px 20px 0 0 !important;
     overflow: hidden !important;
@@ -5108,11 +5427,12 @@ select:focus-visible {
   }
 
   #mobileDrawer .drawer-range-card .range-filter-rail {
-    background:
-      linear-gradient(90deg,
-        rgba(148, 163, 184, 0.16) 0%,
-        rgba(148, 163, 184, 0.32) 50%,
-        rgba(148, 163, 184, 0.16) 100%);
+    background: linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.16) 0%,
+      rgba(148, 163, 184, 0.32) 50%,
+      rgba(148, 163, 184, 0.16) 100%
+    );
     box-shadow:
       inset 0 1px 2px rgba(15, 23, 42, 0.12),
       inset 0 -1px 1px rgba(255, 255, 255, 0.4);
@@ -5126,7 +5446,10 @@ select:focus-visible {
   }
 
   /* 18 px ring-thumb for compact drawer */
-  #mobileDrawer .drawer-range-card .range-filter-track input[type="range"]::-webkit-slider-thumb {
+  #mobileDrawer
+    .drawer-range-card
+    .range-filter-track
+    input[type="range"]::-webkit-slider-thumb {
     box-sizing: border-box;
     width: 18px;
     height: 18px;
@@ -5134,11 +5457,12 @@ select:focus-visible {
     border: 2.5px solid transparent;
     background:
       radial-gradient(
-        circle at 38% 30%,
-        rgba(255, 255, 255, 0.98) 0%,
-        rgba(255, 255, 255, 0.84) 50%,
-        rgba(220, 228, 248, 0.92) 100%
-      ) padding-box,
+          circle at 38% 30%,
+          rgba(255, 255, 255, 0.98) 0%,
+          rgba(255, 255, 255, 0.84) 50%,
+          rgba(220, 228, 248, 0.92) 100%
+        )
+        padding-box,
       linear-gradient(140deg, var(--accent-2), var(--accent)) border-box;
     box-shadow:
       0 0 0 2px rgba(79, 70, 229, 0.1),
@@ -5146,8 +5470,14 @@ select:focus-visible {
       inset 0 1px 2px rgba(255, 255, 255, 0.9);
   }
 
-  #mobileDrawer .drawer-range-card .range-filter-track input[type="range"]:hover::-webkit-slider-thumb,
-  #mobileDrawer .drawer-range-card .range-filter-track input[type="range"]:active::-webkit-slider-thumb {
+  #mobileDrawer
+    .drawer-range-card
+    .range-filter-track
+    input[type="range"]:hover::-webkit-slider-thumb,
+  #mobileDrawer
+    .drawer-range-card
+    .range-filter-track
+    input[type="range"]:active::-webkit-slider-thumb {
     transform: scale(1.2);
     box-shadow:
       0 0 0 4px rgba(79, 70, 229, 0.14),
@@ -5155,18 +5485,22 @@ select:focus-visible {
       inset 0 1px 2px rgba(255, 255, 255, 0.95);
   }
 
-  #mobileDrawer .drawer-range-card .range-filter-track input[type="range"]::-moz-range-thumb {
+  #mobileDrawer
+    .drawer-range-card
+    .range-filter-track
+    input[type="range"]::-moz-range-thumb {
     box-sizing: border-box;
     width: 18px;
     height: 18px;
     border: 2.5px solid transparent;
     background:
       radial-gradient(
-        circle at 38% 30%,
-        rgba(255, 255, 255, 0.98) 0%,
-        rgba(255, 255, 255, 0.84) 50%,
-        rgba(220, 228, 248, 0.92) 100%
-      ) padding-box,
+          circle at 38% 30%,
+          rgba(255, 255, 255, 0.98) 0%,
+          rgba(255, 255, 255, 0.84) 50%,
+          rgba(220, 228, 248, 0.92) 100%
+        )
+        padding-box,
       linear-gradient(140deg, var(--accent-2), var(--accent)) border-box;
     box-shadow:
       0 0 0 2px rgba(79, 70, 229, 0.1),
@@ -5257,10 +5591,28 @@ select:focus-visible {
 /* ─── Dark theme: direct card background override (bypasses var() chain) ──── */
 [data-theme="dark"] .card.card-hover {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 36%),
-    radial-gradient(circle at 82% 14%, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 26%),
-    radial-gradient(circle at 50% 36%, rgba(251, 191, 36, 0.20) 0%, rgba(251, 191, 36, 0.09) 16%, rgba(255, 255, 255, 0) 44%),
-    radial-gradient(circle at 12% 100%, rgba(217, 70, 239, 0.14) 0%, rgba(217, 70, 239, 0.06) 20%, rgba(255, 255, 255, 0) 44%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.07),
+      rgba(255, 255, 255, 0) 36%
+    ),
+    radial-gradient(
+      circle at 82% 14%,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0) 26%
+    ),
+    radial-gradient(
+      circle at 50% 36%,
+      rgba(251, 191, 36, 0.2) 0%,
+      rgba(251, 191, 36, 0.09) 16%,
+      rgba(255, 255, 255, 0) 44%
+    ),
+    radial-gradient(
+      circle at 12% 100%,
+      rgba(217, 70, 239, 0.14) 0%,
+      rgba(217, 70, 239, 0.06) 20%,
+      rgba(255, 255, 255, 0) 44%
+    ),
     linear-gradient(180deg, #17223e 0%, #0a1224 100%) !important;
   border-color: rgba(148, 163, 184, 0.22) !important;
   color: #edf3ff !important;
@@ -5293,26 +5645,58 @@ select:focus-visible {
   #mobileCardDeck {
     display: block;
     position: relative;
-    /* active card height + room for 3 peeking back-cards */
-    height: calc(62svh + 52px);
-    margin: 8px 0 20px;
+    /* JS sets height = top card's offsetHeight + 52px for back-card peeks */
+    height: auto;
+    margin: 8px 0 0;
   }
 
-  /* Each card is stacked absolutely inside the deck */
+  /* Each card: content-based height, no scroll */
   #mobileCardDeck > .card {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: 3px;
+    right: 3px;
     top: 0;
-    height: 62svh;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
+    height: auto;
+    overflow: hidden;
     border-radius: 20px;
     will-change: transform;
-    transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                opacity  0.32s ease;
+    transition:
+      transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      opacity 0.32s ease;
     touch-action: pan-y;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Compact typography so all content fits without scroll */
+  #mobileCardDeck > .card.card-hover {
+    padding: 14px 14px 10px;
+    line-height: 1.55;
+  }
+
+  #mobileCardDeck > .card.card-hover h2.card-title-urdu {
+    font-size: clamp(1.32rem, 1.22rem + 0.22vw, 1.42rem);
+    line-height: 1.3;
+    padding-inline: 6px;
+    margin-bottom: 2px;
+  }
+
+  #mobileCardDeck > .card.card-hover .font-urdu {
+    font-size: clamp(1.18rem, 1.1rem + 0.18vw, 1.26rem);
+  }
+
+  #mobileCardDeck > .card.card-hover p.card-body-urdu {
+    font-size: clamp(1.16rem, 1.08rem + 0.16vw, 1.24rem);
+    line-height: 1.72;
+    margin-bottom: 6px;
+  }
+
+  #mobileCardDeck > .card .card-meta {
+    margin-top: 4px;
+    margin-bottom: 8px;
+  }
+
+  #mobileCardDeck > .card .card-actions {
+    margin-top: 6px;
   }
 
   /* Stacked positions — each card peeks below the one in front */
@@ -5334,5 +5718,22 @@ select:focus-visible {
     z-index: 7;
     transform: translateY(46px) scale(0.886);
     pointer-events: none;
+  }
+}
+
+/* ─── Mobile footer: push to bottom of viewport ──────────────────────────── */
+@media (max-width: 767px) {
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  body > div.relative {
+    flex: 1;
+  }
+
+  body > footer {
+    margin-top: auto;
   }
 }
