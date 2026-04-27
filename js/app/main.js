@@ -223,8 +223,8 @@ class InstaRishtaApp {
 
     bindRange("ageMinFilter", () => handleAgeRangeChange("desktop"));
     bindRange("ageMaxFilter", () => handleAgeRangeChange("desktop"));
-    bindRange("mobileAgeMinFilter", () => handleAgeRangeChange("mobile"));
-    bindRange("mobileAgeMaxFilter", () => handleAgeRangeChange("mobile"));
+    bindChange("mobileAgeMinFilter", () => handleAgeRangeChange("mobile"));
+    bindChange("mobileAgeMaxFilter", () => handleAgeRangeChange("mobile"));
     bindRange("heightMinFilter", () => handleHeightRangeChange("desktop"));
     bindRange("heightMaxFilter", () => handleHeightRangeChange("desktop"));
     bindRange("mobileHeightMinFilter", () => handleHeightRangeChange("mobile"));
@@ -2159,7 +2159,9 @@ class InstaRishtaApp {
     this._deckUsers = [];
     this._deckIndex = 0;
     this._deckDragging = false;
+    this._deckStartX = 0;
     this._deckStartY = 0;
+    this._deckDirLocked = null; // 'h' | 'v' | null
     this._deckSwipeInProgress = false;
 
     const getTopCard = () => deck.querySelector(".deck-card-0");
@@ -2171,34 +2173,51 @@ class InstaRishtaApp {
       if (isActionTarget(e.target)) return;
       const card = getTopCard();
       if (!card || !card.contains(e.target)) return;
+      this._deckStartX = e.touches[0].clientX;
       this._deckStartY = e.touches[0].clientY;
       this._deckDragging = true;
+      this._deckDirLocked = null;
       card.style.transition = "none";
     }, { passive: true });
 
     deck.addEventListener("touchmove", (e) => {
       if (!this._deckDragging) return;
+      const dx = e.touches[0].clientX - this._deckStartX;
       const dy = e.touches[0].clientY - this._deckStartY;
       const card = getTopCard();
       if (!card) return;
-      if (dy < 0) {
-        card.style.transform = `translateY(${dy}px) scale(${Math.max(0.92, 1 + dy * 0.0004)})`;
-      } else {
-        card.style.transform = `translateY(${Math.round(dy * 0.18)}px)`;
+
+      // Lock swipe direction on first significant movement
+      if (!this._deckDirLocked) {
+        if (Math.abs(dx) > Math.abs(dy) + 4) {
+          this._deckDirLocked = "h";
+        } else if (Math.abs(dy) > Math.abs(dx) + 4) {
+          this._deckDirLocked = "v";
+          card.style.transition = "";
+        }
       }
+
+      // Only animate on confirmed horizontal swipe; vertical = page scrolls naturally
+      if (this._deckDirLocked !== "h") return;
+
+      card.style.transform = `translateX(${dx}px) scale(${Math.max(0.92, 1 - Math.abs(dx) * 0.0003)})`;
     }, { passive: true });
 
     deck.addEventListener("touchend", (e) => {
       if (!this._deckDragging) return;
       this._deckDragging = false;
-      const dy = e.changedTouches[0].clientY - this._deckStartY;
+      const dx = e.changedTouches[0].clientX - this._deckStartX;
       const card = getTopCard();
       if (card) card.style.transition = "";
 
-      if (dy < -55 && !this._deckSwipeInProgress) {
-        this._deckNext();
-      } else if (dy > 55 && !this._deckSwipeInProgress) {
-        this._deckPrev();
+      if (this._deckDirLocked === "h") {
+        if (dx < -55 && !this._deckSwipeInProgress) {
+          this._deckNext();
+        } else if (dx > 55 && !this._deckSwipeInProgress) {
+          this._deckPrev();
+        } else {
+          if (card) card.style.transform = "";
+        }
       } else {
         if (card) card.style.transform = "";
       }
@@ -2268,7 +2287,7 @@ class InstaRishtaApp {
     if (!topCard) { this._deckSwipeInProgress = false; return; }
 
     topCard.style.transition = "transform 0.3s ease, opacity 0.3s ease";
-    topCard.style.transform = "translateY(-110%) scale(0.92)";
+    topCard.style.transform = "translateX(-110%) scale(0.92)";
     topCard.style.opacity = "0";
 
     for (let i = 1; i <= 3; i++) {

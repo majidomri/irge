@@ -4841,6 +4841,11 @@ select:focus-visible {
 }
 
 @media (max-width: 767px) {
+  /* Stats strip hidden on mobile — shown inside drawer instead */
+  .stats-strip-wrap {
+    display: none;
+  }
+
   .filters-row-secondary {
     grid-template-columns: 1fr;
   }
@@ -5007,6 +5012,48 @@ select:focus-visible {
 
   #mobileDrawer .filter-row-selects > *:only-child {
     grid-column: 1 / -1;
+  }
+
+  /* ── Drawer stats (mobile-only summary row) ─────────────────── */
+  .drawer-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px 0 4px;
+  }
+
+  .drawer-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    text-align: center;
+  }
+
+  .drawer-stat-item strong {
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--accent);
+  }
+
+  .drawer-stat-item span {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  [data-theme="dark"] .drawer-stat-item {
+    background: rgba(148, 163, 184, 0.08);
+  }
+
+  [data-theme="dark"] .drawer-stat-item strong {
+    color: #a5b4fc;
   }
 
   #mobileDrawer .filter-row input,
