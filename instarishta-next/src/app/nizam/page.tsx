@@ -65,9 +65,15 @@ CREATE TABLE IF NOT EXISTS public.ir_user_profiles (
 
 ALTER TABLE public.ir_user_profiles ENABLE ROW LEVEL SECURITY;
 
--- Service role bypasses RLS; deny all other access
-CREATE POLICY "deny_all" ON public.ir_user_profiles
-  USING (false) WITH CHECK (false);
+-- Service role bypasses RLS; deny all other access (idempotent)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'ir_user_profiles' AND policyname = 'deny_all'
+  ) THEN
+    EXECUTE 'CREATE POLICY deny_all ON public.ir_user_profiles USING (false) WITH CHECK (false)';
+  END IF;
+END $$;
 
 -- Optional: also set ADMIN_EMAILS in your Vercel env vars
 -- ADMIN_EMAILS=your@email.com,other@email.com`;
