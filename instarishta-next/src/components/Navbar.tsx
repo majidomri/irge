@@ -28,6 +28,14 @@ const NAV_ITEMS = [
     ],
   },
   {
+    label: 'Plans',
+    bgColor: '#1a3028',
+    textColor: '#fff',
+    links: [
+      { label: 'Membership Plans', href: '/pricing',   ariaLabel: 'Membership Plans' },
+    ],
+  },
+  {
     label: 'About',
     bgColor: '#1a3028',
     textColor: '#fff',
