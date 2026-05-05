@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -128,10 +129,21 @@ body {
   50%       { transform: translateY(-18px); }
 }
 
-/* Arabic font helper */
+/* Arabic/Urdu font helpers */
 .font-arab {
   font-family: 'Noto Naskh Arabic', 'Geeza Pro', 'Al Nile', serif;
   direction: rtl;
+}
+
+/* Urdu Nastaliq — Noto Nastaliq Urdu is a full web Nastaliq font (Google Fonts).
+   Use this class wherever you need proper Nastaliq calligraphic script on the live site.
+   Local Windows system fonts like Faiz Nastaliq / Jameel Noori Nastaliq only exist on
+   Windows machines and are not available on Vercel. */
+.font-urdu {
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Faiz Nastaleeq', serif;
+  direction: rtl;
+  line-height: 2;
+  letter-spacing: 0;
 }
 
 /* StarBorder keyframes */
