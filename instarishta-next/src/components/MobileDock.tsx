@@ -23,8 +23,8 @@ function ProfilesIcon({ active }: { active: boolean }) {
 
 function ChannelsIcon({ active }: { active: boolean }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? '#00A86B' : 'rgba(255,255,255,0.7)'} strokeWidth="2">
-      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 4.5C7.85786 4.5 4.5 7.85786 4.5 12C4.5 14.3287 5.56045 16.4092 7.22758 17.786L7.5 18.0109V19.5H12C16.1421 19.5 19.5 16.1421 19.5 12C19.5 7.85786 16.1421 4.5 12 4.5ZM3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21H6V18.7083C4.15984 17.0613 3 14.6658 3 12Z" fill={active ? '#00A86B' : 'rgba(255,255,255,0.7)'}/>
     </svg>
   );
 }
