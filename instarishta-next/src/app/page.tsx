@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import dynamic from 'next/dynamic';
+import StarBorder from '@/components/ui/StarBorder';
+const Masonry = dynamic(() => import('@/components/ui/Masonry'), { ssr: false });
 
 type Channel = { slug: string; name: string; description: string | null; cover_image: string | null };
 
@@ -24,6 +27,26 @@ const COMMUNITIES = [
   { emoji: '⚡', title: 'Urgent Proposals',       sub: 'Seeking Nikah within 3–6 months' },
   { emoji: '🤲', title: 'Reverts to Islam',       sub: 'Welcoming revert Muslims worldwide' },
 ];
+
+function TestimonialCard({ bg, color, initials, name, city, quote }: {
+  bg: string; color: string; initials: string; name: string; city: string; quote: string;
+}) {
+  return (
+    <div className="relative w-full h-full p-6 border border-[rgba(0,0,0,.06)]" style={{ background: bg, borderRadius: 12 }}>
+      <div className="absolute top-1 left-4 text-[4rem] opacity-10 leading-none select-none" style={{ color }}>{'"'}</div>
+      <div className="text-[#00754A] text-sm mb-2">★★★★★</div>
+      <p className="relative z-[1] text-[0.875rem] text-[rgba(0,0,0,0.82)] leading-[1.55] mb-4">{quote}</p>
+      <div className="flex items-center gap-2.5 mt-auto">
+        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: color }}>{initials}</div>
+        <div>
+          <div className="text-[0.82rem] font-bold text-[rgba(0,0,0,0.87)]">{name}</div>
+          <div className="text-[0.72rem] text-[rgba(0,0,0,0.52)]">{city}</div>
+        </div>
+        <div className="ml-auto text-[0.65rem] text-[#006241] font-bold bg-[rgba(0,98,65,.06)] rounded-full px-2 py-0.5 border border-[rgba(0,98,65,.15)] whitespace-nowrap">✓ Verified</div>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -118,12 +141,14 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-wrap items-center gap-3 mb-8">
-              <Link href="/profiles" className="btn-primary inline-flex items-center gap-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-                </svg>
-                Browse All Profiles
-              </Link>
+              <StarBorder as="div" color="#00C87A" speed="4s" thickness={2} className="rounded-full">
+                <Link href="/profiles" className="btn-primary inline-flex items-center gap-2" style={{ borderRadius: 'inherit' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                  </svg>
+                  Browse All Profiles
+                </Link>
+              </StarBorder>
               <Link href="/biodata" className="btn-ghost inline-flex items-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -365,27 +390,22 @@ export default function HomePage() {
               Families Who Found Their Match Here
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { bg: 'bg-white',      color: '#1E3932', initials: 'AM', name: 'Abrar Mohammed', city: 'Hyderabad, Telangana',  quote: 'Alhamdulillah, my son found a wonderful bride through InstaRishta within 2 months. The profiles were genuine and the contact process was done with full family involvement — just as Islam teaches.' },
-              { bg: 'bg-[#f5f3ff]', color: '#2b5148', initials: 'SB', name: 'Shabana Begum',  city: 'Mumbai, Maharashtra',    quote: 'As a single mother looking for a rishta for my daughter, I was nervous. InstaRishta was respectful, private, and the profiles were serious. We found a good match — may Allah keep them happy.' },
-              { bg: 'bg-[#f5f3ff]', color: '#006241', initials: 'ZA', name: 'Zainab Ahmed',   city: 'Bengaluru, Karnataka',   quote: "I tried Shaadi.com and was frustrated by the noise. InstaRishta is different — Muslim only, clean profiles, and real rishtas. Found my nikah match in just 6 weeks. Subhan'Allah!" },
-            ].map((t) => (
-              <div key={t.name} className={`relative ${t.bg} border border-[rgba(0,0,0,.06)] rounded-[12px] p-8 transition-all hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,.12)]`}>
-                <div className="absolute top-1 left-5 text-[5rem] text-[#006241] opacity-10 leading-none select-none pointer-events-none">"</div>
-                <div className="text-[#00754A] text-[1rem] mb-3">★★★★★</div>
-                <p className="relative z-[1] text-[0.9rem] text-[rgba(0,0,0,0.87)] leading-[1.5] mb-6">{t.quote}</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[0.9rem] shrink-0" style={{ background: t.color }}>{t.initials}</div>
-                  <div>
-                    <div className="text-[0.85rem] font-bold text-[rgba(0,0,0,0.87)]">{t.name}</div>
-                    <div className="text-[0.75rem] text-[rgba(0,0,0,0.58)]">{t.city}</div>
-                  </div>
-                  <div className="ml-auto text-[0.68rem] text-[#006241] font-bold bg-[rgba(0,98,65,.06)] rounded-full px-2 py-0.5 border border-[rgba(0,98,65,.15)]">✓ Verified</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Masonry
+            animateFrom="bottom"
+            stagger={0.07}
+            blurToFocus
+            scaleOnHover
+            hoverScale={0.97}
+            columns={[3, 3, 2, 1]}
+            items={[
+              { id: 'am', height: 220, content: <TestimonialCard bg="#fff"      color="#1E3932" initials="AM" name="Abrar Mohammed" city="Hyderabad, Telangana"  quote="Alhamdulillah, my son found a wonderful bride through InstaRishta within 2 months. The profiles were genuine and the contact process was done with full family involvement — just as Islam teaches." /> },
+              { id: 'sb', height: 240, content: <TestimonialCard bg="#f5fbf8"   color="#2b5148" initials="SB" name="Shabana Begum"  city="Mumbai, Maharashtra"    quote="As a single mother looking for a rishta for my daughter, I was nervous. InstaRishta was respectful, private, and the profiles were serious. We found a good match — may Allah keep them happy." /> },
+              { id: 'za', height: 220, content: <TestimonialCard bg="#f0faf5"   color="#006241" initials="ZA" name="Zainab Ahmed"   city="Bengaluru, Karnataka"   quote="I tried Shaadi.com and was frustrated by the noise. InstaRishta is different — Muslim only, clean profiles, and real rishtas. Found my nikah match in just 6 weeks. Subhan'Allah!" /> },
+              { id: 'rk', height: 200, content: <TestimonialCard bg="#fff"      color="#00754A" initials="RK" name="Rizwan Khan"    city="Delhi, NCR"              quote="The wali-first approach is exactly what I was looking for. My family felt safe and respected throughout the process. Nikah happened in 3 months. JazakAllah khair." /> },
+              { id: 'fh', height: 230, content: <TestimonialCard bg="#f5f3ff"   color="#1E3932" initials="FH" name="Fatima Hussain" city="Lahore, Pakistan"        quote="Very clean platform, no unnecessary messaging. My profile was verified quickly and I received serious proposals within a week. The halal approach makes all the difference." /> },
+              { id: 'ma', height: 210, content: <TestimonialCard bg="#f0faf5"   color="#2b5148" initials="MA" name="Maryam Ansari"  city="Toronto, Canada"         quote="As an NRI looking for a match back home, InstaRishta had genuinely verified profiles. The education and family details were accurate. Found a wonderful match, alhamdulillah!" /> },
+            ]}
+          />
         </div>
       </section>
 
