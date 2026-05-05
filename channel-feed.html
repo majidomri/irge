@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <title>Channel — InstaRishta</title>
+  <link rel="stylesheet" href="styles/design-system.css">
+  <style>
+    :root {
+      --canvas:  #F3F0EE;
+      --lifted:  #FCFBFA;
+      --white:   #FFFFFF;
+      --ink:     #141413;
+      --slate:   #696969;
+      --dust:    #D1CDC7;
+      --signal:  #00754A;
+      --arc:     #006241;
+      --sh-nav:  0px 4px 24px rgba(0,0,0,0.04);
+      --sh-card: 0px 24px 48px rgba(0,0,0,0.08);
+      --story-unseen: #006241;
+      --story-seen:   #D1CDC7;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%; background: var(--white); color: var(--ink);
+      font-family: var(--ds-font, 'Inter', system-ui, sans-serif);
+      -webkit-font-smoothing: antialiased; overscroll-behavior: none;
+    }
+
+    /* ── Floating pill header ── */
+    .hdr {
+      position: sticky; top: 12px; z-index: 40;
+      margin: 12px 16px 0;
+      background: var(--white); border-radius: 999px;
+      padding: 11px 20px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: var(--sh-nav);
+    }
+    .back-btn {
+      background: var(--ink); border: none; color: var(--canvas);
+      width: 32px; height: 32px; border-radius: 50%;
+      font-size: 20px; line-height: 1; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hdr-title {
+      font-size: 16px; font-weight: 700; letter-spacing: -0.32px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+      color: var(--ink);
+    }
+    .hdr-logo {
+      font-size: 12px; font-weight: 700; letter-spacing: -0.24px;
+      color: var(--ink); flex-shrink: 0;
+    }
+    .hdr-logo-accent { color: #00754A; }
+
+    /* ── Stories bar ── */
+    .stories-bar {
+      display: flex; gap: 14px; padding: 16px 20px;
+      overflow-x: auto;
+      background: var(--white);
+      margin: 12px 16px 0; border-radius: 24px;
+      box-shadow: var(--sh-nav);
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .stories-bar::-webkit-scrollbar { display: none; }
+    .story-btn {
+      flex-shrink: 0; background: none; border: none; cursor: pointer; padding: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .story-ring {
+      width: 60px; height: 60px; border-radius: 50%;
+      padding: 2.5px; background: var(--story-unseen);
+    }
+    .story-ring.seen { background: var(--story-seen); }
+    .story-img-wrap {
+      width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+      border: 2.5px solid var(--white);
+    }
+    .story-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .story-label {
+      font-size: 10px; color: var(--slate); max-width: 64px;
+      text-align: center; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; font-weight: 500;
+    }
+
+    /* ── Post sections ── */
+    .sections-wrap { padding-bottom: 80px; }
+
+    .post-section { overflow: hidden; }
+    .post-section:nth-child(odd)  { background: var(--canvas); }
+    .post-section:nth-child(even) { background: var(--lifted); }
+
+    .sec-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 14px 10px; cursor: pointer; user-select: none;
+    }
+    .sec-icon { font-size: 17px; flex-shrink: 0; }
+    .sec-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.44px;
+      text-transform: uppercase; color: var(--slate); flex: 1;
+    }
+    .sec-count {
+      font-size: 11px; font-weight: 600; color: var(--arc);
+      background: rgba(0,98,65,0.10); border-radius: 14px; padding: 2px 8px;
+    }
+    .sec-chevron {
+      font-size: 18px; color: var(--dust); transition: transform 0.22s;
+    }
+    .post-section.collapsed .sec-chevron { transform: rotate(-90deg); }
+    .post-section.collapsed .sec-grid    { display: none; }
+
+    .sec-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px;
+      padding: 0 0 2px;
+    }
+    @media (min-width: 600px) { .sec-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 900px) { .sec-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .post-card {
+      position: relative; aspect-ratio: 1; overflow: hidden;
+      background: var(--lifted); border: none; cursor: pointer; padding: 0;
+      border-radius: 0; transition: opacity 0.15s; display: block; width: 100%;
+    }
+    .post-card:active { opacity: 0.82; }
+    .post-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .audio-badge {
+      position: absolute; top: 5px; right: 5px; font-size: 12px;
+      background: rgba(255,255,255,0.88); border-radius: 50%;
+      width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    }
+    .new-post { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+
+    /* empty state */
+    .empty-state-wrap {
+      text-align: center; padding: 60px 20px; color: var(--slate); font-size: 15px;
+    }
+    .empty-state-wrap span { display: block; font-size: 40px; margin-bottom: 12px; }
+
+    /* ── Loader ── */
+    .loader { display: flex; justify-content: center; padding: 24px; display: none; }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 2.5px solid var(--dust); border-top-color: var(--signal);
+      border-radius: 50%; animation: spin 0.65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Story overlay ── */
+    .story-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: #000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .story-overlay.active { opacity: 1; pointer-events: all; }
+
+    .progress-bars {
+      position: absolute; top: env(safe-area-inset-top, 0); top: max(env(safe-area-inset-top, 0), 12px);
+      left: 12px; right: 12px; z-index: 10;
+      display: flex; gap: 3px;
+    }
+    .prog-track {
+      flex: 1; height: 2.5px; background: rgba(255,255,255,0.25); border-radius: 2px; overflow: hidden;
+    }
+    .prog-fill { height: 100%; background: #fff; width: 0; border-radius: 2px; }
+    .prog-fill.done   { width: 100%; }
+    .prog-fill.active { animation: storyTick 5s linear forwards; }
+    @keyframes storyTick { from { width: 0; } to { width: 100%; } }
+
+    .story-close {
+      position: absolute; top: max(env(safe-area-inset-top, 0), 18px); right: 14px; z-index: 20;
+      background: rgba(0,0,0,0.4); border: none; color: #fff;
+      font-size: 22px; width: 36px; height: 36px;
+      border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .story-main { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    #storyImg { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; pointer-events: none; transition: opacity 0.2s; }
+
+    /* ── Story pause indicator ── */
+    .story-pause-hint {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 58px; height: 58px; border-radius: 50%;
+      background: rgba(0,0,0,0.52); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; pointer-events: none; z-index: 15;
+      opacity: 0; transition: opacity 0.18s;
+    }
+    .story-pause-hint.visible { opacity: 1; }
+
+    /* ── Post modal (full-screen) ── */
+    .post-modal {
+      position: fixed; inset: 0; z-index: 100;
+      background: #000;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.22s;
+      overflow: hidden;
+    }
+    .post-modal.active { opacity: 1; pointer-events: all; }
+
+    /* Blurred ambient background for letterboxed images */
+    .modal-blur-bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      filter: blur(26px) brightness(0.22);
+      transform: scale(1.15);
+      will-change: transform;
+    }
+
+    /* Slide-able content wrapper (animated on post-to-post nav) */
+    .modal-content { position: absolute; inset: 0; z-index: 2; }
+
+    /* Top gradient + back button */
+    .modal-topbar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      padding: max(env(safe-area-inset-top, 0px), 14px) 14px 16px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .modal-back-btn {
+      background: rgba(0,0,0,0.38); backdrop-filter: blur(8px);
+      border: none; color: #fff; font-size: 28px; line-height: 1;
+      width: 42px; height: 42px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .modal-counter {
+      font-size: 13px; color: rgba(255,255,255,0.75); font-weight: 600;
+      background: rgba(0,0,0,0.38); backdrop-filter: blur(8px);
+      padding: 4px 12px; border-radius: 20px;
+    }
+
+    /* Bottom info — gradient overlay, slides up on open */
+    .modal-info {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+      padding: 80px 16px max(env(safe-area-inset-bottom, 0px), 28px);
+      background: linear-gradient(to top, rgba(0,0,0,0.94) 55%, transparent 100%);
+      transform: translateY(18px);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 65vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .post-modal.active .modal-info { transform: translateY(0); }
+
+    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: #fff; }
+    .modal-caption { font-size: 14px; color: rgba(255,255,255,0.72); line-height: 1.55; margin-bottom: 10px; }
+
+    .modal-audio {
+      margin-bottom: 12px; padding: 10px 14px;
+      background: rgba(255,255,255,0.09); backdrop-filter: blur(10px);
+      border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); display: none;
+    }
+    .modal-audio label { font-size: 12px; color: rgba(255,255,255,0.55); display: block; margin-bottom: 6px; }
+    .modal-audio audio { width: 100%; height: 36px; }
+
+    .modal-actions {
+      display: flex; align-items: center; gap: 16px;
+      padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.12);
+    }
+    .like-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 22px; line-height: 1; display: flex; align-items: center; gap: 6px;
+      color: #fff;
+    }
+    .like-count { font-size: 14px; font-weight: 600; }
+    .view-info { font-size: 13px; color: rgba(255,255,255,0.55); margin-left: auto; }
+    .modal-date { font-size: 12px; color: rgba(255,255,255,0.38); margin-top: 8px; }
+
+    /* Swipe hint arrows (fade in/out on navigate) */
+    .modal-swipe-hint {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      font-size: 18px; color: rgba(255,255,255,0.45); z-index: 8;
+      pointer-events: none; opacity: 0; transition: opacity 0.3s;
+    }
+    .modal-swipe-hint.top { top: 72px; }
+    .modal-swipe-hint.bottom { bottom: 10px; }
+    .post-modal.active .modal-swipe-hint { opacity: 1; }
+
+    /* ── Carousel in post modal ── */
+    .modal-carousel {
+      position: absolute; inset: 0; z-index: 1;
+      display: flex; overflow-x: auto; overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .modal-carousel::-webkit-scrollbar { display: none; }
+    .carousel-slide {
+      min-width: 100vw; width: 100vw; height: 100%;
+      flex-shrink: 0; scroll-snap-align: center; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .carousel-slide img {
+      max-width: 100%; max-height: 100%; object-fit: contain;
+      display: block; user-select: none; pointer-events: none;
+    }
+    .carousel-dots {
+      position: absolute; bottom: 72px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 5px; z-index: 12; pointer-events: none;
+    }
+    .cdot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(255,255,255,0.38); transition: background 0.18s, transform 0.18s;
+    }
+    .cdot.active { background: #fff; transform: scale(1.25); }
+    .photo-badge {
+      position: absolute; top: 5px; left: 5px; font-size: 10px;
+      background: rgba(0,0,0,0.52); color: #fff; border-radius: 8px;
+      padding: 2px 6px; font-weight: 700; pointer-events: none;
+    }
+
+    /* ── Realtime badge ── */
+    .rt-badge {
+      position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: var(--canvas);
+      padding: 6px 18px; border-radius: 20px;
+      font-size: 13px; font-weight: 600; z-index: 50;
+      box-shadow: 0 4px 16px rgba(20,20,19,0.28);
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .rt-badge.show { opacity: 1; pointer-events: all; cursor: pointer; }
+
+    /* ── Error ── */
+    .page-error { text-align: center; padding: 80px 24px; color: var(--slate); }
+    .page-error span { font-size: 40px; display: block; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────────────────── -->
+<header class="hdr">
+  <button class="back-btn" onclick="history.length>1 ? history.back() : location.href='channels.html'">‹</button>
+  <div class="hdr-title" id="channelName">Loading…</div>
+  <span class="hdr-logo">Insta<span class="hdr-logo-accent">Rishta</span></span>
+</header>
+
+<!-- ── Stories bar ───────────────────────────────────────────────────────── -->
+<div class="stories-bar" id="storiesBar" style="display:none"></div>
+
+<!-- ── Post sections ──────────────────────────────────────────────────────── -->
+<div class="sections-wrap" id="sectionsWrap"></div>
+<div class="loader" id="loader"><div class="spinner"></div></div>
+<div id="sentinel" style="height:1px"></div>
+
+<!-- ── Realtime badge ────────────────────────────────────────────────────── -->
+<div class="rt-badge" id="rtBadge">↑ New post added</div>
+
+<!-- ── Story overlay ─────────────────────────────────────────────────────── -->
+<div class="story-overlay" id="storyOverlay" role="dialog" aria-label="Story viewer">
+  <div class="progress-bars" id="progressBars"></div>
+  <button class="story-close" id="storyClose">✕</button>
+  <div class="story-pause-hint" id="storyPauseHint">⏸</div>
+  <div class="story-main">
+    <img id="storyImg" src="" alt="Story">
+  </div>
+</div>
+
+<!-- ── Post modal (full-screen) ──────────────────────────────────────────── -->
+<div class="post-modal" id="postModal" role="dialog" aria-label="Post detail">
+  <div class="modal-blur-bg" id="modalBlurBg"></div>
+  <div class="modal-carousel" id="modalCarousel"></div>
+  <div class="carousel-dots" id="carouselDots"></div>
+  <div class="modal-content" id="modalContent">
+    <div class="modal-topbar">
+      <button class="modal-back-btn" id="modalClose">&#8249;</button>
+      <span class="modal-counter" id="modalCounter"></span>
+    </div>
+    <div class="modal-swipe-hint top"    id="swipeHintTop">&#8593; prev</div>
+    <div class="modal-swipe-hint bottom" id="swipeHintBot">&#8595; next</div>
+    <div class="modal-info" id="modalInfo">
+      <div class="modal-title"   id="modalTitle"></div>
+      <div class="modal-caption" id="modalCaption"></div>
+      <div class="modal-audio"   id="audioSection">
+        <label>🎵 Voice Preview</label>
+        <audio id="modalAudio" controls preload="none"></audio>
+      </div>
+      <div class="modal-actions">
+        <button class="like-btn" id="likeBtn">🤍 <span class="like-count" id="likeCount">0</span></button>
+        <div class="view-info">👁 <span id="viewCount">0</span> views</div>
+      </div>
+      <div class="modal-date" id="modalDate"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Scripts ────────────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app/services/supabase-client.js"></script>
+<script>
+  // ── State ────────────────────────────────────────────────────────────────
+  const slug    = new URLSearchParams(location.search).get('slug');
+  let channel   = null;
+  let posts     = [];
+  let stories   = [];
+  let page      = 0;
+  let loading   = false;
+  let exhausted = false;
+
+  // ── Post modal state ─────────────────────────────────────────────────────
+  let modalPostIdx  = 0;
+  let carouselIdx   = 0;
+  let carouselImgs  = [];  // array of full-res URLs for current post
+
+  // ── Story viewer state ────────────────────────────────────────────────────
+  let storyIdx       = 0;
+  let storyTimer     = null;
+  let storyPaused    = false;
+  let storyStartTime = 0;
+  let storyRemaining = 0;
+  const STORY_DURATION = 5000;
+
+  // ── Seen stories (localStorage) ───────────────────────────────────────────
+  const SEEN_KEY = 'ir_seen_stories';
+  const seen = () => JSON.parse(localStorage.getItem(SEEN_KEY) || '[]');
+  function markSeen(id) {
+    const s = seen();
+    if (!s.includes(id)) localStorage.setItem(SEEN_KEY, JSON.stringify([...s, id]));
+  }
+  function isSeen(id) { return seen().includes(id); }
+
+  // ── Liked posts ───────────────────────────────────────────────────────────
+  const likedKey = id => 'ir_liked_' + id;
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString('en-IN',
+      { day:'numeric', month:'short', year:'numeric' });
+  }
+  function showError(msg) {
+    document.body.innerHTML = `
+      <div class="page-error"><span>⚠️</span>${esc(msg)}<br>
+      <a href="channels.html" style="color:var(--accent);margin-top:12px;display:inline-block">← Channels</a></div>`;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    if (!slug) { showError('No channel specified.'); return; }
+
+    try {
+      channel = await IRService.getChannelBySlug(slug);
+      if (!channel) { showError('Channel "' + slug + '" not found.'); return; }
+
+      document.title           = channel.name + ' — InstaRishta';
+      document.getElementById('channelName').textContent = channel.name;
+
+      await Promise.all([loadStories(), loadPosts()]);
+
+      // Infinite scroll
+      new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting && !loading && !exhausted) loadPosts();
+      }, { rootMargin: '300px' }).observe(document.getElementById('sentinel'));
+
+      // Realtime subscription
+      IRService.subscribeChannel(channel.id, onRealtimePost);
+
+    } catch (e) {
+      console.error(e);
+      showError('Failed to load channel: ' + e.message);
+    }
+  }
+
+  // ── Stories ───────────────────────────────────────────────────────────────
+  async function loadStories() {
+    stories = await IRService.getStories(channel.id);
+    const bar = document.getElementById('storiesBar');
+    if (!stories.length) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    bar.innerHTML = stories.map((s, i) => `
+      <button class="story-btn" onclick="openStory(${i})" aria-label="Story ${i+1}">
+        <div class="story-ring ${isSeen(s.id) ? 'seen' : ''}" id="sr_${s.id}">
+          <div class="story-img-wrap">
+            <img src="${esc(s.image)}" alt="" loading="lazy">
+          </div>
+        </div>
+        <span class="story-label">Story ${i+1}</span>
+      </button>`).join('');
+  }
+
+  // ── Post categories ───────────────────────────────────────────────────────
+  const POST_CATS = [
+    { id: 'medical',  label: 'Medical & Health',        icon: '🩺',
+      kw: ['doctor','mbbs','surgeon','physician','nurse','pharmacist','dentist','medical','hospital','health','clinic','psychiatrist','dermatologist','cardiologist','pediatrician','gynecologist','ortho'] },
+    { id: 'tech',     label: 'Tech & Engineering',      icon: '💻',
+      kw: ['engineer','software','developer','it ','technology','computer','programming','ai ','data','cyber','network','electronics','mechanical','civil','electrical','coding'] },
+    { id: 'business', label: 'Business & Finance',      icon: '💼',
+      kw: ['business','entrepreneur','finance','banking','accountant','ca ','chartered','mba','manager','marketing','sales','commerce','investment','trade'] },
+    { id: 'education',label: 'Education',               icon: '🎓',
+      kw: ['teacher','professor','lecturer','education','school','university','tutor','academic','phd','research','scholar'] },
+    { id: 'legal',    label: 'Legal & Law',             icon: '⚖️',
+      kw: ['lawyer','advocate','legal','law','attorney','judge','court','llb','llm'] },
+    { id: 'govt',     label: 'Government & Services',   icon: '🏛️',
+      kw: ['ias','ips','ifs','government','civil service','military','army','navy','air force','police','upsc','psc','officer'] }
+  ];
+
+  function categorizePost(post) {
+    const hay = ((post.title || '') + ' ' + (post.caption || '')).toLowerCase();
+    for (const cat of POST_CATS) {
+      if (cat.kw.some(k => hay.includes(k))) return cat.id;
+    }
+    return 'others';
+  }
+
+  function postCardHTML(post) {
+    const photoCount = (post.images && post.images.length) ? 1 + post.images.length : 1;
+    return `<button class="post-card" data-id="${post.id}" aria-label="${esc(post.title || 'Profile card')}">
+      <img src="${esc(post.thumb || post.image)}" alt="${esc(post.title || '')}" loading="lazy">
+      ${post.audio_url ? '<span class="audio-badge">🔊</span>' : ''}
+      ${photoCount > 1 ? `<span class="photo-badge">⬛ ${photoCount}</span>` : ''}
+    </button>`;
+  }
+
+  // ── Render all posts as education sections ─────────────────────────────────
+  function renderSections() {
+    const wrap = document.getElementById('sectionsWrap');
+    if (!posts.length) {
+      wrap.innerHTML = `<div class="empty-state-wrap"><span>💍</span>No posts in this channel yet.</div>`;
+      return;
+    }
+
+    // Group
+    const groups = {};
+    posts.forEach(p => {
+      const cid = categorizePost(p);
+      (groups[cid] = groups[cid] || []).push(p);
+    });
+
+    // Preserve collapsed state across re-renders
+    const collapsed = new Set();
+    wrap.querySelectorAll('.post-section.collapsed').forEach(el => collapsed.add(el.dataset.cat));
+
+    const orderedIds = [...POST_CATS.map(c => c.id), 'others'].filter(id => groups[id]);
+
+    wrap.innerHTML = orderedIds.map(cid => {
+      const cat   = POST_CATS.find(c => c.id === cid);
+      const label = cid === 'others' ? 'Other Profiles' : cat.label;
+      const icon  = cid === 'others' ? '💍'             : cat.icon;
+      const items = groups[cid];
+      const isCol = collapsed.has(cid);
+      return `
+        <div class="post-section${isCol ? ' collapsed' : ''}" data-cat="${cid}">
+          <div class="sec-header" onclick="this.closest('.post-section').classList.toggle('collapsed')">
+            <span class="sec-icon">${icon}</span>
+            <span class="sec-label">${esc(label)}</span>
+            <span class="sec-count">${items.length}</span>
+            <span class="sec-chevron">›</span>
+          </div>
+          <div class="sec-grid">
+            ${items.map(p => postCardHTML(p)).join('')}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Attach click handlers
+    wrap.querySelectorAll('.post-card').forEach(btn => {
+      const post = posts.find(p => p.id === btn.dataset.id);
+      if (post) btn.addEventListener('click', () => openPost(post));
+    });
+  }
+
+  // ── Posts ─────────────────────────────────────────────────────────────────
+  async function loadPosts() {
+    if (loading || exhausted) return;
+    loading = true;
+    document.getElementById('loader').style.display = 'flex';
+
+    const batch = await IRService.getPosts(channel.id, page);
+
+    document.getElementById('loader').style.display = 'none';
+    loading = false;
+
+    if (batch.length < IRService.POST_PAGE_SIZE) exhausted = true;
+    if (!batch.length && page === 0) {
+      renderSections();
+      return;
+    }
+
+    posts = [...posts, ...batch];
+    renderSections();
+    page++;
+  }
+
+  // ── Realtime: new post ────────────────────────────────────────────────────
+  function onRealtimePost(post) {
+    posts.unshift(post);
+    renderSections();
+
+    const badge = document.getElementById('rtBadge');
+    badge.classList.add('show');
+    badge.onclick = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); badge.classList.remove('show'); };
+    setTimeout(() => badge.classList.remove('show'), 5000);
+  }
+
+  // ── Story viewer ──────────────────────────────────────────────────────────
+  function openStory(index) {
+    storyIdx = index;
+    storyPaused = false;
+    document.getElementById('storyOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    renderStory();
+  }
+
+  function renderStory() {
+    if (storyIdx < 0 || storyIdx >= stories.length) { closeStory(); return; }
+    const s = stories[storyIdx];
+
+    // Crossfade: fade out → swap src → fade in
+    const img = document.getElementById('storyImg');
+    img.style.opacity = '0';
+    setTimeout(() => {
+      img.src = s.image;
+      img.onload = () => { img.style.opacity = '1'; };
+      if (img.complete && img.naturalWidth) img.style.opacity = '1';
+    }, 160);
+
+    markSeen(s.id);
+    const ring = document.getElementById('sr_' + s.id);
+    if (ring) ring.classList.add('seen');
+
+    // Progress bars — active bar uses CSS var for duration so pause works
+    const pbars = document.getElementById('progressBars');
+    pbars.innerHTML = stories.map((_, i) => `
+      <div class="prog-track">
+        <div class="prog-fill ${i < storyIdx ? 'done' : i === storyIdx ? 'active' : ''}"></div>
+      </div>`).join('');
+
+    clearTimeout(storyTimer);
+    storyPaused = false;
+    storyRemaining = STORY_DURATION;
+    storyStartTime = Date.now();
+    storyTimer = setTimeout(() => advanceStory(1), STORY_DURATION);
+  }
+
+  function pauseStory() {
+    if (storyPaused) return;
+    storyPaused = true;
+    storyRemaining = Math.max(0, STORY_DURATION - (Date.now() - storyStartTime));
+    clearTimeout(storyTimer);
+    const fill = document.querySelector('.prog-fill.active');
+    if (fill) fill.style.animationPlayState = 'paused';
+    document.getElementById('storyPauseHint').classList.add('visible');
+  }
+
+  function resumeStory() {
+    if (!storyPaused) return;
+    storyPaused = false;
+    const fill = document.querySelector('.prog-fill.active');
+    if (fill) fill.style.animationPlayState = 'running';
+    document.getElementById('storyPauseHint').classList.remove('visible');
+    storyStartTime = Date.now();
+    storyTimer = setTimeout(() => advanceStory(1), storyRemaining);
+  }
+
+  function advanceStory(dir) {
+    clearTimeout(storyTimer);
+    storyPaused = false;
+    document.getElementById('storyPauseHint').classList.remove('visible');
+    const next = storyIdx + dir;
+    if (next < 0) {
+      // First story: restart from beginning instead of closing
+      renderStory();
+      return;
+    }
+    storyIdx = next;
+    renderStory(); // closes smoothly if past last story
+  }
+
+  function closeStory() {
+    clearTimeout(storyTimer);
+    storyPaused = false;
+    document.getElementById('storyPauseHint').classList.remove('visible');
+    document.getElementById('storyOverlay').classList.remove('active');
+    document.getElementById('storyImg').src = '';
+    document.body.style.overflow = '';
+  }
+
+  // ── Story gesture handling ────────────────────────────────────────────────
+  (function () {
+    const overlay   = document.getElementById('storyOverlay');
+    const closeBtn  = document.getElementById('storyClose');
+    let touchStartX = 0;
+    let touchDeltaX = 0;
+    let holdTimer   = null;
+    let isHolding   = false;
+    const HOLD_MS   = 220;
+    const SWIPE_PX  = 48;
+
+    function pointerDown(x, target) {
+      if (target && target.closest('#storyClose')) return;
+      touchStartX = x;
+      touchDeltaX = 0;
+      isHolding   = false;
+      holdTimer   = setTimeout(() => { isHolding = true; pauseStory(); }, HOLD_MS);
+    }
+
+    function pointerMove(x) {
+      touchDeltaX = x - touchStartX;
+      if (Math.abs(touchDeltaX) > 10) clearTimeout(holdTimer);
+    }
+
+    function pointerUp(x, target) {
+      clearTimeout(holdTimer);
+      if (target && target.closest('#storyClose')) return;
+      if (isHolding) { resumeStory(); isHolding = false; return; }
+      if (Math.abs(touchDeltaX) > SWIPE_PX) {
+        advanceStory(touchDeltaX < 0 ? 1 : -1);
+        return;
+      }
+      // tap zone: left 40% = back, right 60% = forward
+      advanceStory(touchStartX < overlay.offsetWidth * 0.4 ? -1 : 1);
+    }
+
+    // Touch
+    overlay.addEventListener('touchstart', e => {
+      pointerDown(e.touches[0].clientX, e.target);
+    }, { passive: true });
+    overlay.addEventListener('touchmove', e => {
+      pointerMove(e.touches[0].clientX);
+    }, { passive: true });
+    overlay.addEventListener('touchend', e => {
+      pointerUp(e.changedTouches[0].clientX, e.target);
+    });
+
+    // Mouse (desktop hold/click)
+    overlay.addEventListener('mousedown', e => pointerDown(e.clientX, e.target));
+    overlay.addEventListener('mousemove', e => { if (e.buttons) pointerMove(e.clientX); });
+    overlay.addEventListener('mouseup',   e => pointerUp(e.clientX, e.target));
+    overlay.addEventListener('mouseleave', () => {
+      clearTimeout(holdTimer);
+      if (isHolding) { resumeStory(); isHolding = false; }
+    });
+
+    // Close button
+    closeBtn.addEventListener('click', closeStory);
+
+    // Keyboard
+    document.addEventListener('keydown', e => {
+      if (!document.getElementById('storyOverlay').classList.contains('active')) return;
+      if (e.key === 'Escape')      closeStory();
+      if (e.key === 'ArrowRight')  advanceStory(1);
+      if (e.key === 'ArrowLeft')   advanceStory(-1);
+      if (e.key === ' ') { e.preventDefault(); storyPaused ? resumeStory() : pauseStory(); }
+    });
+  })();
+
+  // ── Carousel helpers ──────────────────────────────────────────────────────
+  function _buildCarouselImgs(post) {
+    const extras = Array.isArray(post.images) ? post.images.filter(Boolean) : [];
+    return [post.image, ...extras];
+  }
+
+  function _renderCarousel() {
+    const carousel = document.getElementById('modalCarousel');
+    const dots     = document.getElementById('carouselDots');
+
+    carousel.innerHTML = carouselImgs.map((url, i) => `
+      <div class="carousel-slide">
+        <img src="${esc(url)}" alt="Photo ${i+1}" loading="${i === 0 ? 'eager' : 'lazy'}">
+      </div>`).join('');
+
+    // Snap to first slide immediately (no animation on open)
+    carousel.scrollLeft = 0;
+
+    if (carouselImgs.length > 1) {
+      dots.innerHTML = carouselImgs.map((_, i) =>
+        `<span class="cdot${i === carouselIdx ? ' active' : ''}"></span>`).join('');
+      dots.style.display = 'flex';
+    } else {
+      dots.innerHTML = '';
+      dots.style.display = 'none';
+    }
+  }
+
+  function _updateCarouselDots() {
+    document.querySelectorAll('.cdot').forEach((el, i) =>
+      el.classList.toggle('active', i === carouselIdx));
+  }
+
+  // Returns true if carousel moved, false if already at boundary
+  function navigateCarousel(dir) {
+    const next = carouselIdx + dir;
+    if (next < 0 || next >= carouselImgs.length) return false;
+    carouselIdx = next;
+    const carousel = document.getElementById('modalCarousel');
+    carousel.scrollTo({ left: carouselIdx * window.innerWidth, behavior: 'smooth' });
+    _updateCarouselDots();
+    document.getElementById('modalBlurBg').style.backgroundImage = `url(${carouselImgs[carouselIdx]})`;
+    return true;
+  }
+
+  // ── Post modal ────────────────────────────────────────────────────────────
+  function _fillModal(post) {
+    // Build image list
+    carouselImgs = _buildCarouselImgs(post);
+    carouselIdx  = 0;
+    _renderCarousel();
+
+    document.getElementById('modalBlurBg').style.backgroundImage = `url(${post.image})`;
+    document.getElementById('modalTitle').textContent   = post.title   || '';
+    document.getElementById('modalCaption').textContent = post.caption || '';
+    document.getElementById('modalDate').textContent    = fmtDate(post.created_at);
+
+    const alreadyLiked = !!localStorage.getItem(likedKey(post.id));
+    const likeBtn = document.getElementById('likeBtn');
+    likeBtn.innerHTML = `${alreadyLiked ? '❤️' : '🤍'} <span class="like-count" id="likeCount">${post.likes || 0}</span>`;
+    likeBtn.dataset.id    = post.id;
+    likeBtn.dataset.liked = alreadyLiked ? '1' : '0';
+    likeBtn.onclick = toggleLike;
+    document.getElementById('viewCount').textContent = (post.views || 0) + 1;
+
+    const audioEl = document.getElementById('modalAudio');
+    if (post.audio_url) {
+      document.getElementById('audioSection').style.display = 'block';
+      audioEl.src = post.audio_url;
+    } else {
+      document.getElementById('audioSection').style.display = 'none';
+      audioEl.pause(); audioEl.src = '';
+    }
+
+    document.getElementById('modalCounter').textContent =
+      `${modalPostIdx + 1} / ${posts.length}`;
+
+    // show/hide swipe hints
+    document.getElementById('swipeHintTop').style.opacity = modalPostIdx > 0               ? '' : '0';
+    document.getElementById('swipeHintBot').style.opacity = modalPostIdx < posts.length - 1 ? '' : '0';
+
+    IRService.incrementViews(post.id);
+  }
+
+  function navigateModal(dir) {
+    const next = modalPostIdx + dir;
+    if (next < 0 || next >= posts.length) return;
+
+    const content  = document.getElementById('modalContent');
+    const carousel = document.getElementById('modalCarousel');
+    const bg       = document.getElementById('modalBlurBg');
+    const dots     = document.getElementById('carouselDots');
+
+    const exitY  = dir > 0 ? '-22%' : '22%';
+    const enterY = dir > 0 ?  '22%' : '-22%';
+    const opts   = { duration: 210, easing: 'ease-in', fill: 'forwards' };
+
+    // Slide content out; simultaneously fade carousel + bg out
+    content.animate(
+      [{ transform: 'translateY(0)', opacity: 1 },
+       { transform: `translateY(${exitY})`, opacity: 0 }], opts);
+    carousel.animate([{ opacity: 1 }, { opacity: 0 }], opts);
+    bg.animate([{ opacity: 1 }, { opacity: 0 }], opts).onfinish = () => {
+      modalPostIdx = next;
+      _fillModal(posts[modalPostIdx]);
+
+      // Fade new content in
+      const inOpts = { duration: 260, easing: 'cubic-bezier(0.32,0.72,0,1)', fill: 'forwards' };
+      carousel.animate([{ opacity: 0 }, { opacity: 1 }], inOpts);
+      bg.animate([{ opacity: 0 }, { opacity: 1 }], inOpts);
+      content.animate(
+        [{ transform: `translateY(${enterY})`, opacity: 0 },
+         { transform: 'translateY(0)',          opacity: 1 }], inOpts
+      );
+    };
+  }
+
+  function openPost(post) {
+    modalPostIdx = posts.findIndex(p => p.id === post.id);
+    if (modalPostIdx === -1) modalPostIdx = 0;
+    _fillModal(post);
+    document.getElementById('postModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePost() {
+    document.getElementById('postModal').classList.remove('active');
+    document.body.style.overflow = '';
+    const audio = document.getElementById('modalAudio');
+    audio.pause(); audio.src = '';
+  }
+
+  function toggleLike() {
+    const btn = document.getElementById('likeBtn');
+    const id  = btn.dataset.id;
+    if (btn.dataset.liked === '1') return;
+    btn.dataset.liked = '1';
+    localStorage.setItem(likedKey(id), '1');
+    const cnt = document.getElementById('likeCount');
+    const n   = parseInt(cnt.textContent || '0') + 1;
+    cnt.textContent = n;
+    btn.innerHTML = `❤️ <span class="like-count" id="likeCount">${n}</span>`;
+    IRService.incrementLikes(id);
+  }
+
+  document.getElementById('modalClose').addEventListener('click', closePost);
+
+  // ── Post modal swipe (dual-axis: H = carousel, V = post-to-post) ─────────
+  (function () {
+    const modal    = document.getElementById('postModal');
+    const SWIPE_PX = 52;
+    let startX = 0, startY = 0, deltaX = 0, deltaY = 0;
+    let swiping = false, axis = null;
+
+    function down(x, y, target) {
+      if (target && target.closest('#modalInfo, audio, .modal-audio')) { swiping = false; return; }
+      startX = x; startY = y; deltaX = 0; deltaY = 0;
+      swiping = true; axis = null;
+    }
+
+    function move(x, y) {
+      if (!swiping) return;
+      deltaX = x - startX;
+      deltaY = y - startY;
+      // Lock axis after 8px of movement
+      if (!axis && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
+        axis = Math.abs(deltaX) > Math.abs(deltaY) ? 'h' : 'v';
+      }
+    }
+
+    function up() {
+      if (!swiping) return; swiping = false;
+      if (!axis) return;
+      if (axis === 'h' && Math.abs(deltaX) > SWIPE_PX) {
+        const moved = navigateCarousel(deltaX < 0 ? 1 : -1);
+        if (!moved) navigateModal(deltaX < 0 ? 1 : -1);
+      } else if (axis === 'v' && Math.abs(deltaY) > SWIPE_PX) {
+        navigateModal(deltaY < 0 ? 1 : -1);
+      }
+    }
+
+    modal.addEventListener('touchstart', e => down(e.touches[0].clientX, e.touches[0].clientY, e.target), { passive: true });
+    modal.addEventListener('touchmove',  e => move(e.touches[0].clientX, e.touches[0].clientY),            { passive: true });
+    modal.addEventListener('touchend',   up);
+    modal.addEventListener('mousedown',  e => down(e.clientX, e.clientY, e.target));
+    modal.addEventListener('mousemove',  e => { if (e.buttons) move(e.clientX, e.clientY); });
+    modal.addEventListener('mouseup',    up);
+
+    document.addEventListener('keydown', e => {
+      if (!modal.classList.contains('active')) return;
+      if (e.key === 'Escape')      closePost();
+      if (e.key === 'ArrowRight') { if (!navigateCarousel(1))  navigateModal(1);  }
+      if (e.key === 'ArrowLeft')  { if (!navigateCarousel(-1)) navigateModal(-1); }
+      if (e.key === 'ArrowDown')  navigateModal(1);
+      if (e.key === 'ArrowUp')    navigateModal(-1);
+    });
+  })();
+
+  init();
+</script>
+</body>
+</html>

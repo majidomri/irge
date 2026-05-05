@@ -1,6 +1,28 @@
 node_modules/
 dist/
 
+# Claude / IDE internals
+.claude/
+.continue/
+
+# Internal docs & ML/training data
+SECURITY_MASTER_PROMPT.md
+bad_samples.txt
+golden_samples.txt
+fintune.yaml
+pattern_library.txt
+insta_data.json
+mc.md
+sp.md
+connectors.txt
+
+# Draft / admin pages (not ready for production)
+addthis.html
+admin-channels.html
+admin-studio.html
+finalgreen.html
+prompts.html
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

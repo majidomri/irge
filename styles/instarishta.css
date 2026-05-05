@@ -15,10 +15,10 @@
 }
 :root {
   color-scheme: light;
-  --bg: #f3f7fb;
+  --bg: #F3F0EE;        /* Mastercard canvas cream */
   --surface: #ffffff;
-  --surface-elevated: #ffffff;
-  --surface-muted: #f8fafc;
+  --surface-elevated: #FCFBFA;  /* Mastercard lifted */
+  --surface-muted: #f2f0eb;     /* Starbucks neutral warm */
   --profile-card-bg:
     radial-gradient(
       circle at 50% 38%,
@@ -58,8 +58,8 @@
     0 28px 64px rgba(15, 23, 42, 0.1), 0 10px 22px rgba(15, 23, 42, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.94);
   --muted: #64748b;
-  --accent: #6d28d9;
-  --accent-2: #4f46e5;
+  --accent: #006241;    /* Starbucks Green */
+  --accent-2: #00754A;  /* Starbucks Green Accent */
   --urgent: #b45309;
   --glass: rgba(255, 255, 255, 0.6);
   --text: #0f172a;
@@ -412,7 +412,7 @@
   letter-spacing: -0.02em;
 }
 .site-logo-accent {
-  color: var(--accent);
+  color: #00754A;
 }
 .site-footer {
   border-top: 1px solid var(--border);
@@ -654,13 +654,13 @@ body {
   gap: 8px;
   width: 100%;
   min-height: 44px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: white;
   text-decoration: none;
   position: relative;
@@ -675,10 +675,11 @@ body {
   line-height: 1;
 }
 .action-btn.contact-btn {
-  background: linear-gradient(135deg, #4f46e5, #6d28d9);
+  background: #000000;
+  border-radius: 999px;
 }
 .action-btn.call-btn {
-  background: linear-gradient(135deg, #374151, #030712);
+  background: #000000;
 }
 .card-meta {
   margin-top: 6px;
@@ -901,13 +902,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent) 100%);
-  color: #fff;
-  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #000000;
+  color: #ffffff;
+  font-weight: 700;
   font-size: 13px;
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+  box-shadow: rgba(0,0,0,0.12) 0px 2px 8px;
 }
 .filter-chip .chip-label {
   white-space: nowrap;
@@ -1714,13 +1715,13 @@ select:focus-visible {
   background:
     radial-gradient(
       circle at top left,
-      rgba(79, 70, 229, 0.16),
+      rgba(0, 98, 65, 0.10),
       transparent 34%
     ),
     linear-gradient(
       135deg,
-      rgba(243, 247, 251, 0.98),
-      rgba(226, 232, 240, 0.96)
+      rgba(252, 251, 250, 0.99),
+      rgba(243, 240, 238, 0.97)
     );
   backdrop-filter: none;
   transition:
@@ -2113,10 +2114,10 @@ select:focus-visible {
 
 [data-theme="dark"] #mobileDrawer .gender-grid a.active {
   color: #f8fbff !important;
-  border-color: rgba(167, 139, 250, 0.42) !important;
-  background: linear-gradient(135deg, #6d28d9, #8b5cf6) !important;
+  border-color: rgba(0, 98, 65, 0.42) !important;
+  background: #006241 !important;
   box-shadow:
-    12px 12px 24px rgba(91, 33, 182, 0.34),
+    12px 12px 24px rgba(0, 98, 65, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
 }
 

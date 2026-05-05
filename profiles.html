@@ -164,6 +164,9 @@
       }
     </script>
 
+    <!-- Unified design system (Mastercard surfaces · Starbucks section colors · Uber typography+buttons+chips+spacing) -->
+    <link rel="stylesheet" href="styles/design-system.css">
+
     <link rel="preload" href="src/output.css" as="style">
     <link rel="preload" href="styles/instarishta.css" as="style">
     <link rel="modulepreload" href="js/app/main.js">
@@ -196,7 +199,7 @@
         </div>
         <div class="splash-copy">
           <span class="splash-eyebrow">Verified Muslim Proposals</span>
-          <strong class="splash-wordmark">InstaRishta</strong>
+          <strong class="splash-wordmark">Insta<span class="site-logo-accent">Rishta</span></strong>
           <span class="splash-tagline">Fast browsing for serious nikah matches.</span>
         </div>
       </div>
@@ -311,6 +314,28 @@
           </div>
         </div>
       </header>
+
+      <!-- ── Site Highlights strip ── -->
+      <div id="hlStrip" style="display:none;padding:16px 12px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+        <div id="hlRings" style="display:flex;gap:14px;align-items:flex-start;min-width:max-content"></div>
+      </div>
+
+      <!-- ── Highlights viewer overlay ── -->
+      <div id="hlOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;touch-action:none">
+        <!-- Dot indicators -->
+        <div id="hlDots" style="position:absolute;top:14px;left:0;right:0;display:flex;justify-content:center;gap:5px;z-index:10;padding:0 16px"></div>
+        <!-- Close -->
+        <button id="hlClose" style="position:absolute;top:12px;right:14px;z-index:11;background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
+        <!-- Counter -->
+        <div id="hlCounter" style="position:absolute;top:16px;left:14px;z-index:11;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7)"></div>
+        <!-- Image -->
+        <img id="hlImg" src="" alt="Highlight" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity 0.2s">
+        <!-- Title overlay -->
+        <div id="hlTitle" style="position:absolute;bottom:48px;left:0;right:0;text-align:center;color:#fff;font-size:16px;font-weight:600;padding:0 24px;text-shadow:0 1px 6px rgba(0,0,0,.6)"></div>
+        <!-- Left / right tap zones -->
+        <div id="hlLeft"  style="position:absolute;left:0;top:0;width:40%;height:100%;z-index:8;cursor:pointer"></div>
+        <div id="hlRight" style="position:absolute;right:0;top:0;width:60%;height:100%;z-index:8;cursor:pointer"></div>
+      </div>
 
       <main id="mainContent" class="max-w-7xl mx-auto py-4 md:py-2">
         <section class="stats-strip-wrap mb-5 fade-in" aria-label="Platform totals">
@@ -890,6 +915,119 @@
     </script>
     <script type="module" src="js/app/main.js"></script>
 
+    <!-- ── Site Highlights ─────────────────────────────────────────────────── -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/js/app/services/supabase-client.js"></script>
+    <script>
+    (function () {
+      let highlights = [];
+      let hlIdx = 0;
+
+      // ── Load & render strip ──────────────────────────────────────────────
+      async function initHighlights() {
+        try {
+          highlights = await IRService.getHighlights();
+        } catch (e) { return; }
+        if (!highlights.length) return;
+
+        const strip = document.getElementById('hlStrip');
+        const rings = document.getElementById('hlRings');
+        strip.style.display = 'block';
+
+        rings.innerHTML = highlights.map((h, i) => `
+          <button onclick="openHighlight(${i})"
+            style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;padding:0">
+            <div style="width:62px;height:62px;border-radius:50%;padding:2.5px;
+              background:linear-gradient(135deg,#CF4500,#F37338);box-shadow:0 2px 10px rgba(207,69,0,0.35)">
+              <div style="width:100%;height:100%;border-radius:50%;border:2.5px solid #fff;overflow:hidden;background:#f3f0ee">
+                <img src="${escH(h.image)}" alt="${escH(h.title || 'Highlight')}"
+                  style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy">
+              </div>
+            </div>
+            <span style="font-size:10px;font-weight:600;color:#696969;max-width:64px;text-align:center;
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.2px">
+              ${escH(h.title || 'Info')}
+            </span>
+          </button>`).join('');
+      }
+
+      // ── Viewer ───────────────────────────────────────────────────────────
+      window.openHighlight = function (idx) {
+        hlIdx = idx;
+        document.getElementById('hlOverlay').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        renderHighlight();
+      };
+
+      function closeHighlight() {
+        document.getElementById('hlOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+      }
+
+      function renderHighlight() {
+        if (hlIdx < 0 || hlIdx >= highlights.length) { closeHighlight(); return; }
+        const h   = highlights[hlIdx];
+        const img = document.getElementById('hlImg');
+
+        // Crossfade
+        img.style.opacity = '0';
+        setTimeout(() => {
+          img.src = h.image;
+          img.onload = () => { img.style.opacity = '1'; };
+          if (img.complete && img.naturalWidth) img.style.opacity = '1';
+        }, 150);
+
+        document.getElementById('hlTitle').textContent   = h.title || '';
+        document.getElementById('hlCounter').textContent = `${hlIdx + 1} / ${highlights.length}`;
+
+        // Dots
+        document.getElementById('hlDots').innerHTML = highlights.map((_, i) => {
+          const active = i === hlIdx;
+          return `<div style="height:3px;border-radius:2px;flex:1;max-width:40px;
+            background:${active ? '#fff' : 'rgba(255,255,255,0.35)'};
+            transition:background 0.2s"></div>`;
+        }).join('');
+      }
+
+      function advance(dir) {
+        const next = hlIdx + dir;
+        if (next < 0) { renderHighlight(); return; } // restart first
+        if (next >= highlights.length) { closeHighlight(); return; }
+        hlIdx = next;
+        renderHighlight();
+      }
+
+      // Tap zones
+      document.getElementById('hlLeft').addEventListener('click',  () => advance(-1));
+      document.getElementById('hlRight').addEventListener('click', () => advance(1));
+      document.getElementById('hlClose').addEventListener('click', closeHighlight);
+
+      // Swipe gesture
+      let sx = 0, sy = 0;
+      const overlay = document.getElementById('hlOverlay');
+      overlay.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+      overlay.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) advance(dx < 0 ? 1 : -1);
+      });
+
+      // Keyboard
+      document.addEventListener('keydown', e => {
+        if (document.getElementById('hlOverlay').style.display === 'none') return;
+        if (e.key === 'Escape')     closeHighlight();
+        if (e.key === 'ArrowRight') advance(1);
+        if (e.key === 'ArrowLeft')  advance(-1);
+      });
+
+      function escH(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      initHighlights();
+    })();
+    </script>
+
     <!-- Footer -->
     <footer class="site-footer">
       <div class="site-footer-inner">
@@ -899,6 +1037,7 @@
         <nav class="site-footer-links" aria-label="Footer links">
           <a href="https://InstaRishta.me/privacy">Privacy</a>
           <a href="/about-instarishta.html">About</a>
+          <a href="/channels.html">Channels</a>
         </nav>
       </div>
     </footer>

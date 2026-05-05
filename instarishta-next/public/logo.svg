@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="InstaRishta">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3932"/>
+      <stop offset="100%" stop-color="#0a1f1a"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cba258"/>
+      <stop offset="50%" stop-color="#e8c97a"/>
+      <stop offset="100%" stop-color="#cba258"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00C87A"/>
+      <stop offset="100%" stop-color="#00754A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Outer glow ring (gold wedding ring) -->
+  <circle cx="256" cy="230" r="118" fill="none" stroke="url(#ring)" stroke-width="22" opacity="0.9"/>
+
+  <!-- Inner detail ring -->
+  <circle cx="256" cy="230" r="90" fill="none" stroke="url(#ring)" stroke-width="6" opacity="0.3"/>
+
+  <!-- Diamond / stone on top of ring -->
+  <polygon points="256,88 278,118 256,138 234,118" fill="url(#ring)" opacity="0.95"/>
+  <polygon points="256,95 272,118 256,132 240,118" fill="#fff" opacity="0.25"/>
+
+  <!-- IR monogram inside ring -->
+  <!-- "I" -->
+  <rect x="220" y="188" width="16" height="84" rx="8" fill="white"/>
+  <!-- "R" -->
+  <path d="M248 188 h28 a22 22 0 0 1 0 44 h-28 v-44z" fill="white"/>
+  <path d="M276 232 l20 40" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <rect x="248" y="232" width="14" height="40" rx="0" fill="white"/>
+
+  <!-- Mint green crescent accent (Islamic motif) -->
+  <path d="M 148 320 Q 180 270 256 265 Q 195 268 188 320 Z" fill="url(#accent)" opacity="0.6"/>
+
+  <!-- Tagline dots — "Halal · Rishta" decorative -->
+  <circle cx="216" cy="380" r="5" fill="url(#accent)" opacity="0.7"/>
+  <circle cx="236" cy="380" r="5" fill="url(#ring)" opacity="0.7"/>
+  <circle cx="256" cy="380" r="5" fill="url(#accent)" opacity="0.7"/>
+  <circle cx="276" cy="380" r="5" fill="url(#ring)" opacity="0.7"/>
+  <circle cx="296" cy="380" r="5" fill="url(#accent)" opacity="0.7"/>
+
+  <!-- Bottom text: INSTARISHTA -->
+  <text x="256" y="445" font-family="'Helvetica Neue', Arial, sans-serif" font-size="38" font-weight="800" fill="white" text-anchor="middle" letter-spacing="1" opacity="0.9">InstaRishta</text>
+  <text x="256" y="478" font-family="'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="500" fill="#00C87A" text-anchor="middle" letter-spacing="3" opacity="0.8">MATRIMONY</text>
+</svg>

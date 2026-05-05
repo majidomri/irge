@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Typography — Inter (Uber substitute) */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Mastercard surfaces */
+  --color-canvas:  #F3F0EE;
+  --color-lifted:  #FCFBFA;
+  --color-white:   #FFFFFF;
+  --color-bone:    #F4F4F4;
+  --color-ink:     #141413;
+  --color-slate:   #696969;
+  --color-dust:    #D1CDC7;
+
+  /* Starbucks section colours */
+  --color-hero:    #006241;
+  --color-dark:    #1E3932;
+  --color-mid:     #2B5148;
+  --color-warm:    #F2F0EB;
+  --color-ceramic: #EDEBE9;
+
+  /* Brand */
+  --color-brand:   #006241;
+  --color-brand-lt:#00754A;
+
+  /* Radii */
+  --radius-pill:   999px;
+  --radius-card:   8px;
+  --radius-feat:   12px;
+  --radius-hero:   40px;
+
+  /* Shadows */
+  --shadow-nav:  0px 4px 24px rgba(0,0,0,0.04);
+  --shadow-card: 0px 24px 48px rgba(0,0,0,0.08);
+  --shadow-std:  0px 4px 16px rgba(0,0,0,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  min-height: 100vh;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Pill button helpers */
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #000; color: #fff;
+  padding: 12px 24px; border-radius: 999px;
+  font-size: 0.9rem; font-weight: 700; letter-spacing: -0.01em;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.82; }
+
+.btn-brand {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-brand-lt); color: #fff;
+  padding: 12px 24px; border-radius: 999px;
+  font-size: 0.9rem; font-weight: 700;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-brand:hover { opacity: 0.88; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: rgba(255,255,255,0.85);
+  padding: 10px 22px; border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,0.28);
+  font-size: 0.875rem; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.08); }
+
+/* Chip row */
+.chip-row {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex-shrink: 0; background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.18);
+  padding: 8px 16px; border-radius: 999px;
+  font-size: 0.8125rem; font-weight: 500;
+  text-decoration: none; white-space: nowrap;
+  transition: background 0.15s;
+}
+.chip:hover { background: rgba(255,255,255,0.20); }
+
+/* Spinner */
+.spinner {
+  width: 28px; height: 28px;
+  border: 2.5px solid var(--color-dust);
+  border-top-color: var(--color-brand-lt);
+  border-radius: 50%; animation: spin 0.65s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Reveal animation */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+.reveal { animation: reveal 0.55s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* Ticker strip */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Floating decorative element */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-18px); }
+}
+
+/* Arabic font helper */
+.font-arab {
+  font-family: 'Noto Naskh Arabic', 'Geeza Pro', 'Al Nile', serif;
+  direction: rtl;
+}
+
+/* StarBorder keyframes */
+@keyframes star-movement-bottom {
+  0%   { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(-100%, 0%); opacity: 0; }
+}
+@keyframes star-movement-top {
+  0%   { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(100%, 0%); opacity: 0; }
+}

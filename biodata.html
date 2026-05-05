@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Bio Data | InstaRishta</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@300;400;500;600&display=swap"
+      rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+    <script src="https://kit.fontawesome.com/49c9c7fee9.js" crossorigin="anonymous"></script>
+
+    <style>
+      /* ═══════════════════════════════════════
+       RESET & TOKENS
+    ═══════════════════════════════════════ */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        overflow-x: hidden;
+      }
+
+      :root {
+        --navy: #0B1F3A;
+        --teal: #14B8A6;
+        --coral: #FF5A5F;
+        --bg: #EEF2F8;
+        --muted: #6B7A90;
+        --border: rgba(11, 31, 58, 0.08);
+        --card-bg: rgba(255, 255, 255, 0.78);
+        --s1: 0 2px 8px rgba(11, 31, 58, 0.06);
+        --s2: 0 8px 28px rgba(11, 31, 58, 0.10);
+        --s3: 0 20px 60px rgba(11, 31, 58, 0.11), 0 4px 16px rgba(11, 31, 58, 0.06);
+      }
+
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--bg);
+        color: var(--navy);
+        min-height: 100vh;
+      }
+
+      /* Ambient background */
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 55% 45% at 5% 0%, rgba(20, 184, 166, .10), transparent),
+          radial-gradient(ellipse 45% 55% at 95% 100%, rgba(255, 90, 95, .08), transparent);
+      }
+
+      /* ═══════════════════════════════════════
+       PAGE SHELL
+    ═══════════════════════════════════════ */
+      .page {
+        position: relative;
+        z-index: 1;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      @media (min-width: 600px) {
+        .page {
+          padding: 24px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .page {
+          padding: 32px;
+        }
+      }
+
+      .shell {
+        background: rgba(255, 255, 255, .68);
+        backdrop-filter: blur(22px) saturate(1.4);
+        -webkit-backdrop-filter: blur(22px) saturate(1.4);
+        border: 1px solid rgba(255, 255, 255, .9);
+        border-bottom-color: var(--border);
+        border-right-color: var(--border);
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: var(--s3);
+        animation: rise .4s ease both;
+      }
+
+      @media (min-width: 600px) {
+        .shell {
+          padding: 28px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .shell {
+          padding: 36px;
+        }
+      }
+
+      /* ═══════════════════════════════════════
+       HEADER BAR
+    ═══════════════════════════════════════ */
+      .hdr {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .hdr-title {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--navy);
+      }
+
+      .hdr-id {
+        font-size: .73rem;
+        color: var(--muted);
+        margin-top: 3px;
+      }
+
+      .hdr-id b {
+        color: #D97706;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 99px;
+        font-size: .71rem;
+        font-weight: 600;
+        white-space: nowrap;
+        background: rgba(20, 184, 166, .12);
+        border: 1px solid rgba(20, 184, 166, .28);
+        color: #0a7a72;
+      }
+
+      .pill i {
+        font-size: .45rem;
+        color: var(--teal);
+      }
+
+      /* ═══════════════════════════════════════
+       TWO-COLUMN LAYOUT
+    ═══════════════════════════════════════ */
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+        align-items: start;
+      }
+
+      @media (min-width: 768px) {
+        .cols {
+          grid-template-columns: 270px 1fr;
+          gap: 28px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .cols {
+          grid-template-columns: 296px 1fr;
+          gap: 36px;
+        }
+      }
+
+      /* ═══════════════════════════════════════
+       SIDEBAR (LEFT)
+    ═══════════════════════════════════════ */
+      .sidebar {
+        width: 100%;
+      }
+
+      @media (min-width: 768px) {
+        .sidebar {
+          position: sticky;
+          top: 20px;
+        }
+      }
+
+      /* ── PHOTO BOX ──
+       THE FIX: Always use explicit px heights. Never use aspect-ratio
+       alone for a Swiper container — the slides have no height to inherit.
+    ── */
+      .photo-box {
+        width: 100%;
+        height: 300px;
+        /* mobile */
+        border-radius: 18px;
+        overflow: hidden;
+        position: relative;
+        background: #d4dce9;
+        /* placeholder colour while loading */
+        box-shadow: 0 10px 36px rgba(11, 31, 58, .16), 0 2px 8px rgba(11, 31, 58, .08);
+      }
+
+      @media (min-width: 480px) {
+        .photo-box {
+          height: 360px;
+        }
+      }
+
+      @media (min-width: 768px) {
+        .photo-box {
+          height: 380px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .photo-box {
+          height: 420px;
+        }
+      }
+
+      /* Swiper must fill the box — explicit heights all the way down */
+      .photo-box .swiper {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .photo-box .swiper-wrapper {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .photo-box .swiper-slide {
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden;
+      }
+
+      .photo-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center top;
+        display: block;
+      }
+
+      /* gradient overlay */
+      .photo-box::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 38%;
+        z-index: 5;
+        pointer-events: none;
+        background: linear-gradient(to top, rgba(11, 31, 58, .50), transparent);
+      }
+
+      /* pagination dots */
+      .photo-box .swiper-pagination {
+        z-index: 10 !important;
+        bottom: 10px !important;
+      }
+
+      .swiper-pagination-bullet {
+        background: rgba(255, 255, 255, .55) !important;
+        width: 7px !important;
+        height: 7px !important;
+        opacity: 1 !important;
+        transition: all .25s !important;
+      }
+
+      .swiper-pagination-bullet-active {
+        background: #fff !important;
+        width: 22px !important;
+        border-radius: 4px !important;
+      }
+
+      /* ── NAME BLOCK ── */
+      .name-block {
+        padding: 14px 4px 6px;
+        text-align: center;
+      }
+
+      .pname {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: clamp(1.55rem, 4.5vw, 1.85rem);
+        font-weight: 700;
+        color: var(--coral);
+        letter-spacing: -.3px;
+        line-height: 1.1;
+      }
+
+      .ptitle {
+        font-size: .74rem;
+        font-weight: 600;
+        color: var(--teal);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-top: 5px;
+      }
+
+      /* ── VERIFIED BADGES ── */
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px 0;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 99px;
+        font-size: .69rem;
+        font-weight: 600;
+        background: rgba(20, 184, 166, .10);
+        border: 1px solid rgba(20, 184, 166, .22);
+        color: var(--navy);
+        white-space: nowrap;
+      }
+
+      .badge i {
+        color: var(--teal);
+        font-size: .62rem;
+      }
+
+      /* ── AUDIO ── */
+      .audio-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, .9);
+        border-bottom-color: var(--border);
+        border-radius: 14px;
+        padding: 10px 12px;
+        margin-top: 8px;
+        box-shadow: var(--s1);
+      }
+
+      .audio-lbl {
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .9px;
+        text-transform: uppercase;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 7px;
+      }
+
+      .audio-lbl i {
+        color: var(--coral);
+      }
+
+      audio {
+        width: 100%;
+        height: 32px;
+        border-radius: 8px;
+        accent-color: var(--teal);
+        display: block;
+      }
+
+      /* ═══════════════════════════════════════
+       MAIN CONTENT (RIGHT)
+    ═══════════════════════════════════════ */
+      .main>*+* {
+        margin-top: 16px;
+      }
+
+      /* ── SECTION CARD ── */
+      .sec {
+        background: var(--card-bg);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, .9);
+        border-bottom-color: var(--border);
+        border-right-color: var(--border);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: var(--s2);
+      }
+
+      /* ── SECTION TITLE ── */
+      .sec-title {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.12rem;
+        font-weight: 700;
+        color: var(--navy);
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 14px;
+      }
+
+      .sec-title::before {
+        content: '';
+        display: block;
+        flex-shrink: 0;
+        width: 3px;
+        height: 17px;
+        border-radius: 3px;
+        background: linear-gradient(to bottom, var(--teal), var(--coral));
+      }
+
+      /* ── INFO GRID ──
+       mobile: 2 col  |  desktop (768px+): 3 col
+    ── */
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        /* 2 cols from the start */
+        gap: 9px;
+      }
+
+      @media (min-width: 768px) {
+        .info-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      /* ── INFO CARD ──
+       Mobile: icon on top, label + value below, everything centred.
+       Desktop: icon left, text right (horizontal row).
+    ── */
+      .ic {
+        display: flex;
+        flex-direction: column;
+        /* mobile: vertical stack */
+        align-items: center;
+        text-align: center;
+        gap: 7px;
+        padding: 14px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .60);
+        border: 1px solid rgba(255, 255, 255, .85);
+        border-bottom-color: var(--border);
+        box-shadow: var(--s1);
+        transition: transform .2s ease, box-shadow .2s ease;
+        min-width: 0;
+      }
+
+      @media (min-width: 768px) {
+        .ic {
+          flex-direction: row;
+          /* desktop: horizontal */
+          align-items: center;
+          text-align: left;
+          gap: 10px;
+          padding: 11px 13px;
+        }
+      }
+
+      .ic:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--s2);
+      }
+
+      .ic-icon {
+        flex-shrink: 0;
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(20, 184, 166, .12);
+        color: var(--teal);
+        font-size: .82rem;
+      }
+
+      .ic-icon.coral {
+        background: rgba(255, 90, 95, .10);
+        color: var(--coral);
+      }
+
+      .ic-body {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .ic-lbl {
+        font-size: .60rem;
+        font-weight: 700;
+        letter-spacing: .8px;
+        text-transform: uppercase;
+        color: var(--muted);
+        line-height: 1;
+        margin-bottom: 3px;
+        /* allow wrapping on narrow mobile cells */
+        white-space: normal;
+      }
+
+      .ic-val {
+        font-size: .80rem;
+        font-weight: 600;
+        color: var(--navy);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* on mobile, centre the text body too */
+      @media (max-width: 767px) {
+        .ic-body {
+          text-align: center;
+        }
+      }
+
+      /* ── FAMILY: always 2 col ── */
+      .fam-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 9px;
+      }
+
+      /* ── TRAIT GRID (merged Highlights + Lifestyle) ── */
+      .trait-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 9px;
+      }
+
+      @media (min-width: 560px) {
+        .trait-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .trait-pill {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 13px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .60);
+        border: 1px solid rgba(255, 255, 255, .85);
+        border-bottom-color: var(--border);
+        box-shadow: var(--s1);
+        font-size: .80rem;
+        font-weight: 500;
+        color: var(--navy);
+        transition: transform .2s ease, box-shadow .2s ease;
+      }
+
+      .trait-pill:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--s2);
+      }
+
+      .trait-icon {
+        flex-shrink: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .80rem;
+      }
+
+      /* ── CHIPS ── */
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 13px;
+        border-radius: 99px;
+        font-size: .75rem;
+        font-weight: 500;
+      }
+
+      .chip-teal {
+        background: rgba(20, 184, 166, .11);
+        border: 1px solid rgba(20, 184, 166, .25);
+        color: #0b7a72;
+      }
+
+      .chip-coral {
+        background: rgba(255, 90, 95, .09);
+        border: 1px solid rgba(255, 90, 95, .25);
+        color: #b83337;
+      }
+
+      .chip-gray {
+        background: rgba(11, 31, 58, .06);
+        border: 1px solid rgba(11, 31, 58, .12);
+        color: var(--navy);
+      }
+
+      /* ── CONTACT ── */
+      .contact-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 9px;
+      }
+
+      @media (min-width: 440px) {
+        .contact-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .cta-card {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 13px 15px;
+        border-radius: 13px;
+        background: rgba(255, 255, 255, .65);
+        border: 1px solid rgba(255, 255, 255, .9);
+        border-bottom-color: var(--border);
+        box-shadow: var(--s1);
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+        transition: transform .22s, box-shadow .22s;
+      }
+
+      .cta-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--s2);
+      }
+
+      .cta-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+      }
+
+      .ci-call {
+        background: rgba(20, 184, 166, .13);
+        color: var(--teal);
+      }
+
+      .ci-wa {
+        background: rgba(37, 211, 102, .13);
+        color: #1da851;
+      }
+
+      .ci-heart {
+        background: rgba(255, 90, 95, .11);
+        color: var(--coral);
+      }
+
+      /* ── ABOUT ── */
+      .about-p {
+        font-size: .83rem;
+        line-height: 1.78;
+        color: #4A5568;
+      }
+
+      /* ── FOOTER ── */
+      footer {
+        text-align: center;
+        padding: 22px 16px;
+        font-size: .76rem;
+        color: var(--muted);
+      }
+
+      footer a {
+        color: var(--navy);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        color: var(--coral);
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div class="page">
+      <div class="shell">
+
+        <!-- HEADER -->
+        <div class="hdr">
+          <div>
+            <div class="hdr-title">Bio Data</div>
+            <div class="hdr-id">Profile ID: <b>#IR-98420</b></div>
+          </div>
+          <span class="pill"><i class="fa-solid fa-circle"></i> Active</span>
+        </div>
+
+        <!-- TWO-COLUMN -->
+        <div class="cols">
+
+          <!-- ════ SIDEBAR ════ -->
+          <div class="sidebar">
+
+            <!-- PHOTO SWIPER -->
+            <div class="photo-box">
+              <div class="swiper profileSwiper">
+                <div class="swiper-wrapper">
+                  <div class="swiper-slide">
+                    <img
+                      src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=600&h=800"
+                      alt="Profile 1">
+                  </div>
+                  <div class="swiper-slide">
+                    <img
+                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600&h=800"
+                      alt="Profile 2">
+                  </div>
+                  <div class="swiper-slide">
+                    <img
+                      src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=600&h=800"
+                      alt="Profile 3">
+                  </div>
+                </div>
+                <div class="swiper-pagination"></div>
+              </div>
+            </div>
+
+            <!-- NAME -->
+            <div class="name-block">
+              <div class="pname">Monalisa Ashley</div>
+              <div class="ptitle">UI / UX Designer</div>
+            </div>
+
+            <!-- VERIFIED -->
+            <div class="badges">
+              <span class="badge"><i class="fa-solid fa-user-shield"></i> Verified Profile</span>
+              <span class="badge"><i class="fa-solid fa-id-card"></i> ID Verified</span>
+              <span class="badge"><i class="fa-solid fa-user-check"></i> Serious Intent</span>
+            </div>
+
+            <!-- AUDIO -->
+            <div class="audio-card">
+              <div class="audio-lbl"><i class="fa-solid fa-microphone-lines"></i> Voice Introduction</div>
+              <audio controls preload="metadata" playsinline>
+                <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3"
+                  type="audio/mpeg">
+              </audio>
+            </div>
+
+          </div>
+
+          <!-- ════ MAIN ════ -->
+          <div class="main">
+
+            <!-- PERSONAL INFO -->
+            <div class="sec">
+              <div class="sec-title">Personal Information</div>
+              <div class="info-grid">
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-heart"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Marital Status</div>
+                    <div class="ic-val">Never Married</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-users"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Community</div>
+                    <div class="ic-val">Syed</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-palette"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Complexion</div>
+                    <div class="ic-val">Fair</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-ruler-vertical"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Height</div>
+                    <div class="ic-val">5.9 ft</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Age</div>
+                    <div class="ic-val">33 Years</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-mosque"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Dargah / Fatiha</div>
+                    <div class="ic-val">Yes</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-briefcase"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Occupation</div>
+                    <div class="ic-val">Own Business</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Education</div>
+                    <div class="ic-val">Masters</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-building-columns"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">University</div>
+                    <div class="ic-val">Osmania University</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-school"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">School</div>
+                    <div class="ic-val">Shine Model School</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-people-roof"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Family Members</div>
+                    <div class="ic-val">3 Members</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-location-dot"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Location</div>
+                    <div class="ic-val">Shaheen Nagar</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ABOUT -->
+            <div class="sec">
+              <div class="sec-title">About Me</div>
+              <p class="about-p">
+                I'm a Creative Director and UI/UX Designer focused on crafting elegant digital experiences.
+                I transform complex ideas into simple, beautiful designs. I value family, tradition, and
+                modern thinking in equal measure — looking for a life partner who shares the same warmth.
+              </p>
+            </div>
+
+            <!-- LIFESTYLE & HIGHLIGHTS (merged) -->
+            <div class="sec">
+              <div class="sec-title">Lifestyle &amp; Highlights</div>
+              <div class="trait-grid">
+
+                <div class="trait-pill" style="--tc: rgba(20,184,166,.13); --ti: #0b8a80;">
+                  <span class="trait-icon" style="background:rgba(20,184,166,.13);"><i class="fa-solid fa-mosque"
+                      style="color:#0b8a80;"></i></span>
+                  Religious
+                </div>
+
+                <div class="trait-pill" style="--tc: rgba(255,90,95,.10); --ti: #c0393e;">
+                  <span class="trait-icon" style="background:rgba(255,90,95,.10);"><i class="fa-solid fa-house-heart"
+                      style="color:#c0393e;"></i></span>
+                  Family Oriented
+                </div>
+
+                <div class="trait-pill" style="--tc: rgba(11,31,58,.07); --ti: #3a5a80;">
+                  <span class="trait-icon" style="background:rgba(11,31,58,.09);"><i class="fa-solid fa-ban"
+                      style="color:#3a5a80;"></i></span>
+                  Non-Smoker
+                </div>
+
+                <div class="trait-pill" style="--tc: rgba(11,31,58,.07); --ti: #3a5a80;">
+                  <span class="trait-icon" style="background:rgba(11,31,58,.09);"><i
+                      class="fa-solid fa-wine-glass-crack" style="color:#3a5a80;"></i></span>
+                  No Drinking
+                </div>
+
+                <div class="trait-pill" style="--tc: rgba(20,184,166,.13); --ti: #0b8a80;">
+                  <span class="trait-icon" style="background:rgba(20,184,166,.13);"><i class="fa-solid fa-briefcase"
+                      style="color:#0b8a80;"></i></span>
+                  Own Business
+                </div>
+
+                <div class="trait-pill" style="--tc: rgba(255,90,95,.10); --ti: #c0393e;">
+                  <span class="trait-icon" style="background:rgba(255,90,95,.10);"><i class="fa-solid fa-globe"
+                      style="color:#c0393e;"></i></span>
+                  Open Minded
+                </div>
+
+              </div>
+            </div>
+
+            <!-- FAMILY -->
+            <div class="sec">
+              <div class="sec-title">Family Details</div>
+              <div class="fam-grid">
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-user-tie"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Father</div>
+                    <div class="ic-val">Businessman</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon coral"><i class="fa-solid fa-user"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Mother</div>
+                    <div class="ic-val">Homemaker</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-users"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Siblings</div>
+                    <div class="ic-val">2 Brothers, 1 Sister</div>
+                  </div>
+                </div>
+
+                <div class="ic">
+                  <div class="ic-icon"><i class="fa-solid fa-house"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Residence</div>
+                    <div class="ic-val">Own House</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- PARTNER PREFERENCE -->
+            <div class="sec">
+              <div class="sec-title">Partner Preference</div>
+              <div class="chips">
+                <span class="chip chip-coral"><i class="fa-solid fa-graduation-cap" style="font-size:.6rem;"></i>
+                  Educated</span>
+                <span class="chip chip-coral"><i class="fa-solid fa-house-heart" style="font-size:.6rem;"></i> Family
+                  Oriented</span>
+                <span class="chip chip-coral"><i class="fa-solid fa-calendar" style="font-size:.6rem;"></i> Age
+                  23–28</span>
+                <span class="chip chip-coral"><i class="fa-solid fa-location-dot" style="font-size:.6rem;"></i>
+                  Hyderabad Preferred</span>
+              </div>
+            </div>
+
+            <!-- CONTACT -->
+            <div class="sec">
+              <div class="sec-title">Contact</div>
+              <div class="contact-grid">
+
+                <a class="cta-card" href="tel:+919550095500">
+                  <div class="cta-icon ci-call"><i class="fa-solid fa-phone"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Call</div>
+                    <div class="ic-val">+91 95500 95500</div>
+                  </div>
+                </a>
+
+                <a class="cta-card" href="https://wa.me/919550095500" target="_blank" rel="noopener">
+                  <div class="cta-icon ci-wa"><i class="fa-brands fa-whatsapp"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">WhatsApp</div>
+                    <div class="ic-val">Chat Now</div>
+                  </div>
+                </a>
+
+                <a class="cta-card" href="#">
+                  <div class="cta-icon ci-heart"><i class="fa-solid fa-heart"></i></div>
+                  <div class="ic-body">
+                    <div class="ic-lbl">Interest</div>
+                    <div class="ic-val">Send Request</div>
+                  </div>
+                </a>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      © 2026 All Rights Reserved by
+      <a href="https://www.instarishta.me" target="_blank" rel="noopener">instarishta.me</a>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+      new Swiper('.profileSwiper', {
+        loop: true,
+        pagination: { el: '.swiper-pagination', clickable: true },
+        autoplay: { delay: 4500, disableOnInteraction: false },
+        speed: 600,
+      });
+    </script>
+  </body>
+
+</html>

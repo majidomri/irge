@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <title>Channels — InstaRishta</title>
+  <meta name="description" content="Browse InstaRishta profile channels by city and category.">
+  <link rel="stylesheet" href="styles/design-system.css">
+  <style>
+    :root {
+      --canvas:  #F3F0EE;
+      --lifted:  #FCFBFA;
+      --white:   #FFFFFF;
+      --ink:     #141413;
+      --slate:   #696969;
+      --dust:    #D1CDC7;
+      --signal:  #00754A;
+      --arc:     #006241;
+      --sh-nav:  0px 4px 24px rgba(0,0,0,0.04);
+      --sh-card: 0px 24px 48px rgba(0,0,0,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      background: var(--white);
+      color: var(--ink);
+      font-family: var(--ds-font, 'Inter', system-ui, sans-serif);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Site header (transparent, matching landing/profiles style) ── */
+    .site-header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(243,240,238,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(209,205,199,0.4);
+      padding: 14px 0;
+    }
+    .site-header-inner {
+      max-width: 1280px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .site-logo {
+      font-size: 20px; font-weight: 700; letter-spacing: -0.4px;
+      color: var(--ink); text-decoration: none; flex: 1;
+    }
+    .site-logo-accent { color: #00754A; }
+    .site-nav { display: flex; align-items: center; gap: 20px; }
+    .site-nav a {
+      font-size: 14px; font-weight: 500; color: var(--slate);
+      text-decoration: none; transition: color 0.15s;
+    }
+    .site-nav a:hover, .site-nav a.active { color: var(--ink); }
+    .site-cta {
+      background: var(--ink); color: var(--canvas);
+      border-radius: 999px; padding: 10px 20px;
+      font-size: 14px; font-weight: 700; text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .site-cta:hover { opacity: 0.82; }
+
+    /* ── Page header ── */
+    .page-hdr { padding: 52px 24px 32px; max-width: 1280px; margin: 0 auto; }
+    .eyebrow {
+      font-size: 13px; font-weight: 700; letter-spacing: 0.52px;
+      text-transform: uppercase; color: var(--slate);
+      display: flex; align-items: center; gap: 7px; margin-bottom: 12px;
+    }
+    .eyebrow::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--arc); flex-shrink: 0;
+    }
+    .page-title {
+      font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -0.96px;
+      line-height: 1.22; color: var(--ink);
+    }
+
+    /* ── Search + filter row ── */
+    .filter-row {
+      padding: 0 24px 32px; max-width: 1280px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    }
+    .search-input {
+      background: var(--white); border: 1.5px solid var(--ink);
+      border-radius: 999px; padding: 10px 22px;
+      color: var(--ink); font-family: inherit;
+      font-size: 15px; font-weight: 500; letter-spacing: -0.3px;
+      outline: none; transition: box-shadow 0.2s; flex-shrink: 0;
+    }
+    .search-input::placeholder { color: var(--dust); }
+    .search-input:focus { box-shadow: 0 0 0 3px rgba(0,117,74,0.18); }
+
+    .pill-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      background: var(--white); border: 1.5px solid var(--dust);
+      border-radius: 999px; padding: 7px 16px;
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      color: var(--slate); cursor: pointer; transition: all 0.15s;
+    }
+    .pill:hover { border-color: var(--ink); color: var(--ink); }
+    .pill.active { background: var(--ink); border-color: var(--ink); color: var(--canvas); }
+
+    /* ── Category sections ── */
+    .sections-wrap { max-width: 1280px; margin: 0 auto; padding: 0 0 100px; }
+
+    .cat-section { overflow: hidden; }
+    .cat-section:nth-child(odd)  { background: var(--canvas); }
+    .cat-section:nth-child(even) { background: var(--lifted); }
+
+    .cat-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 28px 24px 20px;
+      cursor: pointer; user-select: none;
+    }
+    .cat-header:hover .cat-toggle { opacity: 1; }
+    .cat-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--arc); flex-shrink: 0;
+    }
+    .cat-label {
+      font-size: 13px; font-weight: 700; letter-spacing: 0.52px;
+      text-transform: uppercase; color: var(--slate); flex: 1;
+    }
+    .cat-count {
+      font-size: 12px; font-weight: 600; color: var(--arc);
+      background: rgba(0,98,65,0.10); border-radius: 20px;
+      padding: 2px 10px;
+    }
+    .cat-toggle {
+      font-size: 18px; color: var(--dust); transition: transform 0.22s, opacity 0.15s;
+      opacity: 0.6;
+    }
+    .cat-section.collapsed .cat-toggle { transform: rotate(-90deg); }
+
+    .cat-grid-wrap { padding: 0 24px 28px; }
+    .cat-section.collapsed .cat-grid-wrap { display: none; }
+
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 48px 32px;
+    }
+
+    /* ── Channel portrait card ── */
+    .ch-card {
+      text-decoration: none; color: var(--ink);
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    .ch-portrait { position: relative; flex-shrink: 0; }
+    .ch-circle {
+      width: 140px; height: 140px; border-radius: 50%;
+      overflow: hidden; background: var(--lifted);
+      box-shadow: var(--sh-card);
+      transition: transform 0.22s;
+    }
+    .ch-card:hover .ch-circle { transform: translateY(-5px); }
+    .ch-circle img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ch-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center; font-size: 46px;
+    }
+    .ch-sat {
+      position: absolute; bottom: 2px; right: -6px;
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--white); box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--ink);
+      transition: transform 0.18s;
+    }
+    .ch-card:hover .ch-sat { transform: scale(1.14) rotate(-10deg); }
+
+    .ch-body { text-align: center; }
+    .ch-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.44px;
+      text-transform: uppercase; color: var(--slate);
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      margin-bottom: 5px;
+    }
+    .ch-eyebrow::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--arc);
+    }
+    .ch-name {
+      font-size: 16px; font-weight: 700; letter-spacing: -0.32px;
+      line-height: 1.25; margin-bottom: 4px;
+    }
+    .ch-desc { font-size: 13px; color: var(--slate); line-height: 1.4; }
+
+    /* ── States ── */
+    .spinner-wrap { display: flex; justify-content: center; padding: 80px; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2.5px solid var(--dust); border-top-color: var(--signal);
+      border-radius: 50%; animation: spin 0.65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 80px 24px; }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-msg { font-size: 20px; font-weight: 500; color: var(--ink); }
+    .empty-sub { font-size: 14px; color: var(--slate); margin-top: 6px; }
+
+    .err-banner {
+      margin: 0 24px 24px; padding: 12px 24px;
+      background: rgba(207,69,0,0.07); border: 1.5px solid rgba(207,69,0,0.25);
+      border-radius: 20px; color: var(--signal);
+      font-size: 14px; font-weight: 500; display: none;
+    }
+
+    /* ── Site footer ── */
+    .site-footer {
+      background: var(--ink);
+      padding: 24px 0;
+    }
+    .site-footer-inner {
+      max-width: 1280px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .site-footer-copy { font-size: 12px; color: rgba(255,255,255,0.50); flex: 1; }
+    .site-footer-links { display: flex; gap: 20px; }
+    .site-footer-links a {
+      font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.65);
+      text-decoration: none; transition: color 0.15s;
+    }
+    .site-footer-links a:hover { color: #fff; }
+
+    /* ── Responsive ── */
+    @media (max-width: 767px) {
+      .site-header-inner { padding: 0 16px; }
+      .site-nav { display: none; }
+      .page-hdr { padding: 36px 16px 24px; }
+      .page-title { font-size: 32px; }
+      .filter-row { padding: 0 16px 24px; }
+      .cat-header { padding: 22px 16px 16px; }
+      .cat-grid-wrap { padding: 0 16px 22px; }
+      .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 32px 14px; }
+      .ch-circle { width: 110px; height: 110px; }
+      .site-footer-inner { padding: 0 16px; flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .cat-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .cat-grid { grid-template-columns: repeat(5, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="site-logo" href="index.html">Insta<span class="site-logo-accent">Rishta</span></a>
+    <nav class="site-nav">
+      <a href="index.html">Home</a>
+      <a href="channels.html" class="active">Channels</a>
+      <a href="disclaimer.html">Disclaimer</a>
+    </nav>
+    <a class="site-cta" href="index.html">← Home</a>
+  </div>
+</header>
+
+<div class="page-hdr">
+  <div class="eyebrow">Discover</div>
+  <h1 class="page-title">Profile Channels</h1>
+</div>
+
+<div class="filter-row">
+  <input id="searchInput" class="search-input" type="search"
+    placeholder="Search channels…" autocomplete="off" spellcheck="false">
+  <div class="pill-filters" id="pillFilters">
+    <button class="pill active" data-cat="all">All</button>
+  </div>
+</div>
+
+<div id="errBanner" class="err-banner"></div>
+
+<div class="sections-wrap" id="sectionsWrap">
+  <div class="spinner-wrap"><div class="spinner"></div></div>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <span class="site-footer-copy">© 2026 InstaRishta. All rights reserved.</span>
+    <div class="site-footer-links">
+      <a href="index.html">Home</a>
+      <a href="channels.html">Channels</a>
+      <a href="disclaimer.html">Disclaimer</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app/services/supabase-client.js"></script>
+<script>
+  // ── Category definitions ───────────────────────────────────────────────────
+  const CATEGORIES = [
+    {
+      id: 'medical',
+      label: 'Medical & Health',
+      keywords: ['doctor','mbbs','surgeon','physician','nurse','pharmacist','dentist','medical','hospital','health','clinic','psychiatrist','dermatologist','cardiologist','pediatrician','gynecologist','ortho']
+    },
+    {
+      id: 'tech',
+      label: 'Tech & Engineering',
+      keywords: ['engineer','software','developer','it ','technology','computer','programming','ai','data','cyber','network','electronics','mechanical','civil','electrical','coding']
+    },
+    {
+      id: 'business',
+      label: 'Business & Finance',
+      keywords: ['business','entrepreneur','finance','banking','accountant','ca ','chartered','mba','manager','marketing','sales','commerce','investment','trade']
+    },
+    {
+      id: 'education',
+      label: 'Education',
+      keywords: ['teacher','professor','lecturer','education','school','university','tutor','academic','phd','research','scholar']
+    },
+    {
+      id: 'legal',
+      label: 'Legal & Law',
+      keywords: ['lawyer','advocate','legal','law','attorney','judge','court','llb','llm']
+    },
+    {
+      id: 'govt',
+      label: 'Government & Services',
+      keywords: ['ias','ips','ifs','government','civil service','military','army','navy','air force','police','upsc','psc','officer']
+    }
+  ];
+
+  let allChannels   = [];
+  let activeFilter  = 'all';
+  let searchQuery   = '';
+
+  // ── Categorise a channel ───────────────────────────────────────────────────
+  function categorize(ch) {
+    const hay = ((ch.name || '') + ' ' + (ch.description || '')).toLowerCase();
+    for (const cat of CATEGORIES) {
+      if (cat.keywords.some(k => hay.includes(k))) return cat.id;
+    }
+    return 'others';
+  }
+
+  // ── Card HTML ──────────────────────────────────────────────────────────────
+  function chCard(ch) {
+    return `
+      <a class="ch-card" href="channel-feed.html?slug=${encodeURIComponent(ch.slug)}">
+        <div class="ch-portrait">
+          <div class="ch-circle">
+            ${ch.cover_image
+              ? `<img src="${esc(ch.cover_image)}" alt="${esc(ch.name)}" loading="lazy">`
+              : `<div class="ch-placeholder">💍</div>`}
+          </div>
+          <div class="ch-sat">→</div>
+        </div>
+        <div class="ch-body">
+          <div class="ch-eyebrow">Channel</div>
+          <div class="ch-name">${esc(ch.name)}</div>
+          ${ch.description ? `<div class="ch-desc">${esc(ch.description)}</div>` : ''}
+        </div>
+      </a>`;
+  }
+
+  // ── Toggle section collapse ────────────────────────────────────────────────
+  function toggleSection(header) {
+    header.closest('.cat-section').classList.toggle('collapsed');
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function render(list) {
+    const wrap = document.getElementById('sectionsWrap');
+
+    if (!list.length) {
+      wrap.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">💍</div>
+          <div class="empty-msg">No channels found</div>
+          <div class="empty-sub">Try a different search or filter</div>
+        </div>`;
+      return;
+    }
+
+    // Group by category
+    const groups = {};
+    list.forEach(ch => {
+      const cid = categorize(ch);
+      if (!groups[cid]) groups[cid] = [];
+      groups[cid].push(ch);
+    });
+
+    // Build section order: defined categories first, then others
+    const orderedIds = [...CATEGORIES.map(c => c.id), 'others'].filter(id => groups[id]);
+
+    wrap.innerHTML = orderedIds.map(cid => {
+      const label = cid === 'others'
+        ? 'Other Channels'
+        : (CATEGORIES.find(c => c.id === cid)?.label || cid);
+      const items = groups[cid];
+      return `
+        <div class="cat-section">
+          <div class="cat-header" onclick="toggleSection(this)">
+            <span class="cat-dot"></span>
+            <span class="cat-label">${esc(label)}</span>
+            <span class="cat-count">${items.length}</span>
+            <span class="cat-toggle">›</span>
+          </div>
+          <div class="cat-grid-wrap">
+            <div class="cat-grid">
+              ${items.map(ch => chCard(ch)).join('')}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Filter helpers ─────────────────────────────────────────────────────────
+  function applyFilters() {
+    let list = allChannels;
+    if (searchQuery) {
+      list = list.filter(c =>
+        c.name.toLowerCase().includes(searchQuery) ||
+        (c.description || '').toLowerCase().includes(searchQuery));
+    }
+    if (activeFilter !== 'all') {
+      list = list.filter(c => categorize(c) === activeFilter);
+    }
+    render(list);
+  }
+
+  // ── Build filter pills ─────────────────────────────────────────────────────
+  function buildPills() {
+    const used = new Set(allChannels.map(c => categorize(c)));
+    const pillWrap = document.getElementById('pillFilters');
+    const pills = ['all', ...CATEGORIES.map(c => c.id).filter(id => used.has(id))];
+    if (used.has('others')) pills.push('others');
+
+    pillWrap.innerHTML = pills.map(id => {
+      const label = id === 'all' ? 'All'
+        : id === 'others' ? 'Other'
+        : (CATEGORIES.find(c => c.id === id)?.label || id);
+      return `<button class="pill${id === 'all' ? ' active' : ''}" data-cat="${id}">${esc(label)}</button>`;
+    }).join('');
+
+    pillWrap.querySelectorAll('.pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeFilter = btn.dataset.cat;
+        pillWrap.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+      });
+    });
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+  document.getElementById('searchInput').addEventListener('input', function () {
+    searchQuery = this.value.toLowerCase().trim();
+    applyFilters();
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  async function init() {
+    try {
+      allChannels = await IRService.getChannels();
+      buildPills();
+      render(allChannels);
+    } catch (e) {
+      showErr('Could not load channels: ' + e.message);
+      document.getElementById('sectionsWrap').innerHTML = '';
+    }
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById('errBanner');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  init();
+</script>
+</body>
+</html>

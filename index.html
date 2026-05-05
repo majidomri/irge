@@ -21,10 +21,20 @@
     <meta property="og:url" content="https://www.instarishta.me/">
     <meta property="og:image" content="https://www.instarishta.me/assets/icon.svg">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#1E3932">
     <link rel="canonical" href="https://www.instarishta.me/profiles.html">
 
 
+
+    <!-- Design system font: Inter (Uber typography substitute) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap">
+
+    <!-- Unified design system (Mastercard surfaces · Starbucks section colors · Uber typography+buttons+chips+spacing) -->
+    <link rel="stylesheet" href="styles/design-system.css">
+    <link rel="stylesheet" href="styles/styles.css">
 
     <!-- Tailwind CDN (JIT) -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
@@ -34,8 +44,7 @@
         theme: {
           extend: {
             fontFamily: {
-              serif: ['ui-serif', 'New York', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
-              sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'SF Pro Display', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji', 'sans-serif'],
+              sans: ['Inter', 'system-ui', 'Helvetica Neue', 'Arial', 'sans-serif'],
               arab: ['Noto Naskh Arabic', 'Geeza Pro', 'Al Nile', 'serif'],
             }
           }
@@ -88,501 +97,6 @@
   }
   </script>
 
-    <style>
-      /* Accessibility: skip link */
-      .skip-link {
-        position: absolute;
-        left: -9999px;
-        top: auto;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-      }
-
-      .skip-link:focus {
-        position: fixed;
-        left: 16px;
-        top: 12px;
-        width: auto;
-        height: auto;
-        padding: 8px 12px;
-        z-index: 1000;
-        background: #fff;
-        color: #000;
-        border-radius: 8px;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, .2);
-      }
-
-      /* Performance: avoid painting offscreen sections */
-      main section:not(.hero) {
-        content-visibility: auto;
-        contain-intrinsic-size: 800px;
-      }
-
-      /* Mobile: reduce background paint cost */
-      @media (max-width: 768px) {
-        .geo-pattern {
-          display: none;
-        }
-      }
-
-      /* FAQ styles for parity */
-      .faq-item {
-        background: var(--white);
-        border: 1px solid rgba(0, 0, 0, .07);
-        border-radius: 12px;
-        overflow: hidden;
-      }
-
-      .faq-q {
-        appearance: none;
-        -webkit-appearance: none;
-        background: none;
-        border: 0;
-        display: flex;
-        width: 100%;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1.1rem 1.4rem;
-        font-size: .9rem;
-        font-weight: 600;
-        color: #1e1b4b;
-        cursor: pointer;
-        gap: 1rem;
-        text-align: left;
-      }
-
-      .faq-q::after {
-        content: '+';
-        font-size: 1.4rem;
-        font-weight: 300;
-        color: #4f46e5;
-        flex-shrink: 0;
-        transition: transform .25s;
-      }
-
-      .faq-item.open .faq-q::after {
-        transform: rotate(45deg);
-      }
-
-      .faq-a {
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height .35s ease, padding .35s ease;
-        font-size: .875rem;
-        color: #6b7280;
-        line-height: 1.7;
-        padding: 0 1.4rem;
-      }
-
-      .faq-item.open .faq-a {
-        max-height: 200px;
-        padding: 0 1.4rem 1.1rem;
-      }
-
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      :root {
-        --ink: #1e1b4b;
-        --forest: #1e1b4b;
-        --emerald: #3730a3;
-        --jade: #4f46e5;
-        --mint: #34d399;
-        --gold: #f59e0b;
-        --gold-lt: #fcd34d;
-        --cream: #f5f3ff;
-        --parchment: #eef2ff;
-        --warm-grey: #6b7280;
-        --text: #374151;
-        --text-lt: #6b7280;
-        --white: #ffffff;
-        --red: #c0392b;
-
-        --radius-sm: 4px;
-        --radius-md: 12px;
-        --radius-lg: 24px;
-        --radius-xl: 48px;
-
-        --shadow-sm: 0 2px 8px rgba(0, 0, 0, .06);
-        --shadow-md: 0 8px 32px rgba(0, 0, 0, .12);
-        --shadow-lg: 0 24px 64px rgba(0, 0, 0, .18);
-        --shadow-gold: 0 8px 32px rgba(245, 158, 11, .35);
-      }
-
-      html {
-        scroll-behavior: smooth;
-      }
-
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-        background: #f5f3ff;
-        color: #374151;
-        overflow-x: hidden;
-        line-height: 1.6;
-      }
-
-      /* Islamic geometric background and animations reused */
-      .geo-pattern {
-        position: absolute;
-        inset: 0;
-        opacity: .07;
-        pointer-events: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%23a5b4fc' stroke-width='0.8'%3E%3Cpolygon points='60,4 73,30 100,30 79,47 87,74 60,58 33,74 41,47 20,30 47,30'/%3E%3Cpolygon points='60,20 68,37 86,37 72,47 77,64 60,54 43,64 48,47 34,37 52,37'/%3E%3Ccircle cx='60' cy='60' r='18'/%3E%3Cline x1='0' y1='0' x2='60' y2='60'/%3E%3Cline x1='120' y1='0' x2='60' y2='60'/%3E%3Cline x1='0' y1='120' x2='60' y2='60'/%3E%3Cline x1='120' y1='120' x2='60' y2='60'/%3E%3Cline x1='60' y1='0' x2='60' y2='120'/%3E%3Cline x1='0' y1='60' x2='120' y2='60'/%3E%3C/g%3E%3C/svg%3E");
-        background-size: 120px 120px;
-      }
-
-      @keyframes ticker {
-        from {
-          transform: translateX(0);
-        }
-
-        to {
-          transform: translateX(-50%);
-        }
-      }
-
-      @keyframes float {
-
-        0%,
-        100% {
-          transform: translateY(0) rotate(0deg);
-        }
-
-        50% {
-          transform: translateY(-18px) rotate(3deg);
-        }
-      }
-
-      @keyframes fadeUp {
-        from {
-          opacity: 0;
-          transform: translateY(24px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      @keyframes pulse {
-
-        0%,
-        100% {
-          opacity: 1;
-          transform: scale(1);
-        }
-
-        50% {
-          opacity: .5;
-          transform: scale(1.4);
-        }
-      }
-
-      /* Reuse existing reveal classes */
-      .reveal {
-        opacity: 0;
-        transform: translateY(32px);
-        transition: opacity .6s ease, transform .6s ease;
-      }
-
-      .reveal.visible {
-        opacity: 1;
-        transform: translateY(0);
-      }
-
-      .reveal-delay-1 {
-        transition-delay: .1s;
-      }
-
-      .reveal-delay-2 {
-        transition-delay: .2s;
-      }
-
-      .reveal-delay-3 {
-        transition-delay: .3s;
-      }
-
-      .reveal-delay-4 {
-        transition-delay: .4s;
-      }
-
-
-
-      /* Hero and rest retain original look for now */
-      .hero {
-        position: relative;
-        background: linear-gradient(148deg, #1e1b4b 0%, #2a1760 48%, #312e81 100%);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        overflow: hidden;
-      }
-
-      .hero-radial {
-        position: absolute;
-        top: -20%;
-        right: -10%;
-        width: 800px;
-        height: 800px;
-        background: radial-gradient(circle, rgba(109, 40, 217, .22) 0%, transparent 68%);
-        pointer-events: none;
-      }
-
-      .hero-radial-2 {
-        position: absolute;
-        bottom: -10%;
-        left: -5%;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(circle, rgba(79, 70, 229, .18) 0%, transparent 68%);
-        pointer-events: none;
-      }
-
-      .crescent {
-        position: absolute;
-        top: 6%;
-        right: 5%;
-        opacity: .12;
-        pointer-events: none;
-        animation: float 8s ease-in-out infinite;
-      }
-
-      .hero-inner {
-        max-width: 1280px;
-        margin: auto;
-        padding: 5rem 2rem 4rem;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 4rem;
-        align-items: center;
-        position: relative;
-        z-index: 2;
-      }
-
-      .hero-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: .5rem;
-        background: rgba(165, 180, 252, .1);
-        border: 1px solid rgba(165, 180, 252, .22);
-        border-radius: 999px;
-        padding: .3rem .85rem;
-        color: #fcd34d;
-        font-size: .78rem;
-        font-weight: 500;
-        letter-spacing: .06em;
-        text-transform: uppercase;
-        margin-bottom: 1.5rem;
-        opacity: 0;
-        animation: fadeUp .6s .2s ease forwards;
-      }
-
-      .hero-badge::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        background: var(--mint);
-        border-radius: 50%;
-        flex-shrink: 0;
-        animation: pulse 2s ease-in-out infinite;
-      }
-
-      .hero-arabic {
-        font-family: 'Noto Naskh Arabic', serif;
-        font-size: 1.5rem;
-        color: rgba(165, 180, 252, .35);
-        letter-spacing: .04em;
-        margin-bottom: .75rem;
-        opacity: 0;
-        animation: fadeUp .6s .3s ease forwards;
-      }
-
-      .hero-h1 {
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        font-size: clamp(2.8rem, 5vw, 4.2rem);
-        font-weight: 300;
-        color: #fff;
-        line-height: 1.1;
-        letter-spacing: -.02em;
-        margin-bottom: 1.25rem;
-        opacity: 0;
-        animation: fadeUp .6s .4s ease forwards;
-      }
-
-      .hero-h1 strong {
-        font-weight: 600;
-        color: #fcd34d;
-        font-style: italic;
-        display: block;
-      }
-
-      .hero-sub {
-        font-size: 1.05rem;
-        color: rgba(255, 255, 255, .62);
-        line-height: 1.75;
-        max-width: 480px;
-        margin-bottom: 2.5rem;
-        opacity: 0;
-        animation: fadeUp .6s .5s ease forwards;
-      }
-
-      .hero-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        align-items: center;
-        opacity: 0;
-        animation: fadeUp .6s .6s ease forwards;
-      }
-
-      .btn-hero {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: #1e1b4b;
-        font-weight: 700;
-        font-size: 1rem;
-        letter-spacing: .02em;
-        padding: .9rem 2rem;
-        border-radius: 12px;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: .6rem;
-        box-shadow: 0 8px 32px rgba(245, 158, 11, .38);
-        transition: all .3s cubic-bezier(.34, 1.56, .64, 1);
-      }
-
-      .btn-hero:hover {
-        transform: translateY(-3px) scale(1.02);
-        box-shadow: 0 16px 48px rgba(245, 158, 11, .52);
-      }
-
-      .btn-hero-ghost {
-        color: rgba(255, 255, 255, .8);
-        font-size: .95rem;
-        font-weight: 500;
-        text-decoration: none;
-        padding: .9rem 1.75rem;
-        border: 1.5px solid rgba(255, 255, 255, .2);
-        border-radius: 12px;
-        display: inline-flex;
-        align-items: center;
-        gap: .5rem;
-        transition: all .25s;
-      }
-
-      .btn-hero-ghost:hover {
-        border-color: rgba(255, 255, 255, .5);
-        color: #fff;
-      }
-
-      @media (max-width:900px) {
-        .hero-inner {
-          grid-template-columns: 1fr;
-          gap: 3rem;
-          padding: 4rem 1.5rem;
-        }
-
-        .hero-visual {
-          display: none;
-        }
-      }
-
-      /* Keep rest of sections CSS (stats, how, why, etc.) exactly same as your original file for now */
-      .stats-strip {
-        background: #fff;
-        border-bottom: 1px solid rgba(0, 0, 0, .06);
-      }
-
-      .stats-inner {
-        max-width: 1280px;
-        margin: auto;
-        padding: 0 2rem;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-      }
-
-      .stat-item {
-        padding: 1.75rem 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        border-right: 1px solid rgba(0, 0, 0, .06);
-        transition: background .2s;
-      }
-
-      .stat-item:last-child {
-        border-right: none;
-      }
-
-      .stat-item:hover {
-        background: rgba(79, 70, 229, .03);
-      }
-
-      .stat-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        font-size: 1.25rem;
-      }
-
-      .stat-icon.green {
-        background: rgba(79, 70, 229, .08);
-      }
-
-      .stat-icon.gold {
-        background: rgba(79, 70, 229, .1);
-      }
-
-      .stat-icon.red {
-        background: rgba(192, 57, 43, .08);
-      }
-
-      .stat-icon.blue {
-        background: rgba(59, 130, 246, .08);
-      }
-
-      .stat-num {
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        font-size: 1.9rem;
-        font-weight: 800;
-        color: #1e1b4b;
-        line-height: 1;
-      }
-
-      .stat-label {
-        font-size: .78rem;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        margin-top: .2rem;
-      }
-
-      @media (max-width:900px) {
-        .stats-inner {
-          grid-template-columns: 1fr 1fr;
-        }
-
-        .stat-item:nth-child(2) {
-          border-right: none;
-        }
-      }
-
-      /* Communities/Testi/FAQ/CTA/Footer retain from original for now (omitted for brevity) */
-    </style>
   </head>
 
   <body>
@@ -591,34 +105,33 @@
 
     <!-- TOPBAR (Tailwind) -->
     <div
-      class="bg-[#1e1b4b] text-[rgba(255,255,255,.75)] text-[0.72rem] tracking-[0.08em] uppercase overflow-hidden h-[34px] flex items-center"
+      class="bg-[#1E3932] text-[rgba(255,255,255,.75)] text-[0.72rem] tracking-[0.08em] uppercase overflow-hidden h-[34px] flex items-center"
       aria-hidden="true">
       <div class="flex gap-12 whitespace-nowrap animate-[ticker_28s_linear_infinite]">
-        <span class="text-[#a5b4fc]">🌙 Verified Muslim Profiles</span>
+        <span class="text-white/70">🌙 Verified Muslim Profiles</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">✅ Wali &amp; Family Approved Contact</span>
+        <span class="text-white/70">✅ Wali &amp; Family Approved Contact</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">🔒 Private &amp; Secure</span>
+        <span class="text-white/70">🔒 Private &amp; Secure</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">⭐ 500+ Active Proposals</span>
+        <span class="text-white/70">⭐ 500+ Active Proposals</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">📍 Hyderabad · India · Global</span>
+        <span class="text-white/70">📍 Hyderabad · India · Global</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">🌙 Verified Muslim Profiles</span>
+        <span class="text-white/70">🌙 Verified Muslim Profiles</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">✅ Wali &amp; Family Approved Contact</span>
+        <span class="text-white/70">✅ Wali &amp; Family Approved Contact</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">🔒 Private &amp; Secure</span>
+        <span class="text-white/70">🔒 Private &amp; Secure</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">⭐ 500+ Active Proposals</span>
+        <span class="text-white/70">⭐ 500+ Active Proposals</span>
         <span>|</span>
-        <span class="text-[#a5b4fc]">📍 Hyderabad · India · Global</span>
+        <span class="text-white/70">📍 Hyderabad · India · Global</span>
       </div>
     </div>
 
     <!-- NAV (Tailwind) -->
-    <nav
-      class="sticky top-0 z-[100] bg-[rgba(30,27,75,.97)] backdrop-blur-[20px] border-b border-[rgba(165,180,252,.12)]"
+    <nav class="sticky top-0 z-[100] bg-[#0f1815] backdrop-blur-[20px] border-b border-[rgba(255,255,255,.10)]"
       role="navigation" aria-label="Main navigation">
       <div class="max-w-[1280px] mx-auto px-8 flex items-center justify-between h-[68px]">
         <a href="https://www.instarishta.me/" class="flex items-center gap-3 no-underline"
@@ -633,28 +146,30 @@
             </svg>
           </div> -->
           <span class="text-[1.45rem] font-extrabold text-white tracking-[-0.02em]">Insta<em
-              class="not-italic text-[#a5b4fc]">Rishta</em></span>
+              class="not-italic text-[#00754A]">Rishta</em></span>
         </a>
 
         <!-- Desktop links -->
         <ul class="hidden md:flex items-center gap-8 list-none">
-          <li><a class="text-white/70 hover:text-[#c7d2fe] text-[0.875rem] no-underline" href="#how-it-works">How
+          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#how-it-works">How
               It Works</a></li>
-          <li><a class="text-white/70 hover:text-[#c7d2fe] text-[0.875rem] no-underline" href="#why-us">Why
+          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#why-us">Why
               Us</a></li>
-          <li><a class="text-white/70 hover:text-[#c7d2fe] text-[0.875rem] no-underline"
-              href="#communities">Communities</a></li>
-          <li><a class="text-white/70 hover:text-[#c7d2fe] text-[0.875rem] no-underline" href="#faq">FAQ</a></li>
+          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#communities">Communities</a>
+          </li>
+          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#faq">FAQ</a></li>
+          <li><a class="text-[#a5b4fc] hover:text-white text-[0.875rem] font-semibold no-underline"
+              href="/channels.html">📡 Channels</a></li>
 
         </ul>
 
         <!-- Desktop CTAs -->
         <div class="hidden sm:flex items-center gap-4">
           <a href="/post-your-ad.html"
-            class="text-white/80 text-[0.875rem] font-medium no-underline px-4 py-2 rounded-[12px] border border-white/20 hover:text-[#a5b4fc] hover:border-[#a5b4fc] transition">Post
+            class="text-white/80 text-[0.875rem] font-medium no-underline px-4 py-2 rounded-full border border-white/20 hover:text-white hover:border-white/50 transition">Post
             Your Profile</a>
           <a href="/profiles.html"
-            class="inline-flex items-center gap-2 text-[0.875rem] font-semibold no-underline px-5 py-2 rounded-[12px] shadow-[0_4px_16px_rgba(79,70,229,.4)] transition hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(79,70,229,.56)] bg-[linear-gradient(135deg,#4f46e5,#6d28d9)] text-white">
+            class="inline-flex items-center gap-2 text-[0.875rem] font-semibold no-underline px-5 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.16)] transition hover:-translate-y-[1px] bg-black text-white">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
               stroke-linejoin="round" class="w-[15px] h-[15px]">
               <circle cx="11" cy="11" r="8" />
@@ -675,24 +190,27 @@
 
       <!-- Mobile panel -->
       <div id="mobileMenu"
-        class="md:hidden hidden border-t border-[rgba(165,180,252,.12)] bg-[rgba(30,27,75,.98)] backdrop-blur-[12px]">
+        class="md:hidden hidden border-t border-[rgba(255,255,255,.10)] bg-[rgba(30,57,50,0.98)] backdrop-blur-[12px]">
         <ul class="list-none flex flex-col p-2">
-          <li><a class="block px-4 py-3 text-white/80 hover:text-[#c7d2fe] hover:bg-white/5 rounded-lg no-underline"
+          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
               href="#how-it-works">How It Works</a></li>
-          <li><a class="block px-4 py-3 text-white/80 hover:text-[#c7d2fe] hover:bg-white/5 rounded-lg no-underline"
+          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
               href="#why-us">Why Us</a></li>
-          <li><a class="block px-4 py-3 text-white/80 hover:text-[#c7d2fe] hover:bg-white/5 rounded-lg no-underline"
+          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
               href="#communities">Communities</a></li>
-          <li><a class="block px-4 py-3 text-white/80 hover:text-[#c7d2fe] hover:bg-white/5 rounded-lg no-underline"
+          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
               href="#faq">FAQ</a></li>
+          <li><a
+              class="block px-4 py-3 text-[#a5b4fc] hover:text-white hover:bg-[rgba(165,180,252,.08)] rounded-lg no-underline font-semibold"
+              href="/channels.html">📡 Channels</a></li>
 
         </ul>
         <div class="flex gap-3 px-3 pb-3">
           <a href="/post-your-ad.html"
-            class="flex-1 text-center text-white/85 text-[0.9rem] font-medium no-underline px-4 py-2 rounded-[12px] border border-white/20 hover:text-[#a5b4fc] hover:border-[#a5b4fc] transition">Post
+            class="flex-1 text-center text-white/85 text-[0.9rem] font-medium no-underline px-4 py-2 rounded-full border border-white/20 hover:text-white hover:border-white/50 transition">Post
             Your Profile</a>
           <a href="/profiles.html"
-            class="flex-1 inline-flex justify-center items-center gap-2 text-[0.95rem] font-semibold no-underline px-4 py-2 rounded-[12px] shadow-[0_4px_16px_rgba(79,70,229,.4)] transition hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(79,70,229,.56)] bg-[linear-gradient(135deg,#4f46e5,#6d28d9)] text-white">
+            class="flex-1 inline-flex justify-center items-center gap-2 text-[0.95rem] font-semibold no-underline px-4 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.16)] transition hover:-translate-y-[1px] bg-black text-white">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
               stroke-linejoin="round" class="w-[15px] h-[15px]">
               <circle cx="11" cy="11" r="8" />
@@ -708,13 +226,13 @@
 
       <!-- HERO (Tailwind, robust) -->
       <section aria-labelledby="hero-heading"
-        class="relative overflow-hidden min-h-screen flex items-center bg-[linear-gradient(148deg,#1e1b4b_0%,#2a1760_48%,#312e81_100%)]">
+        class="relative overflow-hidden min-h-screen flex items-center bg-[#006241]">
         <!-- Decorative background -->
         <div class="geo-pattern"></div>
         <div class="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] pointer-events-none" aria-hidden="true"
-          style="background: radial-gradient(circle, rgba(109, 40, 217, .22) 0%, transparent 68%);"></div>
+          style="background: radial-gradient(circle, rgba(0,117,74,.25) 0%, transparent 68%);"></div>
         <div class="absolute -bottom-[10%] -left-[5%] w-[600px] h-[600px] pointer-events-none" aria-hidden="true"
-          style="background: radial-gradient(circle, rgba(79, 70, 229, .18) 0%, transparent 68%);"></div>
+          style="background: radial-gradient(circle, rgba(43,81,72,.30) 0%, transparent 68%);"></div>
         <div
           class="absolute top-[6%] right-[5%] opacity-[.12] pointer-events-none animate-[float_8s_ease-in-out_infinite]"
           aria-hidden="true">
@@ -729,31 +247,29 @@
           <!-- Left -->
           <div>
             <div
-              class="inline-flex items-center gap-2 bg-[rgba(165,180,252,.1)] border border-[rgba(165,180,252,.22)] rounded-full px-3 py-1 text-[0.78rem] font-medium uppercase tracking-[0.06em] text-[#c7d2fe] reveal">
+              class="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[0.78rem] font-medium uppercase tracking-[0.06em] text-white/80 reveal">
               <span
                 class="w-[6px] h-[6px] rounded-full bg-[var(--mint)] animate-[pulse_2s_ease-in-out_infinite]"></span>
               🌙 Muslim Matrimony Platform
             </div>
 
-            <div class="font-arab text-[1.5rem] text-[rgba(165,180,252,.35)] tracking-[0.04em] mt-3 mb-2 reveal">
+            <div class="font-arab text-[1.5rem] text-[#cba258] tracking-[0.04em] mt-3 mb-2 reveal">
               بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ
             </div>
 
             <h1 id="hero-heading"
-              class="font-serif text-white leading-[1.1] tracking-[-0.02em] text-[clamp(2.8rem,5vw,4.2rem)] font-light mb-5 reveal">
-              Find Your <strong class="not-italic font-semibold text-[#a5b4fc] italic block">Halal
-                Match,</strong>
+              class="text-white leading-[1.22] tracking-[-0.02em] text-[clamp(2.25rem,5vw,3.25rem)] font-bold mb-5 reveal">
+              Find Your <span class="text-[rgba(255,255,255,0.70)] block">Halal Match,</span>
               Begin Your Nikah Journey.
             </h1>
 
-            <p class="text-white/60 text-[1.05rem] leading-[1.75] max-w-[520px] mb-8 reveal">
+            <p class="text-[rgba(255,255,255,0.70)] text-[1rem] leading-[1.5] max-w-[520px] mb-8 reveal">
               InstaRishta connects serious Muslim men and women seeking marriage proposals the right way — with verified
               profiles, Wali approval, and family-first contact. No dating. No noise. Just Rishta.
             </p>
 
             <div class="flex flex-wrap items-center gap-3 reveal">
               <a href="/profiles.html" class="btn-hero inline-flex items-center"
-                style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 8px 32px rgba(245,158,11,.38);"
                 aria-label="Browse all verified Muslim profiles">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -775,18 +291,28 @@
             <div class="flex items-center gap-4 mt-8 reveal">
               <div class="flex -space-x-2" aria-hidden="true">
                 <span
-                  class="w-8 h-8 rounded-full border-2 border-[#1e1b4b] bg-[#4f46e5] flex items-center justify-center text-[0.75rem] font-semibold text-white">AM</span>
+                  class="w-8 h-8 rounded-full border-2 border-[#006241] bg-[#00754A] flex items-center justify-center text-[0.75rem] font-semibold text-white">AM</span>
                 <span
-                  class="w-8 h-8 rounded-full border-2 border-[#1e1b4b] bg-[#6d28d9] flex items-center justify-center text-[0.75rem] font-semibold text-white">FZ</span>
+                  class="w-8 h-8 rounded-full border-2 border-[#006241] bg-[#2b5148] flex items-center justify-center text-[0.75rem] font-semibold text-white">FZ</span>
                 <span
-                  class="w-8 h-8 rounded-full border-2 border-[#1e1b4b] bg-[#f59e0b] text-[#1e1b4b] flex items-center justify-center text-[0.75rem] font-semibold">NK</span>
+                  class="w-8 h-8 rounded-full border-2 border-[#006241] bg-white text-[#006241] flex items-center justify-center text-[0.75rem] font-semibold">NK</span>
                 <span
-                  class="w-8 h-8 rounded-full border-2 border-[#1e1b4b] bg-[#4338ca] flex items-center justify-center text-[0.75rem] font-semibold text-white">SR</span>
+                  class="w-8 h-8 rounded-full border-2 border-[#006241] bg-[#1E3932] flex items-center justify-center text-[0.75rem] font-semibold text-white">SR</span>
               </div>
               <div class="text-white/70 text-[0.82rem] leading-tight">
                 <strong class="block text-white/90">500+ Active Proposals</strong>
                 Trusted by Muslim families across India &amp; globally
               </div>
+            </div>
+
+            <!-- Chip navigation row (Uber) — browse shortcuts -->
+            <div class="ds-chip-row mt-6 reveal" role="navigation" aria-label="Quick browse">
+              <a href="/profiles.html?gender=bride" class="ds-chip ds-chip-dark">Bride Profiles</a>
+              <a href="/profiles.html?gender=groom" class="ds-chip ds-chip-dark">Groom Profiles</a>
+              <a href="/profiles.html?location=hyderabad" class="ds-chip ds-chip-dark">Hyderabadi</a>
+              <a href="/profiles.html?type=urgent" class="ds-chip ds-chip-dark">Urgent Nikah</a>
+              <a href="/profiles.html?type=hafiz" class="ds-chip ds-chip-dark">Hafiz &amp; Alim</a>
+              <a href="/profiles.html?location=nri" class="ds-chip ds-chip-dark">NRI Diaspora</a>
             </div>
           </div>
 
@@ -795,10 +321,10 @@
             <div class="grid grid-cols-2 gap-3">
               <!-- Card 1 -->
               <div
-                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-[rgba(165,180,252,.28)]">
+                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-white/30">
                 <div class="flex items-center gap-3 mb-3">
                   <div
-                    class="w-[42px] h-[42px] rounded-full bg-[#4f46e5] text-white font-bold text-[1.1rem] flex items-center justify-center">
+                    class="w-[42px] h-[42px] rounded-full bg-[#006241] text-white font-bold text-[1.1rem] flex items-center justify-center">
                     AH</div>
                   <div class="min-w-0">
                     <div class="text-white text-[0.9rem] font-semibold">Ahmed H.</div>
@@ -817,10 +343,10 @@
               </div>
               <!-- Card 2 -->
               <div
-                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-[rgba(165,180,252,.28)]">
+                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-white/30">
                 <div class="flex items-center gap-3 mb-3">
                   <div
-                    class="w-[42px] h-[42px] rounded-full bg-[#6d28d9] text-white font-bold text-[1.1rem] flex items-center justify-center">
+                    class="w-[42px] h-[42px] rounded-full bg-[#00754A] text-white font-bold text-[1.1rem] flex items-center justify-center">
                     FZ</div>
                   <div class="min-w-0">
                     <div class="text-white text-[0.9rem] font-semibold">Fatima Z.</div>
@@ -841,32 +367,32 @@
               <div class="rounded-[12px] p-4 col-span-2 bg-white/5 border border-white/10 backdrop-blur-[8px]">
                 <div class="flex items-center justify-between gap-4">
                   <div class="text-center">
-                    <strong class="block font-serif text-[1.4rem] text-[#a5b4fc]">500+</strong>
+                    <strong class="block font-bold text-[1.4rem] text-white">500+</strong>
                     <span class="block text-[0.7rem] text-white/70 tracking-[0.05em] uppercase">Active Ads</span>
                   </div>
                   <div class="w-px h-10 bg-white/10"></div>
                   <div class="text-center">
-                    <strong class="block font-serif text-[1.4rem] text-[#a5b4fc]">144</strong>
+                    <strong class="block font-bold text-[1.4rem] text-white">144</strong>
                     <span class="block text-[0.7rem] text-white/70 tracking-[0.05em] uppercase">Groom Profiles</span>
                   </div>
                   <div class="w-px h-10 bg-white/10"></div>
                   <div class="text-center">
-                    <strong class="block font-serif text-[1.4rem] text-[#a5b4fc]">356</strong>
+                    <strong class="block font-bold text-[1.4rem] text-white">356</strong>
                     <span class="block text-[0.7rem] text-white/70 tracking-[0.05em] uppercase">Bride Profiles</span>
                   </div>
                   <div class="w-px h-10 bg-white/10"></div>
                   <div class="text-center">
-                    <strong class="block font-serif text-[1.4rem] text-[#a5b4fc]">100%</strong>
+                    <strong class="block font-bold text-[1.4rem] text-white">100%</strong>
                     <span class="block text-[0.7rem] text-white/70 tracking-[0.05em] uppercase">Muslim Only</span>
                   </div>
                 </div>
               </div>
               <!-- Card 4 -->
               <div
-                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-[rgba(165,180,252,.28)]">
+                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-white/30">
                 <div class="flex items-center gap-3 mb-3">
                   <div
-                    class="w-[42px] h-[42px] rounded-full bg-[#7c3aed] text-white font-bold text-[1.1rem] flex items-center justify-center">
+                    class="w-[42px] h-[42px] rounded-full bg-[#2b5148] text-white font-bold text-[1.1rem] flex items-center justify-center">
                     NK</div>
                   <div class="min-w-0">
                     <div class="text-white text-[0.9rem] font-semibold">Nadia K.</div>
@@ -885,10 +411,10 @@
               </div>
               <!-- Card 5 -->
               <div
-                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-[rgba(165,180,252,.28)]">
+                class="rounded-[12px] p-4 bg-white/5 border border-white/10 backdrop-blur-[8px] transition hover:-translate-y-1 hover:border-white/30">
                 <div class="flex items-center gap-3 mb-3">
                   <div
-                    class="w-[42px] h-[42px] rounded-full bg-[#4338ca] text-white font-bold text-[1.1rem] flex items-center justify-center">
+                    class="w-[42px] h-[42px] rounded-full bg-[#1E3932] text-white font-bold text-[1.1rem] flex items-center justify-center">
                     SR</div>
                   <div class="min-w-0">
                     <div class="text-white text-[0.9rem] font-semibold">Sohail R.</div>
@@ -946,59 +472,57 @@
       </div> -->
 
       <!-- HOW IT WORKS (Tailwind) -->
-      <section id="how-it-works" class="bg-white" aria-labelledby="how-heading py-12">
-        <div class="max-w-[1280px] mx-auto px-8 py-12 relative z-[1]">
+      <section id="how-it-works" style="background:#f2f0eb" aria-labelledby="how-heading">
+        <div class="max-w-[1280px] mx-auto px-8 py-20 relative z-[1]">
           <div class="text-center mb-16">
             <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-semibold tracking-[0.1em] uppercase text-[#4f46e5] mb-4 py-6">
+              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4 py-4">
               Simple Process</div>
             <h2 id="how-heading"
-              class="font-serif text-[clamp(2rem,4vw,3rem)] font-light text-[#1e1b4b] leading-[1.15] tracking-[-0.02em] mb-4">
-              How <em class="italic text-[#4f46e5] not-italic:font-normal">InstaRishta</em> Works</h2>
-            <p class="text-[1.05rem] text-[#6b7280] max-w-[560px] leading-[1.7] mx-auto">A halal, family-approved
+              class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
+              How InstaRishta Works</h2>
+            <p class="text-[1rem] text-[rgba(0,0,0,0.58)] max-w-[560px] leading-[1.5] mx-auto">A halal, family-approved
               process — transparent, safe, and Islamically guided from first look to Nikah.</p>
           </div>
 
           <div class="relative">
             <div
-              class="hidden md:block absolute top-[36px] left-[16.67%] right-[16.67%] h-[2px] bg-[linear-gradient(90deg,#4f46e5,rgba(79,70,229,.15),#4f46e5)] z-0">
+              class="hidden md:block absolute top-[36px] left-[16.67%] right-[16.67%] h-[1px] bg-[rgba(0,0,0,0.12)] z-0">
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-10 relative z-[1]">
               <!-- Card 1 -->
               <div class="text-center group reveal">
                 <div
-                  class="w-[72px] h-[72px] rounded-full bg-white border-2 border-[#4f46e5] flex items-center justify-center mx-auto mb-6 text-[1.6rem] font-serif font-semibold text-[#4f46e5] transition-transform duration-300 group-hover:scale-110 group-hover:bg-[linear-gradient(135deg,#4f46e5,#6d28d9)] group-hover:border-transparent group-hover:text-white">
+                  class="w-[72px] h-[72px] rounded-full bg-white border-2 border-[#006241] flex items-center justify-center mx-auto mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#1E3932] group-hover:border-transparent">
                   <span class="text-[1.8rem]">🔍</span>
                 </div>
-                <h3 class="font-serif text-[1.25rem] font-semibold text-[#1e1b4b] mb-2">Browse Verified Profiles</h3>
-                <p class="text-[0.9rem] text-[#6b7280] leading-[1.65] max-w-[240px] mx-auto">Filter by age,
+                <h3 class="text-[1.25rem] font-bold text-[rgba(0,0,0,0.87)] mb-2">Browse Verified Profiles</h3>
+                <p class="text-[0.9rem] text-[rgba(0,0,0,0.58)] leading-[1.5] max-w-[240px] mx-auto">Filter by age,
                   education, location, sect, and more. All profiles are reviewed before going live.</p>
               </div>
 
               <!-- Card 2 -->
               <div class="text-center group reveal reveal-delay-2">
                 <div
-                  class="w-[72px] h-[72px] rounded-full bg-white border-2 border-[#4f46e5] flex items-center justify-center mx-auto mb-6 text-[1.6rem] font-serif font-semibold text-[#4f46e5] transition-transform duration-300 group-hover:scale-110 group-hover:bg-[linear-gradient(135deg,#4f46e5,#6d28d9)] group-hover:border-transparent group-hover:text-white">
+                  class="w-[72px] h-[72px] rounded-full bg-white border-2 border-[#006241] flex items-center justify-center mx-auto mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#1E3932] group-hover:border-transparent">
                   <span class="text-[1.8rem]">💬</span>
                 </div>
-                <h3 class="font-serif text-[1.25rem] font-semibold text-[#1e1b4b] mb-2">Connect with Wali's Consent
-                </h3>
-                <p class="text-[0.9rem] text-[#6b7280] leading-[1.65] max-w-[260px] mx-auto">Reach out via
-                  provided
-                  contact — family-controlled and guardian-first. No direct private chat. Just halal communication.</p>
+                <h3 class="text-[1.25rem] font-bold text-[rgba(0,0,0,0.87)] mb-2">Connect with Wali's Consent</h3>
+                <p class="text-[0.9rem] text-[rgba(0,0,0,0.58)] leading-[1.5] max-w-[260px] mx-auto">Reach out via
+                  provided contact — family-controlled and guardian-first. No direct private chat. Just halal
+                  communication.</p>
               </div>
 
               <!-- Card 3 -->
               <div class="text-center group reveal reveal-delay-4">
                 <div
-                  class="w-[72px] h-[72px] rounded-full bg-white border-2 border-[#4f46e5] flex items-center justify-center mx-auto mb-6 text-[1.6rem] font-serif font-semibold text-[#4f46e5] transition-transform duration-300 group-hover:scale-110 group-hover:bg-[linear-gradient(135deg,#4f46e5,#6d28d9)] group-hover:border-transparent group-hover:text-white">
+                  class="w-[72px] h-[72px] rounded-full bg-white border-2 border-[#006241] flex items-center justify-center mx-auto mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#1E3932] group-hover:border-transparent">
                   <span class="text-[1.8rem]">🤝</span>
                 </div>
-                <h3 class="font-serif text-[1.25rem] font-semibold text-[#1e1b4b] mb-2">Begin Your Nikah Journey</h3>
-                <p class="text-[0.9rem] text-[#6b7280] leading-[1.65] max-w-[280px] mx-auto">After meeting
-                  families
-                  and making istikhara, proceed to nikah with confidence. May Allah bless your union.</p>
+                <h3 class="text-[1.25rem] font-bold text-[rgba(0,0,0,0.87)] mb-2">Begin Your Nikah Journey</h3>
+                <p class="text-[0.9rem] text-[rgba(0,0,0,0.58)] leading-[1.5] max-w-[280px] mx-auto">After meeting
+                  families and making istikhara, proceed to nikah with confidence. May Allah bless your union.</p>
               </div>
             </div>
           </div>
@@ -1006,194 +530,199 @@
       </section>
 
       <!-- WHY INSTARISHTA (Tailwind) -->
-      <section id="why-us" class="relative overflow-hidden" aria-labelledby="why-heading">
+      <section id="why-us" class="relative overflow-hidden bg-[#1E3932]" aria-labelledby="why-heading">
         <div class="absolute inset-0 opacity-[0.04] pointer-events-none geo-pattern"></div>
-        <div class="bg-[linear-gradient(148deg,#1e1b4b_0%,#261860_100%)]">
-          <div
-            class="max-w-[1280px] mx-auto px-8 py-24 relative z-[1] grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
-            <!-- Left -->
-            <div>
-              <div
-                class="inline-flex items-center gap-2 text-[0.75rem] font-semibold tracking-[0.1em] uppercase text-[#c7d2fe] mb-4">
-                <span class="inline-block w-[18px] h-[2px] rounded bg-[#a5b4fc]"></span> Why Us
-              </div>
-              <h2 id="why-heading"
-                class="font-serif text-white text-[clamp(2rem,4vw,3rem)] font-light leading-[1.15] tracking-[-0.02em] mb-4">
-                Not Just Another<br><em class="italic text-[#c7d2fe] not-italic:font-normal">Matrimony Site.</em>
-              </h2>
-              <p class="text-white/60 max-w-[420px] leading-[1.7]">While Shaadi.com and Jeevansathi.com serve all
-                religions and dilute the Muslim experience, InstaRishta is built exclusively for the Muslim Ummah — with
-                Islamic values at its core.</p>
+        <div
+          class="max-w-[1280px] mx-auto px-8 py-24 relative z-[1] grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
+          <!-- Left -->
+          <div>
+            <div
+              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.70)] mb-4">
+              <span class="inline-block w-[18px] h-[1px] rounded bg-white/50"></span> Why Us
+            </div>
+            <h2 id="why-heading"
+              class="text-white text-[clamp(2rem,4vw,2.25rem)] font-bold leading-[1.22] tracking-[-0.02em] mb-4">
+              Not Just Another<br><span class="text-[rgba(255,255,255,0.70)]">Matrimony Site.</span>
+            </h2>
+            <p class="text-[rgba(255,255,255,0.70)] max-w-[420px] leading-[1.5]">While Shaadi.com and Jeevansathi.com
+              serve all
+              religions and dilute the Muslim experience, InstaRishta is built exclusively for the Muslim Ummah — with
+              Islamic values at its core.</p>
 
-              <div class="mt-10 flex flex-col gap-6">
-                <!-- Feature item -->
-                <div class="flex items-start gap-4 reveal">
-                  <div
-                    class="w-9 h-9 rounded-[10px] bg-[rgba(165,180,252,.1)] border border-[rgba(165,180,252,.18)] flex items-center justify-center text-base">
-                    🌙</div>
-                  <div>
-                    <h4 class="text-white text-[0.95rem] font-semibold mb-1">Muslim-Only Platform</h4>
-                    <p class="text-white/50 text-[0.83rem] leading-[1.5]">Every profile is from a Muslim individual or
-                      family. No cross-religion noise — just serious Rishta seekers.</p>
-                  </div>
+            <div class="mt-10 flex flex-col gap-6">
+              <!-- Feature item -->
+              <div class="flex items-start gap-4 reveal">
+                <div
+                  class="w-9 h-9 rounded-[8px] bg-white/10 border border-white/20 flex items-center justify-center text-base">
+                  🌙</div>
+                <div>
+                  <h4 class="text-white text-[0.95rem] font-bold mb-1">Muslim-Only Platform</h4>
+                  <p class="text-[rgba(255,255,255,0.70)] text-[0.83rem] leading-[1.5]">Every profile is from a Muslim
+                    individual or
+                    family. No cross-religion noise — just serious Rishta seekers.</p>
                 </div>
-                <div class="flex items-start gap-4 reveal reveal-delay-1">
-                  <div
-                    class="w-9 h-9 rounded-[10px] bg-[rgba(165,180,252,.1)] border border-[rgba(165,180,252,.18)] flex items-center justify-center text-base">
-                    🛡️</div>
-                  <div>
-                    <h4 class="text-white text-[0.95rem] font-semibold mb-1">Wali &amp; Family-First Contact</h4>
-                    <p class="text-white/50 text-[0.83rem] leading-[1.5]">Profiles support guardian-controlled contact,
-                      honouring the Islamic principle of wali in marriage.</p>
-                  </div>
+              </div>
+              <div class="flex items-start gap-4 reveal reveal-delay-1">
+                <div
+                  class="w-9 h-9 rounded-[8px] bg-white/10 border border-white/20 flex items-center justify-center text-base">
+                  🛡️</div>
+                <div>
+                  <h4 class="text-white text-[0.95rem] font-bold mb-1">Wali &amp; Family-First Contact</h4>
+                  <p class="text-[rgba(255,255,255,0.70)] text-[0.83rem] leading-[1.5]">Profiles support
+                    guardian-controlled contact,
+                    honouring the Islamic principle of wali in marriage.</p>
                 </div>
-                <div class="flex items-start gap-4 reveal reveal-delay-2">
-                  <div
-                    class="w-9 h-9 rounded-[10px] bg-[rgba(165,180,252,.1)] border border-[rgba(165,180,252,.18)] flex items-center justify-center text-base">
-                    ✅</div>
-                  <div>
-                    <h4 class="text-white text-[0.95rem] font-semibold mb-1">Verified Badges &amp; Real Profiles</h4>
-                    <p class="text-white/50 text-[0.83rem] leading-[1.5]">Manual review before publishing. Verified
-                      badges
-                      on profiles that pass our checks.</p>
-                  </div>
+              </div>
+              <div class="flex items-start gap-4 reveal reveal-delay-2">
+                <div
+                  class="w-9 h-9 rounded-[8px] bg-white/10 border border-white/20 flex items-center justify-center text-base">
+                  ✅</div>
+                <div>
+                  <h4 class="text-white text-[0.95rem] font-bold mb-1">Verified Badges &amp; Real Profiles</h4>
+                  <p class="text-[rgba(255,255,255,0.70)] text-[0.83rem] leading-[1.5]">Manual review before publishing.
+                    Verified
+                    badges on profiles that pass our checks.</p>
                 </div>
-                <div class="flex items-start gap-4 reveal reveal-delay-3">
-                  <div
-                    class="w-9 h-9 rounded-[10px] bg-[rgba(165,180,252,.1)] border border-[rgba(165,180,252,.18)] flex items-center justify-center text-base">
-                    🔒</div>
-                  <div>
-                    <h4 class="text-white text-[0.95rem] font-semibold mb-1">Private &amp; No Dating Culture</h4>
-                    <p class="text-white/50 text-[0.83rem] leading-[1.5]">InstaRishta is strictly for serious Nikah
-                      proposals. Zero casual dating or swipe culture.</p>
-                  </div>
+              </div>
+              <div class="flex items-start gap-4 reveal reveal-delay-3">
+                <div
+                  class="w-9 h-9 rounded-[8px] bg-white/10 border border-white/20 flex items-center justify-center text-base">
+                  🔒</div>
+                <div>
+                  <h4 class="text-white text-[0.95rem] font-bold mb-1">Private &amp; No Dating Culture</h4>
+                  <p class="text-[rgba(255,255,255,0.70)] text-[0.83rem] leading-[1.5]">InstaRishta is strictly for
+                    serious Nikah
+                    proposals. Zero casual dating or swipe culture.</p>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Right cards -->
-            <div class="grid grid-cols-2 gap-4">
+          <!-- Right cards -->
+          <div class="grid grid-cols-2 gap-4">
+            <div
+              class="reveal rounded-[12px] p-6 bg-white/5 border border-white/10 transition-transform duration-300 hover:-translate-y-1 hover:bg-white/10">
+              <div class="text-[1.75rem] mb-3">🎯</div>
+              <h4 class="text-white text-[0.95rem] font-bold mb-1">Sect &amp; Maslak Filters</h4>
+              <p class="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">Filter by Sunni, Shia, Deobandi,
+                Barelvi,
+                Ahl-e-Hadith and more — something no generic site offers.</p>
               <div
-                class="reveal rounded-[12px] p-6 bg-[rgba(255,255,255,.05)] border border-[rgba(255,255,255,.08)] transition-transform duration-300 hover:-translate-y-1 hover:bg-[rgba(255,255,255,.08)]">
-                <div class="text-[1.75rem] mb-3">🎯</div>
-                <h4 class="text-white text-[0.95rem] font-semibold mb-1">Sect &amp; Maslak Filters</h4>
-                <p class="text-white/50 text-[0.8rem] leading-[1.5]">Filter by Sunni, Shia, Deobandi, Barelvi,
-                  Ahl-e-Hadith and more — something no generic site offers.</p>
-                <div
-                  class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
-                  Exclusive Feature</div>
-              </div>
+                class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
+                Exclusive</div>
+            </div>
+            <div
+              class="reveal reveal-delay-1 rounded-[12px] p-6 bg-white/5 border border-white/10 transition-transform duration-300 hover:-translate-y-1 hover:bg-white/10">
+              <div class="text-[1.75rem] mb-3">📖</div>
+              <h4 class="text-white text-[0.95rem] font-bold mb-1">Hafiz &amp; Alim Profiles</h4>
+              <p class="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">Dedicated profiles for those with
+                Islamic education
+                — from Hafiz-e-Quran to qualified Ulama.</p>
               <div
-                class="reveal reveal-delay-1 rounded-[12px] p-6 bg-[rgba(255,255,255,.05)] border border-[rgba(255,255,255,.08)] transition-transform duration-300 hover:-translate-y-1 hover:bg-[rgba(255,255,255,.08)]">
-                <div class="text-[1.75rem] mb-3">📖</div>
-                <h4 class="text-white text-[0.95rem] font-semibold mb-1">Hafiz &amp; Alim Profiles</h4>
-                <p class="text-white/50 text-[0.8rem] leading-[1.5]">Dedicated profiles for those with Islamic education
-                  —
-                  from Hafiz-e-Quran to qualified Ulama.</p>
-                <div
-                  class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
-                  Unique</div>
-              </div>
+                class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
+                Unique</div>
+            </div>
+            <div
+              class="reveal reveal-delay-2 rounded-[12px] p-6 bg-white/5 border border-white/10 transition-transform duration-300 hover:-translate-y-1 hover:bg-white/10">
+              <div class="text-[1.75rem] mb-3">🌍</div>
+              <h4 class="text-white text-[0.95rem] font-bold mb-1">India &amp; Global Diaspora</h4>
+              <p class="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">Profiles from Hyderabad, Mumbai,
+                Delhi, and the
+                global Muslim diaspora — UAE, UK, USA &amp; beyond.</p>
               <div
-                class="reveal reveal-delay-2 rounded-[12px] p-6 bg-[rgba(255,255,255,.05)] border border-[rgba(255,255,255,.08)] transition-transform duration-300 hover:-translate-y-1 hover:bg-[rgba(255,255,255,.08)]">
-                <div class="text-[1.75rem] mb-3">🌍</div>
-                <h4 class="text-white text-[0.95rem] font-semibold mb-1">India &amp; Global Diaspora</h4>
-                <p class="text-white/50 text-[0.8rem] leading-[1.5]">Profiles from Hyderabad, Mumbai, Delhi, and the
-                  global Muslim diaspora — UAE, UK, USA &amp; beyond.</p>
-                <div
-                  class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
-                  Worldwide</div>
-              </div>
+                class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
+                Worldwide</div>
+            </div>
+            <div
+              class="reveal reveal-delay-3 rounded-[12px] p-6 bg-white/5 border border-white/10 transition-transform duration-300 hover:-translate-y-1 hover:bg-white/10">
+              <div class="text-[1.75rem] mb-3">⚡</div>
+              <h4 class="text-white text-[0.95rem] font-bold mb-1">Urgent Proposals Tagged</h4>
+              <p class="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">Urgent marriage seekers are clearly
+                tagged — no
+                guessing, no delays when time matters.</p>
               <div
-                class="reveal reveal-delay-3 rounded-[12px] p-6 bg-[rgba(255,255,255,.05)] border border-[rgba(255,255,255,.08)] transition-transform duration-300 hover:-translate-y-1 hover:bg-[rgba(255,255,255,.08)]">
-                <div class="text-[1.75rem] mb-3">⚡</div>
-                <h4 class="text-white text-[0.95rem] font-semibold mb-1">Urgent Proposals Tagged</h4>
-                <p class="text-white/50 text-[0.8rem] leading-[1.5]">Urgent marriage seekers are clearly tagged — no
-                  guessing, no delays when time matters.</p>
-                <div
-                  class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
-                  Speed</div>
-              </div>
+                class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
+                Speed</div>
+            </div>
+            <div
+              class="reveal reveal-delay-4 rounded-[12px] p-6 bg-white/5 border border-white/10 transition-transform duration-300 hover:-translate-y-1 hover:bg-white/10 col-span-2">
+              <div class="text-[1.75rem] mb-3">🤲</div>
+              <h4 class="text-white text-[0.95rem] font-bold mb-1">Built with Islamic Values — Free to Browse</h4>
+              <p class="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">No subscription trap. Browse all
+                verified profiles
+                completely free. Post your profile through our safe, private submission process. Because finding your
+                halal match shouldn't have a paywall.</p>
               <div
-                class="reveal reveal-delay-4 rounded-[12px] p-6 bg-[rgba(165,180,252,.07)] border border-[rgba(165,180,252,.15)] transition-transform duration-300 hover:-translate-y-1 col-span-2">
-                <div class="text-[1.75rem] mb-3">🤲</div>
-                <h4 class="text-white text-[0.95rem] font-semibold mb-1">Built with Islamic Values — Free to Browse</h4>
-                <p class="text-white/50 text-[0.8rem] leading-[1.5]">No subscription trap. Browse all verified profiles
-                  completely free. Post your profile through our safe, private submission process. Because finding your
-                  halal match shouldn't have a paywall.</p>
-                <div
-                  class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
-                  Free to Browse</div>
-              </div>
+                class="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[var(--mint)] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">
+                Free to Browse</div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- COMMUNITIES (Tailwind) -->
-      <section id="communities" class="bg-[#eef2ff]" aria-labelledby="comm-heading">
+      <section id="communities" style="background:#edebe9" aria-labelledby="comm-heading">
         <div class="max-w-[1280px] mx-auto px-8 py-24">
           <div class="text-center mb-14">
             <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-semibold tracking-[0.1em] uppercase text-[#4f46e5] mb-4">
+              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">
               Communities</div>
             <h2 id="comm-heading"
-              class="font-serif text-[clamp(2rem,4vw,3rem)] font-light text-[#1e1b4b] leading-[1.15] tracking-[-0.02em] mb-4">
-              Proposals Across Every<br><em class="italic text-[#4f46e5] not-italic:font-normal">Muslim
-                Community</em>
+              class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
+              Proposals Across Every<br>Muslim Community
             </h2>
-            <p class="text-[1.05rem] text-[#6b7280] max-w-[560px] leading-[1.7] mx-auto">Browse profiles by your
+            <p class="text-[1rem] text-[rgba(0,0,0,0.58)] max-w-[560px] leading-[1.5] mx-auto">Browse profiles by your
               community, sect, or location. InstaRishta serves the entire Muslim Ummah — no one is left behind.</p>
           </div>
 
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal">
               <span class="block text-[2rem] mb-3">🕌</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">Sunni Profiles</div>
-              <div class="text-[0.78rem] text-[#6b7280]">Hanafi · Shafi'i · Maliki · Hanbali</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">Sunni Profiles</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">Hanafi · Shafi'i · Maliki · Hanbali</div>
             </a>
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal reveal-delay-1">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal reveal-delay-1">
               <span class="block text-[2rem] mb-3">📿</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">Hyderabadi Rishte</div>
-              <div class="text-[0.78rem] text-[#6b7280]">Local proposals from Hyderabad city</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">Hyderabadi Rishte</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">Local proposals from Hyderabad city</div>
             </a>
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal reveal-delay-2">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal reveal-delay-2">
               <span class="block text-[2rem] mb-3">👩‍⚕️</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">Educated Profiles</div>
-              <div class="text-[0.78rem] text-[#6b7280]">Doctors · Engineers · MBA · PhD</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">Educated Profiles</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">Doctors · Engineers · MBA · PhD</div>
             </a>
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal reveal-delay-3">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal reveal-delay-3">
               <span class="block text-[2rem] mb-3">📖</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">Hafiz &amp; Alim</div>
-              <div class="text-[0.78rem] text-[#6b7280]">Islamic scholars &amp; Quran Hafiz</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">Hafiz &amp; Alim</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">Islamic scholars &amp; Quran Hafiz</div>
             </a>
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal reveal-delay-1">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal reveal-delay-1">
               <span class="block text-[2rem] mb-3">🌍</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">NRI &amp; Diaspora</div>
-              <div class="text-[0.78rem] text-[#6b7280]">UAE · UK · USA · Canada &amp; more</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">NRI &amp; Diaspora</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">UAE · UK · USA · Canada &amp; more</div>
             </a>
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal reveal-delay-2">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal reveal-delay-2">
               <span class="block text-[2rem] mb-3">💼</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">Divorcees &amp; Widows</div>
-              <div class="text-[0.78rem] text-[#6b7280]">Respectful &amp; judgment-free space</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">Divorcees &amp; Widows</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">Respectful &amp; judgment-free space</div>
             </a>
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal reveal-delay-3">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal reveal-delay-3">
               <span class="block text-[2rem] mb-3">⚡</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">Urgent Proposals</div>
-              <div class="text-[0.78rem] text-[#6b7280]">Seeking Nikah within 3–6 months</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">Urgent Proposals</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">Seeking Nikah within 3–6 months</div>
             </a>
             <a href="/profiles.html"
-              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#4f46e5] hover:shadow-[0_8px_32px_rgba(79,70,229,.14)] reveal reveal-delay-4">
+              class="block text-center rounded-[12px] border border-[rgba(0,0,0,.06)] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#006241] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] reveal reveal-delay-4">
               <span class="block text-[2rem] mb-3">🤲</span>
-              <div class="text-[0.95rem] font-semibold text-[#1e1b4b] mb-1">Reverts to Islam</div>
-              <div class="text-[0.78rem] text-[#6b7280]">Welcoming revert Muslims worldwide</div>
+              <div class="text-[0.95rem] font-bold text-[rgba(0,0,0,0.87)] mb-1">Reverts to Islam</div>
+              <div class="text-[0.78rem] text-[rgba(0,0,0,0.58)]">Welcoming revert Muslims worldwide</div>
             </a>
           </div>
 
@@ -1210,28 +739,130 @@
         </div>
       </section>
 
+      <!-- CHANNELS — lazy-loaded from Supabase -->
+      <section id="channels" class="bg-[#1E3932] py-20 overflow-hidden" aria-labelledby="channels-heading">
+        <div class="max-w-[1280px] mx-auto px-8">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+            <div>
+              <div
+                class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.70)] mb-3">
+                Live Profile Channels
+              </div>
+              <h2 id="channels-heading"
+                class="text-[clamp(2rem,4vw,2.25rem)] font-bold tracking-[-0.02em] text-white leading-[1.22]">
+                Browse by Channel
+              </h2>
+              <p class="text-[rgba(255,255,255,0.70)] mt-3 max-w-[480px] text-[1rem] leading-[1.5]">
+                Follow curated profile channels by city or community — updated in real-time, like WhatsApp channels.
+              </p>
+            </div>
+            <a href="/channels.html"
+              class="inline-flex items-center gap-2 text-[0.875rem] font-semibold no-underline px-5 py-2.5 rounded-full border border-white/25 text-white hover:bg-white/10 transition flex-shrink-0 self-start sm:self-auto">
+              View All Channels
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round" class="w-[14px] h-[14px]">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+
+          <!-- Channel cards — skeletons replaced by JS -->
+          <div id="homeChannelRow" class="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory"
+            style="scrollbar-width:none;-webkit-overflow-scrolling:touch">
+            <div class="flex-shrink-0 w-[158px] h-[210px] snap-start rounded-[14px] bg-white/5 animate-pulse"></div>
+            <div class="flex-shrink-0 w-[158px] h-[210px] snap-start rounded-[14px] bg-white/5 animate-pulse"
+              style="opacity:.7"></div>
+            <div class="flex-shrink-0 w-[158px] h-[210px] snap-start rounded-[14px] bg-white/5 animate-pulse"
+              style="opacity:.5"></div>
+            <div class="flex-shrink-0 w-[158px] h-[210px] snap-start rounded-[14px] bg-white/5 animate-pulse"
+              style="opacity:.3"></div>
+          </div>
+        </div>
+      </section>
+
+      <script>
+          (function () {
+            function esc(s) {
+              return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            function renderChannels(channels) {
+              var row = document.getElementById('homeChannelRow');
+              if (!row) return;
+              if (!channels.length) {
+                document.getElementById('channels').style.display = 'none';
+                return;
+              }
+              row.style.scrollbarWidth = 'none';
+              row.innerHTML = channels.slice(0, 8).map(function (ch) {
+                return '<a href="/channel-feed.html?slug=' + encodeURIComponent(ch.slug) + '" ' +
+                  'class="flex-shrink-0 w-[158px] snap-start rounded-[14px] overflow-hidden no-underline group" ' +
+                  'style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);transition:border-color .2s">' +
+                  '<div style="aspect-ratio:1;overflow:hidden;background:rgba(165,180,252,.06)">' +
+                  (ch.cover_image
+                    ? '<img src="' + esc(ch.cover_image) + '" alt="' + esc(ch.name) + '" style="width:100%;height:100%;object-fit:cover" loading="lazy">'
+                    : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:38px">💍</div>') +
+                  '</div>' +
+                  '<div style="padding:10px 12px 14px">' +
+                  '<div style="color:#fff;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(ch.name) + '</div>' +
+                  (ch.description ? '<div style="color:rgba(255,255,255,.45);font-size:12px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(ch.description) + '</div>' : '') +
+                  '<div style="color:#a5b4fc;font-size:10px;font-weight:700;margin-top:7px;letter-spacing:.06em;text-transform:uppercase">Channel</div>' +
+                  '</div></a>';
+              }).join('');
+            }
+
+            function loadSDKAndRender() {
+              var sdk = document.createElement('script');
+              sdk.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+              sdk.onload = function () {
+                var svc = document.createElement('script');
+                svc.src = '/js/app/services/supabase-client.js';
+                svc.onload = function () {
+                  IRService.getChannels().then(renderChannels).catch(function () {
+                    document.getElementById('channels').style.display = 'none';
+                  });
+                };
+                document.head.appendChild(svc);
+              };
+              document.head.appendChild(sdk);
+            }
+
+            // Only load when section scrolls into view
+            var section = document.getElementById('channels');
+            if (section && 'IntersectionObserver' in window) {
+              var obs = new IntersectionObserver(function (entries) {
+                if (entries[0].isIntersecting) { obs.disconnect(); loadSDKAndRender(); }
+              }, { rootMargin: '400px' });
+              obs.observe(section);
+            } else if (section) {
+              loadSDKAndRender();
+            }
+          })();
+      </script>
+
       <!-- TESTIMONIALS (Tailwind) -->
-      <section aria-labelledby="testi-heading" class="bg-white">
+      <section aria-labelledby="testi-heading" style="background:#f2f0eb">
         <div class="max-w-[1280px] mx-auto px-8 py-24">
           <div class="text-center mb-14">
             <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-semibold tracking-[0.1em] uppercase text-[#4f46e5] mb-4">
+              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">
               Success Stories</div>
             <h2 id="testi-heading"
-              class="font-serif text-[clamp(2rem,4vw,3rem)] font-light text-[#1e1b4b] leading-[1.15] tracking-[-0.02em]">
-              Families Who Found<br><em class="italic text-[#4f46e5] not-italic:font-normal">Their Match Here</em>
+              class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em]">
+              Families Who Found Their Match Here
             </h2>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Card 1 -->
             <div
-              class="relative bg-[#f5f3ff] border border-[rgba(0,0,0,.06)] rounded-[12px] p-8 transition-all reveal hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,.12)]">
+              class="relative bg-white border border-[rgba(0,0,0,.06)] rounded-[12px] p-8 transition-all reveal hover:-translate-y-1 hover:shadow-[0_4px_16px_rgba(0,0,0,.12)]">
               <div
-                class="absolute top-1 left-5 text-[5rem] text-[#4f46e5] opacity-15 leading-none select-none pointer-events-none">
+                class="absolute top-1 left-5 text-[5rem] text-[#006241] opacity-10 leading-none select-none pointer-events-none">
                 "</div>
-              <div class="text-[#a5b4fc] text-[1rem] tracking-[0.1em] mb-3">★★★★★</div>
-              <p class="relative z-[1] text-[0.9rem] text-[#374151] leading-[1.75] mb-6">Alhamdulillah, my son found
+              <div class="text-[#00754A] text-[1rem] mb-3">★★★★★</div>
+              <p class="relative z-[1] text-[0.9rem] text-[rgba(0,0,0,0.87)] leading-[1.5] mb-6">Alhamdulillah, my son
+                found
                 a
                 wonderful bride through InstaRishta within 2 months. The profiles were genuine and the contact process
                 was
@@ -1239,13 +870,13 @@
               <div class="flex items-center gap-3">
                 <div
                   class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[0.9rem] shrink-0"
-                  style="background:linear-gradient(135deg,#4f46e5,#6d28d9);">AM</div>
+                  style="background:#1E3932;">AM</div>
                 <div>
-                  <div class="text-[0.85rem] font-semibold text-[#1e1b4b]">Abrar Mohammed</div>
-                  <div class="text-[0.75rem] text-[#6b7280]">Hyderabad, Telangana</div>
+                  <div class="text-[0.85rem] font-bold text-[rgba(0,0,0,0.87)]">Abrar Mohammed</div>
+                  <div class="text-[0.75rem] text-[rgba(0,0,0,0.58)]">Hyderabad, Telangana</div>
                 </div>
                 <div
-                  class="ml-auto text-[0.68rem] text-[#4f46e5] font-semibold bg-[rgba(79,70,229,.06)] rounded-full px-2 py-0.5 border border-[rgba(79,70,229,.12)]">
+                  class="ml-auto text-[0.68rem] text-[#006241] font-bold bg-[rgba(0,98,65,.06)] rounded-full px-2 py-0.5 border border-[rgba(0,98,65,.15)]">
                   ✓ Verified</div>
               </div>
             </div>
@@ -1253,22 +884,23 @@
             <div
               class="relative bg-[#f5f3ff] border border-[rgba(0,0,0,.06)] rounded-[12px] p-8 transition-all reveal reveal-delay-2 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,.12)]">
               <div
-                class="absolute top-1 left-5 text-[5rem] text-[#4f46e5] opacity-15 leading-none select-none pointer-events-none">
+                class="absolute top-1 left-5 text-[5rem] text-[#006241] opacity-10 leading-none select-none pointer-events-none">
                 "</div>
-              <div class="text-[#a5b4fc] text-[1rem] tracking-[0.1em] mb-3">★★★★★</div>
-              <p class="relative z-[1] text-[0.9rem] text-[#374151] leading-[1.75] mb-6">As a single mother looking
+              <div class="text-[#00754A] text-[1rem] mb-3">★★★★★</div>
+              <p class="relative z-[1] text-[0.9rem] text-[rgba(0,0,0,0.87)] leading-[1.5] mb-6">As a single mother
+                looking
                 for a rishta for my daughter, I was nervous. InstaRishta was respectful, private, and the profiles were
                 serious. We found a good match — may Allah keep them happy.</p>
               <div class="flex items-center gap-3">
                 <div
                   class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[0.9rem] shrink-0"
-                  style="background:#9b59b6;">SB</div>
+                  style="background:#2b5148;">SB</div>
                 <div>
-                  <div class="text-[0.85rem] font-semibold text-[#1e1b4b]">Shabana Begum</div>
-                  <div class="text-[0.75rem] text-[#6b7280]">Mumbai, Maharashtra</div>
+                  <div class="text-[0.85rem] font-bold text-[rgba(0,0,0,0.87)]">Shabana Begum</div>
+                  <div class="text-[0.75rem] text-[rgba(0,0,0,0.58)]">Mumbai, Maharashtra</div>
                 </div>
                 <div
-                  class="ml-auto text-[0.68rem] text-[#4f46e5] font-semibold bg-[rgba(79,70,229,.06)] rounded-full px-2 py-0.5 border border-[rgba(79,70,229,.12)]">
+                  class="ml-auto text-[0.68rem] text-[#006241] font-bold bg-[rgba(0,98,65,.06)] rounded-full px-2 py-0.5 border border-[rgba(0,98,65,.15)]">
                   ✓ Verified</div>
               </div>
             </div>
@@ -1276,21 +908,22 @@
             <div
               class="relative bg-[#f5f3ff] border border-[rgba(0,0,0,.06)] rounded-[12px] p-8 transition-all reveal reveal-delay-4 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,.12)]">
               <div
-                class="absolute top-1 left-5 text-[5rem] text-[#4f46e5] opacity-15 leading-none select-none pointer-events-none">
+                class="absolute top-1 left-5 text-[5rem] text-[#006241] opacity-10 leading-none select-none pointer-events-none">
                 "</div>
-              <div class="text-[#a5b4fc] text-[1rem] tracking-[0.1em] mb-3">★★★★★</div>
-              <p class="relative z-[1] text-[0.9rem] text-[#374151] leading-[1.75] mb-6">I tried Shaadi.com and was
+              <div class="text-[#00754A] text-[1rem] mb-3">★★★★★</div>
+              <p class="relative z-[1] text-[0.9rem] text-[rgba(0,0,0,0.87)] leading-[1.5] mb-6">I tried Shaadi.com and
+                was
                 frustrated by the noise. InstaRishta is different — Muslim only, clean profiles, and real rishtas. Found
                 my nikah match in just 6 weeks. Subhan'Allah!</p>
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-[0.9rem] shrink-0"
-                  style="background:linear-gradient(135deg,#4338ca,#4f46e5);">ZA</div>
+                  style="background:#006241;color:white;">ZA</div>
                 <div>
-                  <div class="text-[0.85rem] font-semibold text-[#1e1b4b]">Zainab Ahmed</div>
-                  <div class="text-[0.75rem] text-[#6b7280]">Bengaluru, Karnataka</div>
+                  <div class="text-[0.85rem] font-bold text-[rgba(0,0,0,0.87)]">Zainab Ahmed</div>
+                  <div class="text-[0.75rem] text-[rgba(0,0,0,0.58)]">Bengaluru, Karnataka</div>
                 </div>
                 <div
-                  class="ml-auto text-[0.68rem] text-[#4f46e5] font-semibold bg-[rgba(79,70,229,.06)] rounded-full px-2 py-0.5 border border-[rgba(79,70,229,.12)]">
+                  class="ml-auto text-[0.68rem] text-[#006241] font-bold bg-[rgba(0,98,65,.06)] rounded-full px-2 py-0.5 border border-[rgba(0,98,65,.15)]">
                   ✓ Verified</div>
               </div>
             </div>
@@ -1299,22 +932,20 @@
       </section>
 
       <!-- FAQ (Tailwind) -->
-      <section id="faq" aria-labelledby="faq-heading" class="bg-[#eef2ff]">
+      <section id="faq" aria-labelledby="faq-heading" style="background:#edebe9">
         <div
           class="max-w-[1280px] mx-auto px-8 py-24 grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-12 md:gap-20 items-start">
           <div>
             <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-semibold tracking-[0.1em] uppercase text-[#4f46e5] mb-4">
+              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">
               FAQ</div>
             <h2 id="faq-heading"
-              class="font-serif text-[clamp(2rem,4vw,3rem)] font-light text-[#1e1b4b] leading-[1.15] tracking-[-0.02em] mb-4">
-              Questions About<br><em class="italic text-[#4f46e5] not-italic:font-normal">InstaRishta?</em></h2>
-            <p class="text-[1.05rem] text-[#6b7280] max-w-[560px] leading-[1.7]">Everything you need to know
-              about
+              class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
+              Questions About InstaRishta?</h2>
+            <p class="text-[1rem] text-[rgba(0,0,0,0.58)] max-w-[560px] leading-[1.5]">Everything you need to know about
               finding a halal match on InstaRishta, answered clearly.</p>
             <div class="mt-8">
-              <a href="/profiles.html" class="btn-hero inline-flex items-center"
-                style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 8px 32px rgba(245,158,11,.38);">
+              <a href="/profiles.html" class="btn-hero inline-flex items-center">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                   stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8" />
@@ -1359,8 +990,8 @@
               <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a-5">Is InstaRishta free to
                 use?</button>
               <div class="faq-a" id="faq-a-5" aria-hidden="true">Yes — browsing all profiles on InstaRishta is
-                completely free. You can also submit your profile for free through our secure private submission form.
-                No hidden subscription fees.</div>
+                completely free. You can also submit your BioData through our secure private submission form.
+              </div>
             </div>
             <div class="faq-item">
               <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a-6">Can I post a rishta
@@ -1374,24 +1005,22 @@
       </section>
 
       <!-- CTA BANNER (Tailwind) -->
-      <section aria-labelledby="cta-heading" class="relative overflow-hidden">
-        <div class="absolute inset-0 opacity-[0.06] pointer-events-none geo-pattern"></div>
-        <div class="relative z-[2] bg-[linear-gradient(135deg,#1e1b4b_0%,#261860_100%)] py-28 px-8">
+      <section aria-labelledby="cta-heading" class="relative overflow-hidden bg-[#00754A]">
+        <div class="absolute inset-0 opacity-[0.04] pointer-events-none geo-pattern"></div>
+        <div class="relative z-[2] py-28 px-8">
           <div class="max-w-[900px] mx-auto text-center">
-            <div class="font-arab text-[2rem] text-[rgba(165,180,252,.3)] mb-4"
-              aria-label="And We created you in pairs">
+            <div class="font-arab text-[2rem] text-[#cba258] mb-4" aria-label="And We created you in pairs">
               وَخَلَقْنَاكُمْ أَزْوَاجًا</div>
             <h2 id="cta-heading"
-              class="font-serif text-white text-[clamp(2.2rem,5vw,3.5rem)] font-light tracking-[-0.02em] leading-[1.15] mb-5">
-              Your Halal Match<br>Is <em class="italic text-[#c7d2fe] not-italic:font-normal">Waiting</em> for
-              You.
+              class="text-white text-[clamp(2rem,5vw,2.25rem)] font-bold tracking-[-0.02em] leading-[1.22] mb-5">
+              Your Halal Match Is Waiting for You.
             </h2>
-            <p class="text-white/60 text-[1.05rem] max-w-[520px] mx-auto leading-[1.7] mb-10">Join hundreds of Muslim
+            <p class="text-[rgba(255,255,255,0.70)] text-[1rem] max-w-[520px] mx-auto leading-[1.5] mb-10">Join hundreds
+              of Muslim
               families who found verified, serious marriage proposals on InstaRishta. Begin your nikah journey today —
               free, private, and family-approved.</p>
             <div class="flex justify-center flex-wrap gap-4">
-              <a href="/profiles.html" class="btn-hero inline-flex items-center"
-                style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 8px 32px rgba(245,158,11,.38);">
+              <a href="/profiles.html" class="btn-hero inline-flex items-center" style="background:#fff;color:#000;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                   stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8" />
@@ -1400,10 +1029,10 @@
                 Browse Profiles — Free
               </a>
               <a href="/post-your-ad.html"
-                class="inline-flex items-center text-white/80 text-[1rem] font-medium no-underline px-6 py-4 rounded-[12px] border border-white/20 hover:text-white hover:border-white/50 transition">📝
+                class="inline-flex items-center text-white/90 text-[1rem] font-medium no-underline px-6 py-3.5 rounded-full border border-white/25 hover:bg-white/10 hover:border-white/50 transition">📝
                 Post Your Rishta Profile</a>
             </div>
-            <div class="mt-6 text-white/35 text-[0.8rem] flex items-center justify-center gap-3">
+            <div class="mt-6 text-white text-[0.8rem] flex items-center justify-center gap-3">
               <span class="before:content-['✓_'] before:text-[var(--mint)]">Free to Browse</span>
               <span class="before:content-['✓_'] before:text-[var(--mint)]">Muslim Only</span>
               <span class="before:content-['✓_'] before:text-[var(--mint)]">Family-First Contact</span>
@@ -1416,7 +1045,7 @@
     </main>
 
     <!-- FOOTER (Tailwind) -->
-    <footer role="contentinfo" class="bg-[#1e1b4b] text-white/55">
+    <footer role="contentinfo" class="bg-[#141413] text-white/55">
       <div
         class="max-w-[1280px] mx-auto px-8 pt-16 pb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
         <div>
@@ -1430,20 +1059,20 @@
                 <path d="M43 22h1" stroke="white" stroke-width="4.5" stroke-linecap="round" />
               </svg>
             </div> -->
-            <span class="font-serif text-[1.3rem] font-semibold text-white tracking-[-0.01em]">Insta<em
-                class="not-italic text-[#a5b4fc]">Rishta</em></span>
+            <span class="text-[1.3rem] font-bold text-white tracking-[-0.01em]">Insta<em
+                class="not-italic text-white/70">Rishta</em></span>
           </a>
           <p class="text-[0.85rem] leading-[1.65] mt-3 max-w-[240px]">Trusted Muslim matrimony and nikah matchmaking
             platform. Serving the Ummah with halal, family-first proposals since 2024.</p>
           <div class="flex gap-2 mt-4">
             <a href="https://www.instagram.com/instarishta/"
-              class="w-9 h-9 rounded-[10px] bg-white/5 border border-white/10 flex items-center justify-center text-white/60 no-underline text-[0.85rem] transition hover:bg-[rgba(79,70,229,.25)] hover:border-[rgba(165,180,252,.3)] hover:text-[#c7d2fe]"
+              class="w-9 h-9 rounded-[10px] bg-white/5 border border-white/10 flex items-center justify-center text-white/60 no-underline text-[0.85rem] transition hover:bg-white/10 hover:border-white/30 hover:text-white"
               target="_blank" rel="noopener">📷</a>
             <a href="https://telegram.me/liverishteyofficial"
-              class="w-9 h-9 rounded-[10px] bg-white/5 border border-white/10 flex items-center justify-center text-white/60 no-underline text-[0.85rem] transition hover:bg-[rgba(79,70,229,.25)] hover:border-[rgba(165,180,252,.3)] hover:text-[#c7d2fe]"
+              class="w-9 h-9 rounded-[10px] bg-white/5 border border-white/10 flex items-center justify-center text-white/60 no-underline text-[0.85rem] transition hover:bg-white/10 hover:border-white/30 hover:text-white"
               target="_blank" rel="noopener">✈️</a>
             <a href="https://wa.me/918886667121"
-              class="w-9 h-9 rounded-[10px] bg-white/5 border border-white/10 flex items-center justify-center text-white/60 no-underline text-[0.85rem] transition hover:bg-[rgba(79,70,229,.25)] hover:border-[rgba(165,180,252,.3)] hover:text-[#c7d2fe]"
+              class="w-9 h-9 rounded-[10px] bg-white/5 border border-white/10 flex items-center justify-center text-white/60 no-underline text-[0.85rem] transition hover:bg-white/10 hover:border-white/30 hover:text-white"
               target="_blank" rel="noopener">💬</a>
           </div>
         </div>
@@ -1451,31 +1080,33 @@
         <div>
           <h5 class="text-[0.8rem] font-semibold tracking-[0.08em] uppercase text-white/85 mb-4">Platform</h5>
           <ul class="list-none flex flex-col gap-2.5">
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="/profiles.html">Browse
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/profiles.html">Browse
                 Profiles</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="/post-your-ad.html">Post
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/post-your-ad.html">Post
                 Your Profile</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="#how-it-works">How It
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="#how-it-works">How It
                 Works</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="#why-us">Why
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="#why-us">Why
                 InstaRishta</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="#faq">FAQ</a>
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="#faq">FAQ</a>
             </li>
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/channels.html">Browse
+                Channels</a></li>
           </ul>
         </div>
 
         <div>
           <h5 class="text-[0.8rem] font-semibold tracking-[0.08em] uppercase text-white/85 mb-4">Communities</h5>
           <ul class="list-none flex flex-col gap-2.5">
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="/profiles.html">Sunni
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/profiles.html">Sunni
                 Profiles</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]"
-                href="/profiles.html">Hyderabadi Rishte</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="/profiles.html">NRI
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/profiles.html">Hyderabadi
+                Rishte</a></li>
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/profiles.html">NRI
                 Proposals</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="/profiles.html">Hafiz
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/profiles.html">Hafiz
                 &amp; Alim</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]" href="/profiles.html">Urgent
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]" href="/profiles.html">Urgent
                 Rishte</a></li>
           </ul>
         </div>
@@ -1483,15 +1114,15 @@
         <div>
           <h5 class="text-[0.8rem] font-semibold tracking-[0.08em] uppercase text-white/85 mb-4">Legal</h5>
           <ul class="list-none flex flex-col gap-2.5">
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]"
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]"
                 href="https://InstaRishta.me/privacy">Privacy Policy</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]"
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]"
                 href="https://InstaRishta.me/terms">Terms &amp; Conditions</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]"
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]"
                 href="https://InstaRishta.me/refund-policy">Refund Policy</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]"
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]"
                 href="/about-instarishta.html">About InstaRishta</a></li>
-            <li><a class="text-white/45 hover:text-[#c7d2fe] no-underline text-[0.85rem]"
+            <li><a class="text-white/45 hover:text-white no-underline text-[0.85rem]"
                 href="https://wa.me/918886667121">Contact Us</a></li>
           </ul>
         </div>
@@ -1500,12 +1131,11 @@
         class="max-w-[1280px] mx-auto px-8 py-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
         <p class="text-[0.78rem]">© 2025 InstaRishta Matrimonial &amp; Matchmaking. All rights reserved.</p>
         <div class="flex gap-6">
-          <a class="text-white/40 hover:text-[#c7d2fe] no-underline text-[0.78rem]"
+          <a class="text-white/40 hover:text-white no-underline text-[0.78rem]"
             href="https://InstaRishta.me/privacy">Privacy</a>
-          <a class="text-white/40 hover:text-[#c7d2fe] no-underline text-[0.78rem]"
+          <a class="text-white/40 hover:text-white no-underline text-[0.78rem]"
             href="https://InstaRishta.me/terms">Terms</a>
-          <a class="text-white/40 hover:text-[#c7d2fe] no-underline text-[0.78rem]"
-            href="/about-instarishta.html">About</a>
+          <a class="text-white/40 hover:text-white no-underline text-[0.78rem]" href="/about-instarishta.html">About</a>
         </div>
       </div>
     </footer>
