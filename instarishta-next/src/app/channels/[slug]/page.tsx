@@ -228,8 +228,13 @@ function AudioPlayer({ url, title, caption, onPlayAttempt }: {
 
   const skip = (secs: number) => {
     const a = audioRef.current ?? init();
-    a.currentTime = Math.max(0, Math.min(duration || 0, a.currentTime + secs));
-    setCurrent(a.currentTime);
+    const dur = (isFinite(a.duration) && a.duration > 0) ? a.duration : duration;
+    const newTime = Math.max(0, Math.min(dur, a.currentTime + secs));
+    const wasPlaying = !a.paused;
+    if (wasPlaying) a.pause();
+    a.currentTime = newTime;
+    setCurrent(newTime);
+    if (wasPlaying) a.play().catch(() => {});
   };
 
   const seek = (e: React.ChangeEvent<HTMLInputElement>) => {

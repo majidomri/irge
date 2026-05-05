@@ -125,7 +125,6 @@ export default function MagicRings({
       try {
         renderer = new THREE.WebGLRenderer({ alpha: true });
       } catch { return; }
-      if (!renderer.capabilities.isWebGL2) { renderer.dispose(); return; }
 
       renderer.setClearColor(0x000000, 0);
       mount.appendChild(renderer.domElement);
