@@ -14,6 +14,7 @@ import TextType from '@/components/ui/TextType';
 import ClickSpark from '@/components/ui/ClickSpark';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import AuthModal from '@/components/AuthModal';
+import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 
@@ -51,8 +52,17 @@ function StoryViewer({
   const [idx, setIdx]         = useState(initialIdx);
   const [paused, setPaused]   = useState(false);
   const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startRef  = useRef(0);    // when current timer segment started
-  const elapsedRef = useRef(0);  // ms elapsed before current segment
+  const startRef  = useRef(0);
+  const elapsedRef = useRef(0);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, []);
 
   const clearTimer = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
 
@@ -336,6 +346,17 @@ function PostModal({
   const swipeRef    = useRef({ x: 0, y: 0, inCar: false });
   const postIdx     = allPosts.indexOf(post);
 
+  // Lock body scroll while modal is mounted
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+      document.documentElement.style.overflow = '';
+    };
+  }, []);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -382,8 +403,8 @@ function PostModal({
       )}
 
       {/* Top bar */}
-      <div className="relative z-10 flex items-center gap-3 px-4 pt-11 pb-3 shrink-0"
-        style={{ background: 'linear-gradient(to bottom,rgba(0,0,0,0.65) 0%,transparent 100%)' }}>
+      <div className="relative z-10 flex items-center gap-3 px-4 pb-3 shrink-0"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)', background: 'linear-gradient(to bottom,rgba(0,0,0,0.65) 0%,transparent 100%)' }}>
         <button onClick={onClose}
           className="w-9 h-9 rounded-full flex items-center justify-center text-xl border-0"
           style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}>‹</button>
@@ -399,9 +420,9 @@ function PostModal({
         )}
       </div>
 
-      {/* ── Image carousel (60 % of viewport height) ── */}
+      {/* ── Image carousel — shorter when audio also present so player fits without scrolling ── */}
       {hasImg && (
-        <div ref={carouselRef} className="relative z-10 shrink-0 overflow-hidden" style={{ height: '60vh' }}>
+        <div ref={carouselRef} className="relative z-10 shrink-0 overflow-hidden" style={{ height: isAudio ? '42vh' : '58vh' }}>
           <div ref={scrollRef}
             className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
             style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
@@ -419,7 +440,7 @@ function PostModal({
       )}
 
       {/* ── Scrollable content ── */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-4 pb-2" style={{ scrollbarWidth: 'none' }}>
+      <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-3 pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
         {/* Carousel dots — below image, above text */}
         {imgs.length > 1 && (
           <div className="flex justify-center gap-1.5 mb-4">
@@ -477,8 +498,8 @@ function PostModal({
       </div>
 
       {/* ── Bottom bar ── */}
-      <div className="relative z-10 px-5 py-4 shrink-0"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.4)' }}>
+      <div className="relative z-10 px-5 py-3 shrink-0"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.4)' }}>
         <div className="flex items-center gap-4">
           <button onClick={() => onLike(post.id)}
             className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
@@ -681,6 +702,9 @@ export default function ChannelFeedPage() {
           </div>
         )}
       </div>
+
+      {/* ── Featured profiles spotlight ── */}
+      <FeaturedCarousel placement="channels" label="Spotlight Profiles" />
 
       {/* ── Category filter chips ── */}
       {posts.length > 0 && (

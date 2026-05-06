@@ -23,6 +23,20 @@ export const USAGE_LIMITS = {
 
 export type UsageFeature = keyof typeof USAGE_LIMITS;
 
+// ── Registered flag ───────────────────────────────────────────────────────────
+// Set permanently when a user signs in for the first time. Prevents signed-out
+// users from reusing the 3 free anon credits after they already have an account.
+const REGISTERED_KEY = 'ir_registered';
+
+export function markRegistered() {
+  try { localStorage.setItem(REGISTERED_KEY, '1'); } catch {}
+}
+
+export function isRegistered(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(REGISTERED_KEY) === '1';
+}
+
 // ── Anonymous (localStorage) usage ───────────────────────────────────────────
 const LS_KEY = (f: UsageFeature) => `ir_anon_${f}`;
 
@@ -43,19 +57,26 @@ export function anonRecordUsage(feature: UsageFeature) {
 }
 
 export function anonRemaining(feature: UsageFeature): number {
+  if (isRegistered()) return 0; // once you've had an account, no free anon credits
   const limit = USAGE_LIMITS[feature].anon;
   if (limit < 0) return Infinity;
   return Math.max(0, limit - anonGetUsage(feature).length);
 }
 
 // ── Authenticated user DB usage ───────────────────────────────────────────────
-export async function dbRecordUsage(feature: UsageFeature, userId: string) {
-  const client = getAuthClient();
-  await client.from('ir_user_usage').insert({ user_id: userId, feature });
-}
 
 export async function dbGetRemaining(feature: UsageFeature, userId: string): Promise<number> {
   const client = getAuthClient();
+  if (feature === 'contact') {
+    // Balance-based: read actual credit balance from ir_user_profiles
+    const { data } = await client
+      .from('ir_user_profiles')
+      .select('contact_credits')
+      .eq('id', userId)
+      .single();
+    return data?.contact_credits ?? 0;
+  }
+  // Other features: rolling hourly window
   const limit = USAGE_LIMITS[feature].free;
   if (limit < 0) return Infinity;
   const cutoff = new Date(Date.now() - USAGE_LIMITS[feature].windowMs).toISOString();
@@ -66,6 +87,16 @@ export async function dbGetRemaining(feature: UsageFeature, userId: string): Pro
     .eq('feature', feature)
     .gte('used_at', cutoff);
   return Math.max(0, limit - (count ?? 0));
+}
+
+export async function dbRecordUsage(feature: UsageFeature, userId: string) {
+  const client = getAuthClient();
+  if (feature === 'contact') {
+    // Atomically decrement the credit balance via SECURITY DEFINER RPC
+    await client.rpc('ir_decrement_credit');
+    return;
+  }
+  await client.from('ir_user_usage').insert({ user_id: userId, feature });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

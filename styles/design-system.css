@@ -1,0 +1,440 @@
+/* ================================================================
+   INSTARISHTA DESIGN SYSTEM v1.0
+   ─────────────────────────────────────────────────────────────────
+   Surface & BG ───── Mastercard   (#F3F0EE canvas, #FCFBFA lifted,
+                                    #FFFFFF white, #F4F4F4 bone,
+                                    #141413 ink)
+   Section Colors ─── Starbucks    (#006241 hero, #1E3932 dark,
+                                    #2b5148 mid, #f2f0eb warm,
+                                    #edebe9 ceramic)
+   Typography ─────── Uber/Inter   (52 36 32 24 20 18 16 14 12 scale,
+                                    700 display, 400-500 body)
+   Buttons ────────── Uber         (999px pill, black primary,
+                                    white secondary, #efefef chip)
+   Chip Nav Row ───── Uber         (.ds-chip-row)
+   Spacing ────────── Uber         (4 6 8 10 12 14 16 18 20 24 32 ...)
+   Card Examples ──── Mastercard   (8px card, 40px hero frame,
+                                    50% portrait circle)
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400;1,14..32,500&display=swap');
+
+/* ================================================================
+   TOKENS
+   ================================================================ */
+:root {
+  /* ── Surface & Background (Mastercard) ── */
+  --ds-canvas:       #F3F0EE;   /* warm putty page canvas */
+  --ds-lifted:       #FCFBFA;   /* raised / nested section */
+  --ds-white:        #FFFFFF;   /* nav, cards, modals */
+  --ds-bone:         #F4F4F4;   /* component sub-region */
+  --ds-ink:          #141413;   /* footer bg & primary CTAs */
+  --ds-charcoal:     #262627;
+  --ds-slate:        #696969;   /* muted secondary text */
+  --ds-dust:         #D1CDC7;   /* disabled / whisper text */
+
+  /* ── Section Background Colors (Starbucks) ── */
+  --ds-sec-hero:     #006241;   /* Starbucks Green — hero */
+  --ds-sec-dark:     #1E3932;   /* House Green — dark bands */
+  --ds-sec-mid:      #2b5148;   /* Green Uplift — mid-dark */
+  --ds-sec-warm:     #f2f0eb;   /* Neutral Warm */
+  --ds-sec-ceramic:  #edebe9;   /* Ceramic — zone separator */
+  --ds-sec-strip:    #000000;   /* Black — utility strip */
+
+  /* Text on light (Starbucks) */
+  --ds-on-light:      rgba(0, 0, 0, 0.87);
+  --ds-on-light-soft: rgba(0, 0, 0, 0.58);
+  /* Text on dark (Starbucks) */
+  --ds-on-dark:       rgba(255, 255, 255, 1.00);
+  --ds-on-dark-soft:  rgba(255, 255, 255, 0.70);
+
+  /* Brand green */
+  --ds-brand:        #006241;
+  --ds-brand-lt:     #00754A;
+
+  /* ── Typography Scale (Uber / Inter) ── */
+  --ds-font:         'Inter', system-ui, 'Helvetica Neue', Arial, sans-serif;
+
+  --ds-sz-display:   3.25rem;   /* 52px  hero */
+  --ds-sz-h1:        2.25rem;   /* 36px  section */
+  --ds-sz-h2:        2rem;      /* 32px  card title */
+  --ds-sz-h3:        1.5rem;    /* 24px  sub-heading */
+  --ds-sz-h4:        1.25rem;   /* 20px  compact heading */
+  --ds-sz-nav:       1.125rem;  /* 18px  nav / UI */
+  --ds-sz-body:      1rem;      /* 16px  body / button */
+  --ds-sz-caption:   0.875rem;  /* 14px  caption */
+  --ds-sz-micro:     0.75rem;   /* 12px  fine print */
+
+  --ds-lh-display:   1.23;
+  --ds-lh-h1:        1.22;
+  --ds-lh-h2:        1.25;
+  --ds-lh-h3:        1.33;
+  --ds-lh-body:      1.50;
+
+  /* ── Spacing Scale (Uber) ── */
+  --ds-sp-1:    4px;
+  --ds-sp-2:    6px;
+  --ds-sp-3:    8px;
+  --ds-sp-4:    10px;
+  --ds-sp-5:    12px;
+  --ds-sp-6:    14px;
+  --ds-sp-7:    16px;
+  --ds-sp-8:    18px;
+  --ds-sp-9:    20px;
+  --ds-sp-10:   24px;
+  --ds-sp-11:   32px;
+  --ds-sp-12:   48px;
+  --ds-sp-13:   64px;
+  --ds-sp-14:   96px;
+
+  /* ── Border Radius (Mastercard + Uber) ── */
+  --ds-r-card:     8px;    /* Uber standard card */
+  --ds-r-feature:  12px;   /* Uber featured card */
+  --ds-r-hero:     40px;   /* Mastercard hero frame (stadium) */
+  --ds-r-pill:     999px;  /* full pill — buttons, chips, nav */
+  --ds-r-circle:   50%;    /* portrait / avatar */
+
+  /* ── Elevation (Mastercard atmospheric) ── */
+  --ds-sh-nav:     rgba(0,0,0,0.04) 0px 4px 24px 0px;
+  --ds-sh-card:    rgba(0,0,0,0.08) 0px 24px 48px 0px;
+  --ds-sh-std:     rgba(0,0,0,0.12) 0px 4px 16px 0px;
+  --ds-sh-float:   rgba(0,0,0,0.16) 0px 2px 8px 0px;
+}
+
+/* ================================================================
+   BASE
+   ================================================================ */
+body {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-body);
+  line-height: var(--ds-lh-body);
+}
+
+/* ================================================================
+   TYPOGRAPHY CLASSES  (Uber scale)
+   ================================================================ */
+.ds-display {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-display);
+  font-weight: 700;
+  line-height: var(--ds-lh-display);
+  letter-spacing: -0.02em;
+}
+.ds-h1 {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-h1);
+  font-weight: 700;
+  line-height: var(--ds-lh-h1);
+}
+.ds-h2 {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-h2);
+  font-weight: 700;
+  line-height: var(--ds-lh-h2);
+}
+.ds-h3 {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-h3);
+  font-weight: 700;
+  line-height: var(--ds-lh-h3);
+}
+.ds-h4 {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-h4);
+  font-weight: 700;
+  line-height: 1.40;
+}
+.ds-eyebrow {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-caption);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ds-body {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-body);
+  font-weight: 400;
+  line-height: var(--ds-lh-body);
+}
+.ds-caption {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-caption);
+  font-weight: 400;
+  line-height: 1.43;
+}
+.ds-micro {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-micro);
+  font-weight: 400;
+  line-height: 1.67;
+}
+
+/* ================================================================
+   BUTTON VARIANTS  (Uber — 999px pill)
+   ================================================================ */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-body);
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+/* Primary — black pill */
+.ds-btn-primary {
+  background: #000000;
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: var(--ds-r-pill);
+}
+.ds-btn-primary:hover { background: #1a1a1a; transform: translateY(-1px); }
+.ds-btn-primary:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Secondary — white pill */
+.ds-btn-secondary {
+  background: #ffffff;
+  color: #000000;
+  padding: 12px 24px;
+  border-radius: var(--ds-r-pill);
+}
+.ds-btn-secondary:hover { background: #e2e2e2; }
+
+/* Brand — green pill */
+.ds-btn-brand {
+  background: var(--ds-brand-lt);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: var(--ds-r-pill);
+}
+.ds-btn-brand:hover { background: var(--ds-brand); transform: translateY(-1px); }
+
+/* Ghost — for dark section backgrounds */
+.ds-btn-ghost {
+  background: transparent;
+  color: rgba(255,255,255,0.80);
+  padding: 12px 24px;
+  border-radius: var(--ds-r-pill);
+  border: 1.5px solid rgba(255,255,255,0.28);
+}
+.ds-btn-ghost:hover { border-color: rgba(255,255,255,0.60); color: #ffffff; }
+
+/* Outline — for light section backgrounds */
+.ds-btn-outline {
+  background: transparent;
+  color: #000000;
+  padding: 12px 24px;
+  border-radius: var(--ds-r-pill);
+  border: 1.5px solid rgba(0,0,0,0.28);
+}
+.ds-btn-outline:hover { border-color: #000000; }
+
+/* ================================================================
+   CHIP / FILTER NAVIGATION  (Uber)
+   ================================================================ */
+
+/* Scrollable horizontal chip row */
+.ds-chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.ds-chip-row::-webkit-scrollbar { display: none; }
+
+/* Wrapping chip set */
+.ds-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Base chip */
+.ds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #efefef;
+  color: #000000;
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-caption);
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: var(--ds-r-pill);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ds-chip:hover                  { background: #e2e2e2; }
+.ds-chip.active,
+.ds-chip[aria-selected="true"]  { background: #000000; color: #ffffff; }
+.ds-chip.active:hover           { background: #1a1a1a; }
+
+/* Chips on dark backgrounds */
+.ds-chip-dark {
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.ds-chip-dark:hover             { background: rgba(255,255,255,0.18); }
+.ds-chip-dark.active            { background: #ffffff; color: #000000; }
+
+/* ================================================================
+   CARD EXAMPLES  (Mastercard)
+   ================================================================ */
+
+/* Standard content card (Uber 8px) */
+.ds-card {
+  background: var(--ds-white);
+  border-radius: var(--ds-r-card);
+  box-shadow: var(--ds-sh-std);
+  overflow: hidden;
+}
+
+/* Featured card (Uber 12px) */
+.ds-card-featured {
+  background: var(--ds-white);
+  border-radius: var(--ds-r-feature);
+  box-shadow: var(--ds-sh-card);
+  overflow: hidden;
+}
+
+/* Hero / Stadium frame (Mastercard 40px) */
+.ds-card-hero {
+  background: #000000;
+  border-radius: var(--ds-r-hero);
+  box-shadow: var(--ds-sh-card);
+  overflow: hidden;
+}
+
+/* Portrait circle (Mastercard) */
+.ds-portrait {
+  border-radius: var(--ds-r-circle);
+  overflow: hidden;
+  aspect-ratio: 1;
+}
+.ds-portrait img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Dark glass card (for dark sections) */
+.ds-card-glass {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--ds-r-feature);
+  transition: background 0.2s, transform 0.2s;
+}
+.ds-card-glass:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
+
+/* Light card on warm canvas */
+.ds-card-light {
+  background: var(--ds-white);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: var(--ds-r-feature);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.ds-card-light:hover { transform: translateY(-2px); box-shadow: var(--ds-sh-card); }
+
+/* ================================================================
+   SECTION SURFACE HELPERS  (Starbucks + Mastercard)
+   ================================================================ */
+.ds-sec-canvas   { background-color: var(--ds-canvas);      color: var(--ds-on-light); }
+.ds-sec-warm     { background-color: var(--ds-sec-warm);    color: var(--ds-on-light); }
+.ds-sec-ceramic  { background-color: var(--ds-sec-ceramic); color: var(--ds-on-light); }
+.ds-sec-lifted   { background-color: var(--ds-lifted);      color: var(--ds-on-light); }
+.ds-sec-hero     { background-color: var(--ds-sec-hero);    color: var(--ds-on-dark); }
+.ds-sec-dark     { background-color: var(--ds-sec-dark);    color: var(--ds-on-dark); }
+.ds-sec-mid      { background-color: var(--ds-sec-mid);     color: var(--ds-on-dark); }
+.ds-sec-ink      { background-color: var(--ds-ink);         color: var(--ds-on-dark); }
+.ds-sec-strip    { background-color: var(--ds-sec-strip);   color: var(--ds-on-dark); }
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+
+/* Dark sticky nav (Starbucks House Green) */
+.ds-nav-dark {
+  background: rgba(30, 57, 50, 0.97);
+  backdrop-filter: blur(20px);
+}
+
+/* Mastercard floating pill nav */
+.ds-nav-pill {
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  border-radius: var(--ds-r-pill);
+  box-shadow: var(--ds-sh-nav);
+  padding: 12px 32px;
+}
+
+/* ================================================================
+   BADGE / TAG
+   ================================================================ */
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--ds-sz-micro);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--ds-r-pill);
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ds-badge-green {
+  background: rgba(0,98,65,0.10);
+  color: var(--ds-brand);
+  border: 1px solid rgba(0,98,65,0.18);
+}
+.ds-badge-dark {
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+/* ================================================================
+   FOOTER  (Mastercard ink black)
+   ================================================================ */
+.ds-footer {
+  background: var(--ds-ink);
+  color: rgba(255,255,255,0.55);
+}
+.ds-footer a { color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.15s; }
+.ds-footer a:hover { color: #ffffff; }
+.ds-footer-col-head {
+  font-family: var(--ds-font);
+  font-size: var(--ds-sz-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.38);
+  margin-bottom: 12px;
+}
+
+/* ================================================================
+   CONTAINER
+   ================================================================ */
+.ds-container {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+@media (max-width: 640px) {
+  .ds-container { padding-left: 16px; padding-right: 16px; }
+}

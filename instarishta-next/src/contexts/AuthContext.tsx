@@ -1,7 +1,8 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
-import { getAuthClient } from '@/lib/auth-client';
+import { getAuthClient, markRegistered } from '@/lib/auth-client';
+import { logIrisEvent, initIris } from '@/lib/iris';
 
 interface AuthContextValue {
   user:    User | null;
@@ -21,15 +22,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const client = getAuthClient();
+
+    // On mount: if no session, run IRIS anon init (fingerprint + account check)
     client.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      if (data.session?.user) {
+        markRegistered();
+        logIrisEvent('login', { source: 'session_restore' }).catch(() => { /* ignore */ });
+      } else {
+        initIris().catch(() => { /* ignore */ });
+      }
       setLoading(false);
     });
-    const { data: { subscription } } = client.auth.onAuthStateChange((_event, s) => {
+
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
+      if (s?.user) {
+        markRegistered();
+        // Distinguish first-ever signup from subsequent logins
+        const irisEvent = event === 'SIGNED_IN' ? 'login' : 'login';
+        logIrisEvent(irisEvent, {
+          email:    s.user.email,
+          provider: s.user.app_metadata?.provider,
+          event,
+        }).catch(() => { /* ignore */ });
+      } else if (event === 'SIGNED_OUT') {
+        logIrisEvent('signout').catch(() => { /* ignore */ });
+      }
     });
+
     return () => subscription.unsubscribe();
   }, []);
 

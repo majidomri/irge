@@ -24,7 +24,8 @@ export function useUsageLimit(feature: UsageFeature): UsageLimitState {
   const limit = isAnon ? USAGE_LIMITS[feature].anon : USAGE_LIMITS[feature].free;
   const unlimited = limit < 0;
 
-  const [remaining, setRemaining] = useState<number>(unlimited ? Infinity : limit);
+  // Auth'd users start at 0 — real value loads from DB via refresh()
+  const [remaining, setRemaining] = useState<number>(unlimited ? Infinity : (isAnon ? limit : 0));
   const [resetLbl,  setResetLbl]  = useState('');
   const refreshing = useRef(false);
 
@@ -42,7 +43,7 @@ export function useUsageLimit(feature: UsageFeature): UsageLimitState {
         } else {
           const rem = await dbGetRemaining(feature, user.id);
           setRemaining(rem);
-          setResetLbl(rem <= 0 ? '1h' : '');
+          setResetLbl('');
         }
       }
     } finally {

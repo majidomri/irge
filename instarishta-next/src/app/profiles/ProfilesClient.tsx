@@ -8,6 +8,9 @@ import ClickSpark from '@/components/ui/ClickSpark';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { USAGE_LIMITS } from '@/lib/auth-client';
 import AuthModal from '@/components/AuthModal';
+import { logContact } from '@/lib/contact-log';
+import { logIrisEvent } from '@/lib/iris';
+import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 
@@ -212,10 +215,10 @@ function AudioBtn({ url }: { url?: string }) {
 // ── ContactModal ──────────────────────────────────────────────────────────────
 
 function ContactModal({
-  profile, num, onClose, remaining, resetLabel, contactLimit,
+  profile, num, onClose, remaining, resetLabel, contactLimit, isAnon,
 }: {
   profile: Profile; num: number; onClose: () => void;
-  remaining: number; resetLabel: string; contactLimit: number;
+  remaining: number; resetLabel: string; contactLimit: number; isAnon: boolean;
 }) {
 
   const text = encodeURIComponent(
@@ -237,7 +240,7 @@ function ContactModal({
         <div className="flex items-center justify-between rounded-xl px-3 py-2 mb-4"
           style={{ background: remaining <= 3 ? '#FFF3EE' : '#F3F0EE' }}>
           <span className="text-xs font-medium" style={{ color: remaining <= 3 ? '#CF4500' : '#696969' }}>
-            {remaining}/{contactLimit} contact{remaining !== 1 ? 's' : ''} left this hour
+            {`${remaining} contact credit${remaining !== 1 ? 's' : ''} remaining`}
           </span>
           {resetLabel && (
             <span className="text-[10px] font-semibold" style={{ color: '#A0A0A0' }}>resets in {resetLabel}</span>
@@ -251,12 +254,14 @@ function ContactModal({
         </div>
         <div className="flex flex-col gap-3">
           <a href={`https://wa.me/${BUSINESS_WA}?text=${text}`} target="_blank" rel="noopener noreferrer"
+            onClick={() => logContact({ type: 'whatsapp', number: BUSINESS_WA, profileNum: num, profileTitle: profile.title })}
             className="flex items-center justify-center gap-2.5 rounded-full py-3.5 text-sm font-bold"
             style={{ background: '#25D366', color: '#fff' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             Chat on WhatsApp
           </a>
           <a href={`tel:${BUSINESS_WA}`}
+            onClick={() => logContact({ type: 'call', number: BUSINESS_WA, profileNum: num, profileTitle: profile.title })}
             className="flex items-center justify-center gap-2 rounded-full py-3 text-sm font-bold border"
             style={{ borderColor: '#D1CDC7', color: '#141413' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 01.22 4.05 2 2 0 012.2 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.91a16 16 0 006.28 6.28l1.48-1.48a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
@@ -469,7 +474,7 @@ function ProfileCard({
       {limitToast && (
         <div data-no-capture className="absolute inset-x-0 top-0 z-10 py-2 text-center text-xs font-semibold"
           style={{ background: '#CF4500', color: '#fff', borderRadius: '20px 20px 0 0' }}>
-          Limit reached · Resets in {resetLabel || '1h'}
+          No credits left · Upgrade your plan
         </div>
       )}
 
@@ -528,7 +533,7 @@ function ProfileCard({
           {canContact ? 'Contact' : `Limit (${remaining})`}
         </button>
         <AudioBtn url={profile.audio_url} />
-        <a href={`tel:${BUSINESS_WA}`} onClick={e => e.stopPropagation()}
+        <a href={`tel:${BUSINESS_WA}`} onClick={e => { e.stopPropagation(); logContact({ type: 'call', number: BUSINESS_WA, profileNum: profile._num, profileTitle: profile.title }); }}
           className="w-10 h-10 rounded-full flex items-center justify-center border shrink-0"
           style={{ borderColor: '#D1CDC7', color: '#696969' }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 01.22 4.05 2 2 0 012.2 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.91a16 16 0 006.28 6.28l1.48-1.48a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
@@ -738,7 +743,7 @@ interface DrawerProps {
   education: string; setEducation: (v: string) => void;
   marital: string; setMarital: (v: string) => void;
   sort: string; setSort: (v: string) => void;
-  remaining: number; resetLabel: string;
+  remaining: number; resetLabel: string; isAnon: boolean;
 }
 
 function CSelect({ label, value, onChange, options }: {
@@ -763,7 +768,7 @@ function FilterDrawer(props: DrawerProps) {
     ageMin, setAgeMin, ageMax, setAgeMax,
     state, setState, community, setCommunity,
     education, setEducation, marital, setMarital,
-    sort, setSort, remaining, resetLabel } = props;
+    sort, setSort, remaining, resetLabel, isAnon } = props;
 
   const STAT_COLORS = ['#141413', '#006241', '#C0397A', '#CF4500'];
 
@@ -812,7 +817,7 @@ function FilterDrawer(props: DrawerProps) {
           <div className="flex items-center justify-between mb-3 rounded-lg px-2.5 py-1.5"
             style={{ background: remaining <= 3 ? '#FFF3EE' : '#F7F5F3' }}>
             <span className="text-[11px] font-medium" style={{ color: remaining <= 3 ? '#CF4500' : '#696969' }}>
-              {remaining}/{contactLimit} contacts left this hour
+              {`${remaining} credit${remaining !== 1 ? 's' : ''} remaining`}
             </span>
             {resetLabel && <span className="text-[10px]" style={{ color: '#A0A0A0' }}>resets {resetLabel}</span>}
           </div>
@@ -894,12 +899,14 @@ export default function ProfilesClient() {
   const [authGate,    setAuthGate]    = useState(false);
 
   const { remaining, resetLabel, consume: consumeContact, canUse: canContact, isAnon } = useUsageLimit('contact');
-  const contactLimit = isAnon ? USAGE_LIMITS.contact.anon : USAGE_LIMITS.contact.free;
+  const contactLimit = USAGE_LIMITS.contact.anon; // only used for anon display
 
   const handleContactRequest = useCallback(async (p: DeckProfile) => {
     const ok = await consumeContact();
     if (!ok) { setAuthGate(true); return; }
     setContact(p);
+    // Log contact unlock for abuse detection and analytics
+    logIrisEvent('contact_unlock', { profileTitle: p.title, profileNum: p._num }).catch(() => { /* ignore */ });
   }, [consumeContact]);
 
   useEffect(() => {
@@ -960,6 +967,9 @@ export default function ProfilesClient() {
   return (
     <div style={{ background: '#FFFFFF', minHeight: '100vh' }}>
 
+      {/* ── Featured profiles spotlight ── */}
+      <FeaturedCarousel placement="profiles" label="Spotlight Profiles" />
+
       {/* Hero — minimal height, centered title */}
       <div style={{ background: '#1E3932', color: '#fff' }} className="px-4 sm:px-6 pt-4 pb-4">
         <div className="max-w-7xl mx-auto">
@@ -1019,7 +1029,7 @@ export default function ProfilesClient() {
               { label: 'Groom',  value: stats.male },
               { label: 'Bride',  value: stats.female },
               { label: 'Urgent', value: stats.urgent },
-              { label: `Contacts left (${contactLimit}/hr)`, value: remaining },
+              { label: 'Contact credits', value: remaining },
             ].map(s => (
               <div key={s.label} className="py-3 px-4 text-center">
                 <strong className="block text-lg font-extrabold" style={{ color: '#141413' }}>
@@ -1165,6 +1175,7 @@ export default function ProfilesClient() {
         contactLimit={contactLimit}
         remaining={remaining}
         resetLabel={resetLabel}
+        isAnon={isAnon}
       />
 
       {/* Contact modal */}
@@ -1175,6 +1186,7 @@ export default function ProfilesClient() {
           remaining={remaining}
           resetLabel={resetLabel}
           contactLimit={contactLimit}
+          isAnon={isAnon}
         />
       )}
 

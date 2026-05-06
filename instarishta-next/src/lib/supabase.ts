@@ -204,6 +204,7 @@ export interface IChannel {
 export interface IPost {
   id: string;
   channel_id: string;
+  user_id?: string;
   image: string;
   thumb?: string;
   images?: string[];
@@ -218,6 +219,7 @@ export interface IPost {
 export interface IStory {
   id: string;
   channel_id: string;
+  user_id?: string;
   image: string;
   created_at: string;
 }

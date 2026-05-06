@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
 import StarBorder from '@/components/ui/StarBorder';
 const Masonry = dynamic(() => import('@/components/ui/Masonry'), { ssr: false });
+import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 type Channel = { slug: string; name: string; description: string | null; cover_image: string | null };
 
@@ -106,6 +107,10 @@ export default function HomePage() {
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden min-h-screen flex items-center bg-[#006241]" aria-labelledby="hero-heading">
+        {/* Prism WebGL background */}
+        <div className="absolute inset-0 z-[1] pointer-events-none" aria-hidden="true">
+        </div>
+
         <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] pointer-events-none" aria-hidden="true"
           style={{ background: 'radial-gradient(circle, rgba(0,117,74,.25) 0%, transparent 68%)' }} />
         <div className="absolute -bottom-[10%] -left-[5%] w-[600px] h-[600px] pointer-events-none" aria-hidden="true"
@@ -142,7 +147,7 @@ export default function HomePage() {
 
             <div className="flex flex-wrap items-center gap-3 mb-8">
               <StarBorder as="div" color="#00C87A" speed="4s" thickness={2} className="rounded-full">
-                <Link href="/profiles" className="btn-primary inline-flex items-center gap-2" style={{ borderRadius: 'inherit' }}>
+                <Link href="/profiles" className="inline-flex items-center gap-2 no-underline text-white font-bold text-[0.9rem]">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                   </svg>
@@ -208,11 +213,18 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Featured Profiles Carousel ── */}
+      <FeaturedCarousel placement="home" label="Spotlight Profiles" />
+
       {/* ── How It Works ── */}
       <section id="how-it-works" style={{ background: '#f2f0eb' }} aria-labelledby="how-heading">
         <div className="max-w-[1280px] mx-auto px-8 py-20">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">Simple Process</div>
+            <div className="flex items-center justify-center gap-[10px] text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[#006241] mb-4">
+              <span className="block h-px w-7 rounded-full bg-current opacity-[0.35]" />
+              Simple Process
+              <span className="block h-px w-7 rounded-full bg-current opacity-[0.35]" />
+            </div>
             <h2 id="how-heading" className="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">How InstaRishta Works</h2>
             <p className="text-[1rem] text-[rgba(0,0,0,0.58)] max-w-[560px] leading-[1.5] mx-auto">
               A halal, family-approved process — transparent, safe, and Islamically guided from first look to Nikah.
@@ -244,8 +256,9 @@ export default function HomePage() {
         <div className="max-w-[1280px] mx-auto px-8 py-24 relative z-[1] grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
           {/* Left */}
           <div>
-            <div className="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.70)] mb-4">
-              <span className="inline-block w-[18px] h-[1px] rounded bg-white/50" /> Why Us
+            <div className="flex items-center gap-[10px] text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[rgba(255,255,255,0.70)] mb-4">
+              <span className="block h-px w-5 rounded-full bg-current opacity-[0.5]" />
+              Why Us
             </div>
             <h2 id="why-heading" className="text-white text-[clamp(2rem,4vw,2.25rem)] font-bold leading-[1.22] tracking-[-0.02em] mb-4">
               Not Just Another<br />
@@ -304,7 +317,11 @@ export default function HomePage() {
       <section id="communities" style={{ background: '#edebe9' }} aria-labelledby="comm-heading">
         <div className="max-w-[1280px] mx-auto px-8 py-24">
           <div className="text-center mb-14">
-            <div className="inline-flex text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">Communities</div>
+            <div className="flex items-center justify-center gap-[10px] text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[#006241] mb-4">
+              <span className="block h-px w-7 rounded-full bg-current opacity-[0.35]" />
+              Communities
+              <span className="block h-px w-7 rounded-full bg-current opacity-[0.35]" />
+            </div>
             <h2 id="comm-heading" className="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
               Proposals Across Every<br />Muslim Community
             </h2>
@@ -338,7 +355,8 @@ export default function HomePage() {
         <div className="max-w-[1280px] mx-auto px-8">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
             <div>
-              <div className="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.70)] mb-3">
+              <div className="flex items-center gap-[10px] text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[rgba(255,255,255,0.70)] mb-3">
+                <span className="block h-px w-5 rounded-full bg-current opacity-[0.5]" />
                 Live Profile Channels
               </div>
               <h2 id="channels-heading" className="text-[clamp(2rem,4vw,2.25rem)] font-bold tracking-[-0.02em] text-white leading-[1.22]">Browse by Channel</h2>
@@ -389,7 +407,11 @@ export default function HomePage() {
       <section style={{ background: '#f2f0eb' }} aria-labelledby="testi-heading">
         <div className="max-w-[1280px] mx-auto px-8 py-24">
           <div className="text-center mb-14">
-            <div className="inline-flex text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">Success Stories</div>
+            <div className="flex items-center justify-center gap-[10px] text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[#006241] mb-4">
+              <span className="block h-px w-7 rounded-full bg-current opacity-[0.35]" />
+              Success Stories
+              <span className="block h-px w-7 rounded-full bg-current opacity-[0.35]" />
+            </div>
             <h2 id="testi-heading" className="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em]">
               Families Who Found Their Match Here
             </h2>
@@ -417,7 +439,10 @@ export default function HomePage() {
       <section id="faq" style={{ background: '#edebe9' }} aria-labelledby="faq-heading">
         <div className="max-w-[1280px] mx-auto px-8 py-24 grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-12 md:gap-20 items-start">
           <div>
-            <div className="inline-flex text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">FAQ</div>
+            <div className="flex items-center gap-[10px] text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[#006241] mb-4">
+              <span className="block h-px w-7 rounded-full bg-current opacity-[0.35]" />
+              FAQ
+            </div>
             <h2 id="faq-heading" className="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
               Questions About InstaRishta?
             </h2>

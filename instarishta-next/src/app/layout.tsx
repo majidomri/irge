@@ -4,6 +4,7 @@ import SiteShell from '@/components/SiteShell';
 import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://instarishta.com'),
   title: {
     default: 'InstaRishta — Trusted Muslim Matrimony & Nikah Matchmaking',
     template: '%s — InstaRishta',

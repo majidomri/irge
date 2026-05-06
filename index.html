@@ -36,6 +36,46 @@
     <link rel="stylesheet" href="styles/design-system.css">
     <link rel="stylesheet" href="styles/styles.css">
 
+    <style>
+      /* Awake Agency-inspired nav */
+      #siteNav {
+        transition: background 0.3s ease, box-shadow 0.3s ease;
+      }
+      #siteNav.nav-solid {
+        background: rgba(10, 18, 15, 0.97) !important;
+        box-shadow: 0 1px 0 rgba(255,255,255,0.07);
+      }
+      .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 0;
+        height: 1px;
+        background: rgba(255,255,255,0.6);
+        transition: width 0.22s ease;
+      }
+      .nav-link:hover::after { width: 100%; }
+
+      /* Section label with line decorators */
+      .sec-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 1.1rem;
+      }
+      .sec-label::before, .sec-label::after {
+        content: '';
+        display: block;
+        height: 1px;
+        width: 28px;
+        background: currentColor;
+        opacity: 0.35;
+        border-radius: 999px;
+      }
+    </style>
+
     <!-- Tailwind CDN (JIT) -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -130,57 +170,48 @@
       </div>
     </div>
 
-    <!-- NAV (Tailwind) -->
-    <nav class="sticky top-0 z-[100] bg-[#0f1815] backdrop-blur-[20px] border-b border-[rgba(255,255,255,.10)]"
+    <!-- NAV (Awake Agency inspired — 3-col: logo | centered links | CTAs) -->
+    <nav id="siteNav"
+      class="sticky top-0 z-[100] backdrop-blur-[24px] border-b border-[rgba(255,255,255,.0)]"
+      style="background:rgba(10,18,15,0.0);"
       role="navigation" aria-label="Main navigation">
-      <div class="max-w-[1280px] mx-auto px-8 flex items-center justify-between h-[68px]">
-        <a href="https://www.instarishta.me/" class="flex items-center gap-3 no-underline"
+      <div class="max-w-[1280px] mx-auto px-8 flex items-center h-[76px] gap-6">
+
+        <!-- Logo (left) -->
+        <a href="https://www.instarishta.me/" class="flex items-center gap-3 no-underline flex-shrink-0 md:w-[176px]"
           aria-label="InstaRishta home">
-          <!-- <div
-            class="w-[38px] h-[38px] rounded-[10px] bg-[linear-gradient(135deg,#f59e0b,#fcd34d)] flex items-center justify-center">
-            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-[22px] h-[22px]">
-              <path d="M20 35c0-7.18 5.82-13 13-13 4.95 0 9.26 2.77 11.45 6.85" stroke="white" stroke-width="4.5"
-                stroke-linecap="round" />
-              <circle cx="33" cy="35" r="6.5" fill="white" />
-              <path d="M43 22h1" stroke="white" stroke-width="4.5" stroke-linecap="round" />
-            </svg>
-          </div> -->
-          <span class="text-[1.45rem] font-extrabold text-white tracking-[-0.02em]">Insta<em
-              class="not-italic text-[#00754A]">Rishta</em></span>
+          <span class="text-[1.45rem] font-extrabold text-white tracking-[-0.03em]">Insta<em
+              class="not-italic text-[#00a876]">Rishta</em></span>
         </a>
 
-        <!-- Desktop links -->
-        <ul class="hidden md:flex items-center gap-8 list-none">
-          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#how-it-works">How
-              It Works</a></li>
-          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#why-us">Why
-              Us</a></li>
-          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#communities">Communities</a>
-          </li>
-          <li><a class="text-white/70 hover:text-white text-[0.875rem] no-underline" href="#faq">FAQ</a></li>
-          <li><a class="text-[#a5b4fc] hover:text-white text-[0.875rem] font-semibold no-underline"
-              href="/channels.html">📡 Channels</a></li>
-
+        <!-- Desktop nav links (centered) -->
+        <ul class="hidden md:flex flex-1 items-center justify-center gap-7 list-none">
+          <li><a class="relative text-white/60 hover:text-white text-[0.875rem] font-medium no-underline transition-colors duration-200 nav-link" href="#how-it-works">How It Works</a></li>
+          <li><a class="relative text-white/60 hover:text-white text-[0.875rem] font-medium no-underline transition-colors duration-200 nav-link" href="#why-us">Why Us</a></li>
+          <li><a class="relative text-white/60 hover:text-white text-[0.875rem] font-medium no-underline transition-colors duration-200 nav-link" href="#communities">Communities</a></li>
+          <li><a class="relative text-white/60 hover:text-white text-[0.875rem] font-medium no-underline transition-colors duration-200 nav-link" href="#faq">FAQ</a></li>
+          <li><a class="relative text-white/60 hover:text-white text-[0.875rem] font-medium no-underline transition-colors duration-200 nav-link" href="/channels.html">Channels</a></li>
         </ul>
 
-        <!-- Desktop CTAs -->
-        <div class="hidden sm:flex items-center gap-4">
+        <!-- Desktop CTAs (right) -->
+        <div class="hidden sm:flex items-center gap-3 md:w-[176px] justify-end flex-shrink-0">
+          <div class="hidden md:block w-px h-[18px] bg-white/15 flex-shrink-0"></div>
           <a href="/post-your-ad.html"
-            class="text-white/80 text-[0.875rem] font-medium no-underline px-4 py-2 rounded-full border border-white/20 hover:text-white hover:border-white/50 transition">Post
-            Your Profile</a>
+            class="text-white/65 text-[0.875rem] font-medium no-underline hover:text-white transition-colors duration-200 px-2">
+            Post Profile
+          </a>
           <a href="/profiles.html"
-            class="inline-flex items-center gap-2 text-[0.875rem] font-semibold no-underline px-5 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.16)] transition hover:-translate-y-[1px] bg-black text-white">
+            class="inline-flex items-center gap-1.5 text-[0.875rem] font-semibold no-underline px-5 py-[9px] rounded-full bg-white text-[#0d1a14] hover:bg-white/92 transition-all duration-200 shadow-[0_0_0_1px_rgba(255,255,255,.08)]">
+            Browse
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-              stroke-linejoin="round" class="w-[15px] h-[15px]">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
+              stroke-linejoin="round" class="w-[12px] h-[12px]">
+              <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-            Browse Profiles
           </a>
         </div>
 
-        <!-- Hamburger -->
-        <button id="navToggle" class="md:hidden flex flex-col gap-[5px] p-2" aria-label="Open menu"
+        <!-- Hamburger (mobile) -->
+        <button id="navToggle" class="md:hidden flex flex-col gap-[5px] p-2 ml-auto" aria-label="Open menu"
           aria-expanded="false" aria-controls="mobileMenu">
           <span class="w-[22px] h-[2px] bg-white/85 rounded"></span>
           <span class="w-[22px] h-[2px] bg-white/85 rounded"></span>
@@ -190,32 +221,19 @@
 
       <!-- Mobile panel -->
       <div id="mobileMenu"
-        class="md:hidden hidden border-t border-[rgba(255,255,255,.10)] bg-[rgba(30,57,50,0.98)] backdrop-blur-[12px]">
+        class="md:hidden hidden border-t border-[rgba(255,255,255,.08)] bg-[rgba(10,18,15,0.98)] backdrop-blur-[16px]">
         <ul class="list-none flex flex-col p-2">
-          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
-              href="#how-it-works">How It Works</a></li>
-          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
-              href="#why-us">Why Us</a></li>
-          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
-              href="#communities">Communities</a></li>
-          <li><a class="block px-4 py-3 text-white/80 hover:text-white hover:bg-white/5 rounded-lg no-underline"
-              href="#faq">FAQ</a></li>
-          <li><a
-              class="block px-4 py-3 text-[#a5b4fc] hover:text-white hover:bg-[rgba(165,180,252,.08)] rounded-lg no-underline font-semibold"
-              href="/channels.html">📡 Channels</a></li>
-
+          <li><a class="block px-4 py-3 text-white/75 hover:text-white hover:bg-white/5 rounded-lg no-underline transition-colors" href="#how-it-works">How It Works</a></li>
+          <li><a class="block px-4 py-3 text-white/75 hover:text-white hover:bg-white/5 rounded-lg no-underline transition-colors" href="#why-us">Why Us</a></li>
+          <li><a class="block px-4 py-3 text-white/75 hover:text-white hover:bg-white/5 rounded-lg no-underline transition-colors" href="#communities">Communities</a></li>
+          <li><a class="block px-4 py-3 text-white/75 hover:text-white hover:bg-white/5 rounded-lg no-underline transition-colors" href="#faq">FAQ</a></li>
+          <li><a class="block px-4 py-3 text-white/75 hover:text-white hover:bg-white/5 rounded-lg no-underline transition-colors" href="/channels.html">Channels</a></li>
         </ul>
         <div class="flex gap-3 px-3 pb-3">
           <a href="/post-your-ad.html"
-            class="flex-1 text-center text-white/85 text-[0.9rem] font-medium no-underline px-4 py-2 rounded-full border border-white/20 hover:text-white hover:border-white/50 transition">Post
-            Your Profile</a>
+            class="flex-1 text-center text-white/80 text-[0.875rem] font-medium no-underline px-4 py-2.5 rounded-full border border-white/20 hover:text-white hover:border-white/40 transition">Post Profile</a>
           <a href="/profiles.html"
-            class="flex-1 inline-flex justify-center items-center gap-2 text-[0.95rem] font-semibold no-underline px-4 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.16)] transition hover:-translate-y-[1px] bg-black text-white">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-              stroke-linejoin="round" class="w-[15px] h-[15px]">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+            class="flex-1 inline-flex justify-center items-center gap-2 text-[0.875rem] font-semibold no-underline px-4 py-2.5 rounded-full bg-white text-[#0d1a14] hover:bg-white/90 transition">
             Browse
           </a>
         </div>
@@ -471,13 +489,57 @@
         </div>
       </div> -->
 
+      <!-- TRUST STRIP (Awake Agency-inspired city/community marquee) -->
+      <div class="bg-white border-y border-[rgba(0,0,0,0.06)] py-3.5 overflow-hidden" aria-hidden="true">
+        <div class="flex gap-10 whitespace-nowrap animate-[ticker_38s_linear_infinite] items-center select-none">
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Hyderabad</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Mumbai</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Delhi</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> UAE</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> UK</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> USA</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Bangalore</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Wali-Approved Contact</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Verified Profiles</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Free to Browse</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <!-- Duplicate for seamless loop -->
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Hyderabad</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Mumbai</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Delhi</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> UAE</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> UK</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> USA</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Bangalore</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Wali-Approved Contact</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Verified Profiles</span>
+          <span class="text-[rgba(0,0,0,0.15)] text-[0.6rem]">◆</span>
+          <span class="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(0,0,0,0.38)] tracking-wide"><span class="text-[#006241] text-[0.9rem]">✓</span> Free to Browse</span>
+        </div>
+      </div>
+
       <!-- HOW IT WORKS (Tailwind) -->
       <section id="how-it-works" style="background:#f2f0eb" aria-labelledby="how-heading">
         <div class="max-w-[1280px] mx-auto px-8 py-20 relative z-[1]">
           <div class="text-center mb-16">
-            <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4 py-4">
-              Simple Process</div>
+            <div class="sec-label text-[#006241] text-[0.72rem] font-bold tracking-[0.12em] uppercase">Simple Process</div>
             <h2 id="how-heading"
               class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
               How InstaRishta Works</h2>
@@ -536,10 +598,7 @@
           class="max-w-[1280px] mx-auto px-8 py-24 relative z-[1] grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
           <!-- Left -->
           <div>
-            <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.70)] mb-4">
-              <span class="inline-block w-[18px] h-[1px] rounded bg-white/50"></span> Why Us
-            </div>
+            <div class="sec-label text-white/60 text-[0.72rem] font-bold tracking-[0.12em] uppercase mb-4">Why Us</div>
             <h2 id="why-heading"
               class="text-white text-[clamp(2rem,4vw,2.25rem)] font-bold leading-[1.22] tracking-[-0.02em] mb-4">
               Not Just Another<br><span class="text-[rgba(255,255,255,0.70)]">Matrimony Site.</span>
@@ -664,9 +723,7 @@
       <section id="communities" style="background:#edebe9" aria-labelledby="comm-heading">
         <div class="max-w-[1280px] mx-auto px-8 py-24">
           <div class="text-center mb-14">
-            <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">
-              Communities</div>
+            <div class="sec-label text-[#006241] text-[0.72rem] font-bold tracking-[0.12em] uppercase mb-4">Communities</div>
             <h2 id="comm-heading"
               class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
               Proposals Across Every<br>Muslim Community
@@ -744,10 +801,7 @@
         <div class="max-w-[1280px] mx-auto px-8">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
             <div>
-              <div
-                class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.70)] mb-3">
-                Live Profile Channels
-              </div>
+              <div class="flex items-center gap-2 text-[0.72rem] font-bold tracking-[0.12em] uppercase text-white/55 mb-3"><span class="inline-block w-5 h-px bg-white/30 rounded"></span> Live Profile Channels</div>
               <h2 id="channels-heading"
                 class="text-[clamp(2rem,4vw,2.25rem)] font-bold tracking-[-0.02em] text-white leading-[1.22]">
                 Browse by Channel
@@ -844,9 +898,7 @@
       <section aria-labelledby="testi-heading" style="background:#f2f0eb">
         <div class="max-w-[1280px] mx-auto px-8 py-24">
           <div class="text-center mb-14">
-            <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">
-              Success Stories</div>
+            <div class="sec-label text-[#006241] text-[0.72rem] font-bold tracking-[0.12em] uppercase mb-5">Success Stories</div>
             <h2 id="testi-heading"
               class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em]">
               Families Who Found Their Match Here
@@ -936,9 +988,7 @@
         <div
           class="max-w-[1280px] mx-auto px-8 py-24 grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-12 md:gap-20 items-start">
           <div>
-            <div
-              class="inline-flex items-center gap-2 text-[0.75rem] font-bold tracking-[0.1em] uppercase text-[#006241] mb-4">
-              FAQ</div>
+            <div class="sec-label text-[#006241] text-[0.72rem] font-bold tracking-[0.12em] uppercase mb-4">FAQ</div>
             <h2 id="faq-heading"
               class="text-[clamp(2rem,4vw,2.25rem)] font-bold text-[rgba(0,0,0,0.87)] leading-[1.22] tracking-[-0.02em] mb-4">
               Questions About InstaRishta?</h2>
@@ -1141,6 +1191,22 @@
     </footer>
 
     <script>
+      // Nav scroll: transparent over hero → solid after scroll
+      (function () {
+        var nav = document.getElementById('siteNav');
+        var topbar = nav ? nav.previousElementSibling : null;
+        function updateNav() {
+          var scrolled = window.scrollY > 40;
+          if (nav) {
+            nav.style.background = scrolled ? 'rgba(10,18,15,0.97)' : 'rgba(10,18,15,0.0)';
+            nav.style.borderBottomColor = scrolled ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0)';
+            nav.style.backdropFilter = scrolled ? 'blur(24px)' : 'blur(0px)';
+          }
+        }
+        window.addEventListener('scroll', updateNav, { passive: true });
+        updateNav();
+      })();
+
       // Mobile menu toggle
       const navToggle = document.getElementById('navToggle');
       const mobileMenu = document.getElementById('mobileMenu');
