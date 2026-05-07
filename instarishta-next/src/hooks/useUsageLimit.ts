@@ -28,7 +28,7 @@ export function useUsageLimit(feature: UsageFeature): UsageLimitState {
 
   const [remaining, setRemaining] = useState<number>(() => {
     if (unlimited) return Infinity;
-    if (isAnon)    return USAGE_LIMITS[feature].anon;
+    if (isAnon)    return anonRemaining(feature);
     if (feature === 'contact') return contextCredits;
     return 0;
   });

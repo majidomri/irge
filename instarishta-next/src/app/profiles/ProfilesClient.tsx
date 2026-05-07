@@ -10,6 +10,7 @@ import { USAGE_LIMITS } from '@/lib/auth-client';
 import AuthModal from '@/components/AuthModal';
 import { logContact } from '@/lib/contact-log';
 import { logIrisEvent } from '@/lib/iris';
+import { useAuth } from '@/contexts/AuthContext';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
@@ -323,9 +324,6 @@ function ContactModal({
             {WA_ICON}
             Chat on WhatsApp
           </button>
-          <p className="text-center text-[10px]" style={{ color: '#B0A8A0' }}>
-            Your message goes directly to the InstaRishta admin · instarishta.me
-          </p>
         </div>
       </section>
     </div>
@@ -416,6 +414,181 @@ function BiodataModal({ profile, onClose }: { profile: DeckProfile; onClose: () 
             <p className="text-xs" style={{ color: '#A0A0A0' }}>instarishta.me</p>
             <p className="text-xs font-semibold" style={{ color: '#006241' }}>IR #{profile._num}</p>
           </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ── PaymentModal ──────────────────────────────────────────────────────────────
+
+const PLANS = [
+  { id: 'silver',   label: 'Silver',   credits: 20,  price: 99  },
+  { id: 'gold',     label: 'Gold',     credits: 50,  price: 199 },
+  { id: 'platinum', label: 'Platinum', credits: 100, price: 349 },
+];
+
+function PaymentModal({ userEmail, onClose }: { userEmail: string; onClose: () => void }) {
+  const [plan,      setPlan]      = useState(PLANS[0].id);
+  const [utr,       setUtr]       = useState('');
+  const [file,      setFile]      = useState<File | null>(null);
+  const [status,    setStatus]    = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [copied,    setCopied]    = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const selected = PLANS.find(p => p.id === plan)!;
+  const upiId    = '918886667121@ybl';
+  const upiLink  = `upi://pay?pa=${upiId}&pn=InstaRishta&am=${selected.price}&cu=INR`;
+
+  function copyUpi() {
+    navigator.clipboard.writeText(upiId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!utr.trim()) return;
+    setStatus('sending');
+    try {
+      const fd = new FormData();
+      fd.append('plan',  plan);
+      fd.append('utr',   utr.trim());
+      fd.append('email', userEmail);
+      if (file) fd.append('screenshot', file);
+      const res = await fetch('/api/payment-notify', { method: 'POST', body: fd });
+      if (res.ok) setStatus('done');
+      else setStatus('error');
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
+      <section className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden" style={{ background: '#fff', zIndex: 1, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 flex items-start justify-between shrink-0" style={{ borderBottom: '1px solid #F0ECE8' }}>
+          <div>
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em]" style={{ color: '#696969' }}>Out of credits</p>
+            <h2 className="text-[1.15rem] font-extrabold mt-0.5" style={{ color: '#141413' }}>Get more credits</h2>
+            <p className="text-xs mt-1" style={{ color: '#696969' }}>Pay via UPI · Admin tops up within hours</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ml-3" style={{ background: '#F3F0EE', color: '#141413' }}>×</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {status === 'done' ? (
+            <div className="px-5 py-10 text-center">
+              <div className="text-5xl mb-4">✅</div>
+              <p className="text-base font-bold mb-1" style={{ color: '#141413' }}>Payment submitted!</p>
+              <p className="text-sm" style={{ color: '#696969' }}>Your request has been sent to our admin. Credits will be added within a few hours.</p>
+              <button onClick={onClose} className="mt-6 rounded-full px-8 py-2.5 text-sm font-bold" style={{ background: '#006241', color: '#fff' }}>Done</button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="px-5 py-4 flex flex-col gap-5">
+
+              {/* Plan selector */}
+              <div>
+                <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: '#A0A0A0' }}>Choose a plan</p>
+                <div className="flex flex-col gap-2">
+                  {PLANS.map(p => (
+                    <button type="button" key={p.id} onClick={() => setPlan(p.id)}
+                      className="flex items-center justify-between rounded-2xl px-4 py-3 border-2 text-left transition-all"
+                      style={{
+                        borderColor: plan === p.id ? '#006241' : '#E8E4E0',
+                        background:  plan === p.id ? '#EEF6F0' : '#FAFAF9',
+                      }}>
+                      <div>
+                        <span className="text-sm font-bold" style={{ color: plan === p.id ? '#006241' : '#141413' }}>{p.label}</span>
+                        <span className="text-xs ml-2" style={{ color: '#696969' }}>{p.credits} credits</span>
+                      </div>
+                      <span className="text-base font-extrabold" style={{ color: plan === p.id ? '#006241' : '#141413' }}>₹{p.price}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* QR + UPI */}
+              <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #F0ECE8' }}>
+                <div className="px-4 pt-4 pb-3">
+                  <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] mb-3" style={{ color: '#A0A0A0' }}>Pay via PhonePe / UPI</p>
+
+                  {/* QR code image */}
+                  <div className="flex justify-center mb-3">
+                    <img src="/phonepe-qr.png" alt="PhonePe QR" width={180} height={180}
+                      className="rounded-xl"
+                      style={{ border: '1px solid #F0ECE8' }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+
+                  {/* UPI ID */}
+                  <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 mb-3" style={{ background: '#F3F0EE' }}>
+                    <span className="flex-1 text-sm font-mono font-semibold" style={{ color: '#141413' }}>{upiId}</span>
+                    <button type="button" onClick={copyUpi}
+                      className="text-xs font-bold px-3 py-1 rounded-full"
+                      style={{ background: copied ? '#006241' : '#1E3932', color: '#fff' }}>
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+
+                  {/* Deep link */}
+                  <a href={upiLink}
+                    className="flex items-center justify-center gap-2 w-full rounded-full py-2.5 text-sm font-bold"
+                    style={{ background: '#5F259F', color: '#fff', textDecoration: 'none' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 17.93V18a1 1 0 0 0-2 0v1.93A8 8 0 0 1 4.07 13H6a1 1 0 0 0 0-2H4.07A8 8 0 0 1 11 4.07V6a1 1 0 0 0 2 0V4.07A8 8 0 0 1 19.93 11H18a1 1 0 0 0 0 2h1.93A8 8 0 0 1 13 19.93z"/></svg>
+                    Open in PhonePe / UPI App
+                  </a>
+                </div>
+              </div>
+
+              {/* UTR input */}
+              <div>
+                <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] mb-1.5" style={{ color: '#A0A0A0' }}>Transaction / UTR number *</p>
+                <input
+                  type="text"
+                  value={utr}
+                  onChange={e => setUtr(e.target.value)}
+                  placeholder="e.g. 425012345678"
+                  required
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+                  style={{ background: '#F3F0EE', color: '#141413', border: '1.5px solid #E8E4E0' }}
+                />
+              </div>
+
+              {/* Screenshot upload */}
+              <div>
+                <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] mb-1.5" style={{ color: '#A0A0A0' }}>Payment screenshot (optional)</p>
+                <button type="button" onClick={() => fileRef.current?.click()}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-left border-2 border-dashed"
+                  style={{ borderColor: '#D1CDC7', color: file ? '#006241' : '#A0A0A0', background: '#FAFAF9' }}>
+                  {file ? file.name : '+ Upload screenshot'}
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => setFile(e.target.files?.[0] ?? null)} />
+              </div>
+
+              {status === 'error' && (
+                <p className="text-xs font-semibold text-center" style={{ color: '#CF4500' }}>
+                  Something went wrong. Please try again.
+                </p>
+              )}
+
+              <button type="submit" disabled={status === 'sending' || !utr.trim()}
+                className="w-full rounded-full py-3.5 text-sm font-bold"
+                style={{ background: '#006241', color: '#fff', opacity: !utr.trim() ? 0.5 : 1 }}>
+                {status === 'sending' ? 'Sending…' : 'Submit Payment for Verification'}
+              </button>
+
+              <p className="text-center text-[10px]" style={{ color: '#B0A8A0' }}>
+                Credits added manually by admin · Usually within 2–4 hours
+              </p>
+            </form>
+          )}
         </div>
       </section>
     </div>
@@ -593,12 +766,12 @@ function ProfileCard({
             Contact
           </button>
         ) : (
-          <a href="https://wa.me/918886667121" target="_blank" rel="noopener noreferrer"
+          <button onClick={handleContact}
             className="flex-1 rounded-full py-2.5 text-sm font-bold flex items-center justify-center gap-2"
-            style={{ background: '#25D366', color: '#fff', textDecoration: 'none' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Contact Admin
-          </a>
+            style={{ background: '#1E3932', color: '#fff' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Get Credits
+          </button>
         )}
         <AudioBtn url={profile.audio_url} />
         {canContact ? (
@@ -609,12 +782,12 @@ function ProfileCard({
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 01.22 4.05 2 2 0 012.2 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.91a16 16 0 006.28 6.28l1.48-1.48a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
           </button>
         ) : (
-          <a href="https://wa.me/918886667121" target="_blank" rel="noopener noreferrer"
+          <button onClick={handleContact}
             className="w-10 h-10 rounded-full flex items-center justify-center border shrink-0"
-            style={{ borderColor: '#25D366', color: '#25D366', textDecoration: 'none' }}
-            title="WhatsApp Admin">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </a>
+            style={{ borderColor: '#1E3932', color: '#1E3932' }}
+            title="Get Credits">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
         )}
       </div>
 
@@ -985,21 +1158,23 @@ export default function ProfilesClient() {
   const [ageMin,      setAgeMin]      = useState(18);
   const [ageMax,      setAgeMax]      = useState(60);
   const [sort,        setSort]        = useState('default');
-  const [contact,     setContact]     = useState<DeckProfile | null>(null);
-  const [biodata,     setBiodata]     = useState<DeckProfile | null>(null);
-  const [drawerOpen,  setDrawerOpen]  = useState(false);
-  const [authGate,    setAuthGate]    = useState(false);
+  const [contact,      setContact]      = useState<DeckProfile | null>(null);
+  const [biodata,      setBiodata]      = useState<DeckProfile | null>(null);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [authGate,     setAuthGate]     = useState(false);
+  const [paymentModal, setPaymentModal] = useState(false);
 
   const { remaining, resetLabel, consume: consumeContact, canUse: canContact, isAnon } = useUsageLimit('contact');
+  const { user } = useAuth();
   const contactLimit = USAGE_LIMITS.contact.anon; // only used for anon display
 
   const handleContactRequest = useCallback(async (p: DeckProfile) => {
+    if (isAnon) { setAuthGate(true); return; }
     const ok = await consumeContact();
-    if (!ok) { setAuthGate(true); return; }
+    if (!ok) { setPaymentModal(true); return; }
     setContact(p);
-    // Log contact unlock for abuse detection and analytics
     logIrisEvent('contact_unlock', { profileTitle: p.title, profileNum: p._num }).catch(() => { /* ignore */ });
-  }, [consumeContact]);
+  }, [consumeContact, isAnon]);
 
   useEffect(() => {
     fetch(WORKER_URL)
@@ -1211,7 +1386,7 @@ export default function ProfilesClient() {
                 canContact={canContact}
                 remaining={remaining}
                 resetLabel={resetLabel}
-                onLimitHit={isAnon ? () => setAuthGate(true) : undefined}
+                onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
               />
             </div>
 
@@ -1226,7 +1401,7 @@ export default function ProfilesClient() {
                   canContact={canContact}
                   remaining={remaining}
                   resetLabel={resetLabel}
-                  onLimitHit={isAnon ? () => setAuthGate(true) : undefined}
+                  onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
                 />
               ))}
             </div>
@@ -1285,6 +1460,13 @@ export default function ProfilesClient() {
           feature="contact"
           onClose={() => setAuthGate(false)}
           onSuccess={() => setAuthGate(false)}
+        />
+      )}
+
+      {paymentModal && (
+        <PaymentModal
+          userEmail={user?.email ?? ''}
+          onClose={() => setPaymentModal(false)}
         />
       )}
 

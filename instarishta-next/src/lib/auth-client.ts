@@ -16,7 +16,7 @@ export const getAuthClient = () => {
 
 // ── Limits ────────────────────────────────────────────────────────────────────
 export const USAGE_LIMITS = {
-  contact: { anon: 3,  free: 20, label: 'profile contacts',  windowMs: 3_600_000 },
+  contact: { anon: 0,  free: 20, label: 'profile contacts',  windowMs: 3_600_000 },
   audio:   { anon: 5,  free: 30, label: 'audio plays',       windowMs: 3_600_000 },
   view:    { anon: 10, free: -1, label: 'profile views',     windowMs: 3_600_000 }, // -1 = unlimited
 } as const;
