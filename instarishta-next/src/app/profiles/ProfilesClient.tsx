@@ -1216,22 +1216,20 @@ export default function ProfilesClient() {
             </div>
 
             {/* Desktop: grid */}
-            <ClickSpark sparkColor="#00A86B" sparkRadius={28} sparkCount={10} duration={500} className="hidden md:block">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filtered.map(p => (
-                  <ProfileCard
-                    key={p._num}
-                    profile={p}
-                    onContact={handleContactRequest}
-                    onBiodata={setBiodata}
-                    canContact={canContact}
-                    remaining={remaining}
-                    resetLabel={resetLabel}
-                    onLimitHit={isAnon ? () => setAuthGate(true) : undefined}
-                  />
-                ))}
-              </div>
-            </ClickSpark>
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map(p => (
+                <ProfileCard
+                  key={p._num}
+                  profile={p}
+                  onContact={handleContactRequest}
+                  onBiodata={setBiodata}
+                  canContact={canContact}
+                  remaining={remaining}
+                  resetLabel={resetLabel}
+                  onLimitHit={isAnon ? () => setAuthGate(true) : undefined}
+                />
+              ))}
+            </div>
           </>
         )}
       </div>
