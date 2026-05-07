@@ -15,7 +15,6 @@ import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 
-const WORKER_URL   = 'https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles';
 const BUSINESS_WA  = '+918886667121';
 
 export interface Profile {
@@ -1144,9 +1143,10 @@ function FilterDrawer(props: DrawerProps) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function ProfilesClient() {
-  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
-  const [loading,     setLoading]     = useState(true);
+export default function ProfilesClient({ initialProfiles = [] }: { initialProfiles?: Profile[] }) {
+  const [allProfiles, setAllProfiles] = useState<Profile[]>(initialProfiles);
+  const [loading,     setLoading]     = useState(initialProfiles.length === 0);
+  const [mobileView,  setMobileView]  = useState<'stack' | 'scroll'>('stack');
   const [search,      setSearch]      = useState('');
   const [idFilter,    setIdFilter]    = useState('');
   const [gender,      setGender]      = useState('all');
@@ -1176,13 +1176,15 @@ export default function ProfilesClient() {
     logIrisEvent('contact_unlock', { profileTitle: p.title, profileNum: p._num }).catch(() => { /* ignore */ });
   }, [consumeContact, isAnon]);
 
+  // Only client-fetch if server gave us nothing (e.g. Worker was down at build time)
   useEffect(() => {
-    fetch(WORKER_URL)
+    if (initialProfiles.length > 0) return;
+    fetch('https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles')
       .then(r => r.json())
       .then(data => setAllProfiles(Array.isArray(data) ? data : []))
       .catch(() => setAllProfiles([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [initialProfiles.length]);
 
   const clearAll = useCallback(() => {
     setSearch(''); setIdFilter(''); setGender('all'); setUrgentOnly(false);
@@ -1373,24 +1375,71 @@ export default function ProfilesClient() {
           </div>
         ) : (
           <>
-            <p className="text-sm font-medium mb-5" style={{ color: '#696969' }}>
-              {filtered.length.toLocaleString()} profile{filtered.length !== 1 ? 's' : ''} found
-            </p>
-
-            {/* Mobile: swipe deck */}
+            {/* Mobile: view toggle + content */}
             <div className="md:hidden">
-              <SwipeDeck
-                profiles={filtered}
-                onContact={handleContactRequest}
-                onBiodata={setBiodata}
-                canContact={canContact}
-                remaining={remaining}
-                resetLabel={resetLabel}
-                onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
-              />
+              {/* Toggle bar */}
+              <div className="flex items-center justify-end gap-1.5 mb-3">
+                <span className="text-xs mr-auto" style={{ color: '#A0A0A0' }}>
+                  {filtered.length} profile{filtered.length !== 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={() => setMobileView('stack')}
+                  title="Stack view"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: mobileView === 'stack' ? '#1E3932' : '#F3F0EE', color: mobileView === 'stack' ? '#fff' : '#696969' }}>
+                  {/* Stack / cards icon */}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                    <path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
+                    <path d="M4 11h16"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setMobileView('scroll')}
+                  title="Scroll view"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: mobileView === 'scroll' ? '#1E3932' : '#F3F0EE', color: mobileView === 'scroll' ? '#fff' : '#696969' }}>
+                  {/* List / scroll icon */}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="3" y1="6"  x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              {mobileView === 'stack' ? (
+                <SwipeDeck
+                  profiles={filtered}
+                  onContact={handleContactRequest}
+                  onBiodata={setBiodata}
+                  canContact={canContact}
+                  remaining={remaining}
+                  resetLabel={resetLabel}
+                  onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
+                />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {filtered.map(p => (
+                    <ProfileCard
+                      key={p._num}
+                      profile={p}
+                      onContact={handleContactRequest}
+                      onBiodata={setBiodata}
+                      canContact={canContact}
+                      remaining={remaining}
+                      resetLabel={resetLabel}
+                      onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Desktop: grid */}
+            <p className="hidden md:block text-sm font-medium mb-5" style={{ color: '#696969' }}>
+              {filtered.length.toLocaleString()} profile{filtered.length !== 1 ? 's' : ''} found
+            </p>
             <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(p => (
                 <ProfileCard
