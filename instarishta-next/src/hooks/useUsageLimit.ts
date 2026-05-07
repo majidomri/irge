@@ -77,7 +77,7 @@ export function useUsageLimit(feature: UsageFeature): UsageLimitState {
   }, [feature, isAnon, refresh]);
 
   const consume = useCallback(async (): Promise<boolean> => {
-    if (unlimited)    return true;
+    if (unlimited)      return true;
     if (remaining <= 0) return false;
 
     if (isAnon) {
@@ -85,12 +85,22 @@ export function useUsageLimit(feature: UsageFeature): UsageLimitState {
       setRemaining(r => Math.max(0, r - 1));
       setResetLbl(anonResetLabel(feature));
     } else if (user) {
-      // Optimistic update — context Realtime will confirm the server value
+      // Optimistic decrement first so UI feels instant
       setRemaining(r => Math.max(0, r - 1));
-      await dbRecordUsage(feature, user.id);
+      try {
+        const serverRemaining = await dbRecordUsage(feature, user.id);
+        // For contact: apply server-confirmed value (Realtime will also fire shortly after)
+        if (feature === 'contact' && serverRemaining >= 0) {
+          setRemaining(serverRemaining);
+        }
+      } catch {
+        // RPC failed — roll back optimistic update and refresh from DB
+        await refresh();
+        return false;
+      }
     }
     return true;
-  }, [feature, isAnon, user, unlimited, remaining]);
+  }, [feature, isAnon, user, unlimited, remaining, refresh]);
 
   return {
     canUse:     unlimited || remaining > 0,

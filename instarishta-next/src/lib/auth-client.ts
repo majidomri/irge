@@ -89,14 +89,16 @@ export async function dbGetRemaining(feature: UsageFeature, userId: string): Pro
   return Math.max(0, limit - (count ?? 0));
 }
 
-export async function dbRecordUsage(feature: UsageFeature, userId: string) {
+/** Returns the server-confirmed remaining count after decrement (-1 = non-contact feature). */
+export async function dbRecordUsage(feature: UsageFeature, userId: string): Promise<number> {
   const client = getAuthClient();
   if (feature === 'contact') {
-    // Atomically decrement the credit balance via SECURITY DEFINER RPC
-    await client.rpc('ir_decrement_credit');
-    return;
+    const { data, error } = await client.rpc('ir_decrement_credit');
+    if (error) throw error;
+    return (data as number) ?? 0;
   }
   await client.from('ir_user_usage').insert({ user_id: userId, feature });
+  return -1;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
