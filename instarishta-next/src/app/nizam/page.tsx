@@ -22,7 +22,7 @@ async function uploadToCloud(file: File, folder: string): Promise<string> {
 }
 
 // ── Types ───────────────────────────────────────────────────────────────────
-type MainTab = 'overview' | 'users' | 'channels' | 'posts' | 'stories' | 'featured' | 'security' | 'setup';
+type MainTab = 'overview' | 'users' | 'channels' | 'posts' | 'stories' | 'featured' | 'security' | 'stats' | 'setup';
 type ContentTab = 'channels' | 'posts' | 'stories';
 
 const PLAN_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -590,6 +590,32 @@ export default function NizamPage() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
 
+  // Share stats
+  interface StatsData {
+    totals:       { views: number; shares: number; entities: number };
+    byType:       Record<string, { entities: number; views: number; shares: number }>;
+    topByViews:   { slug: string; entity_type: string; views: number; shares: number; created_at: string }[];
+    topByShares:  { slug: string; entity_type: string; views: number; shares: number; created_at: string }[];
+    recentEvents: { slug: string; event_type: string; source: string; created_at: string }[];
+    eventsByDay:  Record<string, { views: number; shares: number; referrals: number }>;
+  }
+  const [statsData,    setStatsData]    = useState<StatsData | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  const loadStats = useCallback(async () => {
+    if (!token) return;
+    setStatsLoading(true);
+    try {
+      const res  = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setStatsData(json as StatsData);
+    } catch (e: unknown) { showToast('Stats error: ' + (e as Error).message); }
+    finally { setStatsLoading(false); }
+  }, [token]);
+
+  useEffect(() => { if (tab === 'stats' && token) loadStats(); }, [tab, token, loadStats]);
+
   useEffect(() => {
     getSession().then(s => {
       setSession(!!s);
@@ -896,11 +922,12 @@ export default function NizamPage() {
     { id: 'stories',   icon: '✨', label: 'Stories' },
     { id: 'featured',  icon: '⭐', label: 'Featured', badge: featured.filter(f => f.active).length },
     { id: 'security',  icon: '🛡️', label: 'Security', badge: suspFps.length || undefined },
+    { id: 'stats',     icon: '📈', label: 'Stats' },
     { id: 'setup',     icon: '⚙️', label: 'Setup' },
   ];
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#0e1a14', fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: '#0e1a14', fontFamily: 'Inter, sans-serif' }}>
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl text-sm font-semibold" style={{ background: '#141413', color: '#F3F0EE', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
@@ -921,7 +948,7 @@ export default function NizamPage() {
       {/* Delete confirm */}
       {deletingId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.65)' }}>
-          <div className="rounded-2xl p-6 w-80" style={{ background: '#1a2820' }}>
+          <div className="rounded-2xl p-6 w-full max-w-sm" style={{ background: '#1a2820' }}>
             <p className="font-bold text-white mb-2">Delete this user?</p>
             <p className="text-[0.82rem] text-[rgba(255,255,255,0.5)] mb-5">This permanently removes the account and all associated data.</p>
             <div className="flex gap-2">
@@ -938,7 +965,7 @@ export default function NizamPage() {
         const bs = userStoryMap[banningUser.id] ?? [];
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
-            <div className="rounded-2xl p-6 w-96" style={{ background: '#1a2820' }}>
+            <div className="rounded-2xl p-6 w-full max-w-sm" style={{ background: '#1a2820' }}>
               <p className="font-bold text-white mb-1">Ban + Remove Content?</p>
               <p className="text-[0.82rem] mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{banningUser.email}</p>
               <p className="text-[0.82rem] mb-5" style={{ color: 'rgba(255,255,255,0.4)' }}>
@@ -953,8 +980,8 @@ export default function NizamPage() {
         );
       })()}
 
-      {/* Sidebar */}
-      <aside className="w-56 shrink-0 flex flex-col border-r" style={{ background: '#121e18', borderColor: 'rgba(255,255,255,0.07)' }}>
+      {/* Sidebar — desktop only */}
+      <aside className="w-56 shrink-0 hidden md:flex flex-col border-r" style={{ background: '#121e18', borderColor: 'rgba(255,255,255,0.07)' }}>
         <div className="px-5 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
           <div className="text-[1.1rem] font-extrabold tracking-[-0.02em]">
             <span style={{ color: '#fff' }}>Insta</span><span style={{ color: '#00A86B' }}>Rishta</span>
@@ -986,16 +1013,38 @@ export default function NizamPage() {
         </div>
       </aside>
 
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden border-t" style={{ background: '#121e18', borderColor: 'rgba(255,255,255,0.1)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {NAV.map(n => (
+          <button key={n.id} onClick={() => setTab(n.id)}
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 relative"
+            style={{ color: tab === n.id ? '#00A86B' : 'rgba(255,255,255,0.4)' }}>
+            <span className="text-[1.1rem] leading-none">{n.icon}</span>
+            <span className="text-[0.55rem] font-semibold">{n.label}</span>
+            {n.badge ? (
+              <span className="absolute top-1.5 right-1/4 w-4 h-4 rounded-full text-[0.55rem] font-bold flex items-center justify-center"
+                style={{ background: '#CF4500', color: '#fff' }}>{n.badge > 9 ? '9+' : n.badge}</span>
+            ) : null}
+          </button>
+        ))}
+        <button onClick={doLogout}
+          className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5"
+          style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <span className="text-[1.1rem] leading-none">🚪</span>
+          <span className="text-[0.55rem] font-semibold">Out</span>
+        </button>
+      </nav>
+
       {/* Main */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto nizam-main">
 
         {/* ── OVERVIEW ─────────────────────────────────────────────────── */}
         {tab === 'overview' && (
-          <div className="p-8 max-w-4xl">
+          <div className="p-4 sm:p-8 max-w-4xl">
             <h1 className="text-[1.4rem] font-bold text-white mb-1">Overview</h1>
-            <p className="text-[0.82rem] mb-8" style={{ color: 'rgba(255,255,255,0.45)' }}>Platform snapshot</p>
+            <p className="text-[0.82rem] mb-6" style={{ color: 'rgba(255,255,255,0.45)' }}>Platform snapshot</p>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
               {[
                 { label: 'Total Users',    value: users.length,  icon: '👥', color: '#00A86B' },
                 { label: 'Active Plans',   value: totalActive,   icon: '✅', color: '#C8960C' },
@@ -1009,6 +1058,26 @@ export default function NizamPage() {
                 </div>
               ))}
             </div>
+
+            {/* ChatGPT Admin Assistant */}
+            <a
+              href="https://chatgpt.com/g/g-69e32b8ff2088191aa4f79b0d426bd3b-instarishta"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-4 rounded-2xl p-4 mb-6 transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #0a2c1e 0%, #1a3a28 100%)', border: '1.5px solid rgba(0,168,107,0.4)', textDecoration: 'none' }}
+            >
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl"
+                style={{ background: 'rgba(0,168,107,0.2)' }}>🤖</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">InstaRishta AI Assistant</p>
+                <p className="text-[0.75rem] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  ChatGPT GPT — admin support, profile drafts, Q&amp;A
+                </p>
+              </div>
+              <span className="text-xs font-bold px-3 py-1.5 rounded-full shrink-0"
+                style={{ background: '#00A86B', color: '#fff' }}>Open →</span>
+            </a>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Plan breakdown */}
@@ -1057,7 +1126,7 @@ export default function NizamPage() {
 
         {/* ── USERS ────────────────────────────────────────────────────── */}
         {tab === 'users' && (
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {/* Header */}
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
               <div>
@@ -1067,32 +1136,32 @@ export default function NizamPage() {
               <div className="flex gap-2 items-center flex-wrap">
                 <div className="flex rounded-full overflow-hidden border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                   {(['gallery','table'] as const).map(v => (
-                    <button key={v} onClick={() => setUserView(v)} className="px-4 py-1.5 text-xs font-bold transition-colors"
+                    <button key={v} onClick={() => setUserView(v)} className="px-3 py-1.5 text-xs font-bold transition-colors"
                       style={{ background: userView === v ? '#00A86B' : 'transparent', color: userView === v ? '#fff' : 'rgba(255,255,255,0.5)' }}>
-                      {v === 'gallery' ? '⊞ Gallery' : '≡ Table'}
+                      {v === 'gallery' ? '⊞' : '≡ Table'}
                     </button>
                   ))}
                 </div>
                 <input value={userSearch} onChange={e => { setUserSearch(e.target.value); setUserPage(0); }}
-                  placeholder="Search…" className="rounded-xl px-4 py-2 text-sm outline-none w-44"
+                  placeholder="Search…" className="rounded-xl px-3 py-2 text-sm outline-none flex-1 min-w-0"
                   style={{ background: '#1a2820', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} />
-                <button onClick={() => { loadUsers(); loadUserContent(); }} className="px-3 py-2 rounded-xl text-sm font-semibold"
+                <button onClick={() => { loadUsers(); loadUserContent(); }} className="px-3 py-2 rounded-xl text-sm font-semibold shrink-0"
                   style={{ background: 'rgba(0,168,107,0.12)', color: '#00A86B', border: '1px solid rgba(0,168,107,0.25)' }}>↻</button>
               </div>
             </div>
 
             {/* Filter toolbar */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              <div className="flex gap-1 rounded-full p-1" style={{ background: '#1a2820' }}>
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-1 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              <div className="flex gap-1 rounded-full p-1 shrink-0" style={{ background: '#1a2820' }}>
                 {[['all','All'], ...Object.entries(PLAN_META).map(([k,m]) => [k, m.label])].map(([key, label]) => (
                   <button key={key} onClick={() => { setUserPlanFilter(key); setUserPage(0); }}
-                    className="px-3 py-1 rounded-full text-[0.7rem] font-semibold transition-all"
+                    className="px-3 py-1 rounded-full text-[0.7rem] font-semibold transition-all whitespace-nowrap"
                     style={{ background: userPlanFilter === key ? '#00A86B' : 'transparent', color: userPlanFilter === key ? '#fff' : 'rgba(255,255,255,0.5)' }}>
                     {label}
                   </button>
                 ))}
               </div>
-              <div className="flex gap-1 rounded-full p-1" style={{ background: '#1a2820' }}>
+              <div className="flex gap-1 rounded-full p-1 shrink-0" style={{ background: '#1a2820' }}>
                 {(['all','active','banned'] as const).map(key => (
                   <button key={key} onClick={() => { setUserStatusFilter(key); setUserPage(0); }}
                     className="px-3 py-1 rounded-full text-[0.7rem] font-semibold capitalize transition-all"
@@ -1101,10 +1170,10 @@ export default function NizamPage() {
                   </button>
                 ))}
               </div>
-              <div className="flex gap-1 rounded-full p-1" style={{ background: '#1a2820' }}>
-                {([['all','All'],['has_post','Has Post'],['has_story','Has Story'],['no_content','No Content']] as [string,string][]).map(([key,label]) => (
+              <div className="flex gap-1 rounded-full p-1 shrink-0" style={{ background: '#1a2820' }}>
+                {([['all','All'],['has_post','Post'],['has_story','Story'],['no_content','None']] as [string,string][]).map(([key,label]) => (
                   <button key={key} onClick={() => { setUserContentFilter(key as typeof userContentFilter); setUserPage(0); }}
-                    className="px-3 py-1 rounded-full text-[0.7rem] font-semibold transition-all"
+                    className="px-3 py-1 rounded-full text-[0.7rem] font-semibold transition-all whitespace-nowrap"
                     style={{ background: userContentFilter === key ? '#00A86B' : 'transparent', color: userContentFilter === key ? '#fff' : 'rgba(255,255,255,0.5)' }}>
                     {label}
                   </button>
@@ -1224,9 +1293,9 @@ export default function NizamPage() {
               </>
             ) : (
               <>
-                <div className="rounded-2xl overflow-hidden" style={{ background: '#1a2820' }}>
+                <div className="rounded-2xl overflow-x-auto" style={{ background: '#1a2820' }}>
                   <div className="grid text-[0.7rem] font-bold uppercase tracking-wider px-5 py-3"
-                    style={{ gridTemplateColumns: '1fr 1fr 90px 70px 70px 100px 100px', color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    style={{ gridTemplateColumns: '180px 140px 90px 70px 70px 100px 110px', minWidth: 760, color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                     <span>Email</span><span>Name</span><span>Plan</span><span>Credits</span><span>Content</span><span>Status</span><span>Actions</span>
                   </div>
                   {paginatedUsers.map((u, i) => {
@@ -1235,7 +1304,7 @@ export default function NizamPage() {
                     const uStories= userStoryMap[u.id] ?? [];
                     return (
                       <div key={u.id} className="grid items-center px-5 py-3 text-sm"
-                        style={{ gridTemplateColumns: '1fr 1fr 90px 70px 70px 100px 100px', borderBottom: i < paginatedUsers.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', opacity: u.is_banned ? 0.55 : 1 }}>
+                        style={{ gridTemplateColumns: '180px 140px 90px 70px 70px 100px 110px', minWidth: 760, borderBottom: i < paginatedUsers.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', opacity: u.is_banned ? 0.55 : 1 }}>
                         <span className="text-white text-[0.78rem] truncate pr-2">{u.email}</span>
                         <span className="text-[0.75rem] truncate pr-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{u.full_name ?? '—'}</span>
                         <span><span className="text-[0.68rem] font-bold px-2 py-0.5 rounded-full" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span></span>
@@ -1274,7 +1343,7 @@ export default function NizamPage() {
 
         {/* ── CHANNELS / POSTS / STORIES ───────────────────────────────── */}
         {(tab === 'channels' || tab === 'posts' || tab === 'stories') && (
-          <div className="p-8 grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-8 items-start">
+          <div className="p-4 sm:p-8 grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 sm:gap-8 items-start">
             {/* Channel sidebar */}
             <div>
               <p className="text-[0.68rem] font-bold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>Channels</p>
@@ -1344,7 +1413,7 @@ export default function NizamPage() {
                             {users.map(u => <option key={u.id} value={u.id} style={{ color: '#141413' }}>{u.full_name ?? u.email}</option>)}
                           </select>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                           <input value={npTitle}   onChange={e => setNpTitle(e.target.value)}   placeholder="Title (optional)" className="rounded-lg px-3 py-2 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} />
                           <input value={npAudio}   onChange={e => setNpAudio(e.target.value)}   placeholder="Audio URL"        className="rounded-lg px-3 py-2 text-sm outline-none" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} />
                         </div>
@@ -1403,16 +1472,16 @@ export default function NizamPage() {
 
         {/* ── FEATURED ─────────────────────────────────────────────── */}
         {tab === 'featured' && (
-          <div className="p-8 max-w-3xl">
+          <div className="p-4 sm:p-8 max-w-3xl">
             <h1 className="text-[1.4rem] font-bold text-white mb-1">Featured Carousel</h1>
             <p className="text-[0.82rem] mb-8" style={{ color: 'rgba(255,255,255,0.45)' }}>
               Profile spotlights shown on Home, Channels &amp; Profiles pages
             </p>
 
             {/* Add form */}
-            <div className="rounded-2xl p-6 mb-8" style={{ background: '#1a2820' }}>
+            <div className="rounded-2xl p-4 sm:p-6 mb-8" style={{ background: '#1a2820' }}>
               <p className="text-[0.7rem] font-bold uppercase tracking-wider mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>Add New Spotlight</p>
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="Title *"
                   className="rounded-xl px-3 py-2.5 text-sm outline-none col-span-2"
                   style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} />
@@ -1515,17 +1584,17 @@ export default function NizamPage() {
 
         {/* ── SECURITY / IRIS ─────────────────────────────────────────── */}
         {tab === 'security' && (
-          <div className="p-8 max-w-5xl">
-            <div className="flex items-center justify-between mb-6">
+          <div className="p-4 sm:p-8 max-w-5xl">
+            <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
               <div>
                 <h1 className="text-[1.4rem] font-bold text-white mb-1">Security — IRIS</h1>
                 <p className="text-[0.82rem]" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  Device fingerprints · Multi-account abuse detection · Audit log
+                  Device fingerprints · Abuse detection · Audit log
                 </p>
               </div>
               <button
                 onClick={loadSecurity}
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0"
                 style={{ background: 'rgba(0,168,107,0.12)', color: '#00A86B', border: '1px solid rgba(0,168,107,0.25)' }}
               >
                 {secLoading ? 'Loading…' : 'Refresh'}
@@ -1645,8 +1714,183 @@ export default function NizamPage() {
         )}
 
         {/* ── SETUP ───────────────────────────────────────────────────── */}
+        {/* ── STATS ─────────────────────────────────────────────────────── */}
+        {tab === 'stats' && (
+          <div className="p-4 sm:p-8 max-w-5xl">
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="text-[1.4rem] font-bold text-white">Share Stats</h1>
+              <button onClick={loadStats} className="px-4 py-1.5 rounded-xl text-xs font-semibold"
+                style={{ background: 'rgba(0,168,107,0.15)', color: '#00A86B', border: '1px solid rgba(0,168,107,0.3)' }}>
+                {statsLoading ? 'Loading…' : 'Refresh'}
+              </button>
+            </div>
+            <p className="text-[0.82rem] mb-8" style={{ color: 'rgba(255,255,255,0.45)' }}>Views, shares, and referrals across all NanoID slugs</p>
+
+            {statsLoading && !statsData && (
+              <div className="text-center py-20 text-[0.85rem]" style={{ color: 'rgba(255,255,255,0.35)' }}>Loading analytics…</div>
+            )}
+
+            {statsData && (() => {
+              const { totals, byType, topByViews, topByShares, recentEvents, eventsByDay } = statsData;
+              const TYPE_COLORS: Record<string, string> = {
+                profile: '#00A86B', post: '#2563EB', story: '#C8960C',
+                channel: '#9333EA', featured: '#CF4500', biodata: '#0891B2',
+              };
+
+              // Build sorted day list for sparkline (last 14 days)
+              const today = new Date();
+              const days: string[] = [];
+              for (let i = 13; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                days.push(d.toISOString().slice(0, 10));
+              }
+              const maxDayViews = Math.max(...days.map(d => eventsByDay[d]?.views ?? 0), 1);
+
+              return (
+                <>
+                  {/* Totals */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    {[
+                      { label: 'Total Views',    value: totals.views,    icon: '👁', color: '#00A86B' },
+                      { label: 'Total Shares',   value: totals.shares,   icon: '🔗', color: '#2563EB' },
+                      { label: 'Tracked Slugs',  value: totals.entities, icon: '🔑', color: '#C8960C' },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-2xl p-5" style={{ background: '#1a2820' }}>
+                        <div className="text-2xl mb-2">{s.icon}</div>
+                        <div className="text-[2rem] font-extrabold" style={{ color: s.color }}>{s.value.toLocaleString()}</div>
+                        <div className="text-[0.75rem] mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* By entity type */}
+                  <div className="rounded-2xl p-6 mb-6" style={{ background: '#1a2820' }}>
+                    <h3 className="text-sm font-bold text-white mb-4">Breakdown by Entity Type</h3>
+                    <div className="space-y-3">
+                      {Object.entries(byType).sort((a, b) => b[1].views - a[1].views).map(([type, data]) => {
+                        const pct = totals.views ? Math.round((data.views / totals.views) * 100) : 0;
+                        const color = TYPE_COLORS[type] ?? '#696969';
+                        return (
+                          <div key={type}>
+                            <div className="flex justify-between text-[0.75rem] mb-1">
+                              <span className="font-semibold capitalize" style={{ color }}>{type}</span>
+                              <span style={{ color: 'rgba(255,255,255,0.5)' }}>
+                                {data.views.toLocaleString()} views · {data.shares.toLocaleString()} shares · {data.entities} slugs
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* View activity sparkline */}
+                  <div className="rounded-2xl p-6 mb-6" style={{ background: '#1a2820' }}>
+                    <h3 className="text-sm font-bold text-white mb-4">Views — Last 14 Days</h3>
+                    <div className="flex items-end gap-1" style={{ height: 64 }}>
+                      {days.map(day => {
+                        const v = eventsByDay[day]?.views ?? 0;
+                        const h = maxDayViews > 0 ? Math.max(4, Math.round((v / maxDayViews) * 60)) : 4;
+                        return (
+                          <div key={day} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="rounded-sm w-full" title={`${day}: ${v} views`}
+                              style={{ height: h, background: '#00A86B', opacity: v === 0 ? 0.15 : 0.85 }} />
+                            <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.3)', writingMode: 'vertical-rl', transform: 'rotate(180deg)', height: 24 }}>
+                              {day.slice(5)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    {/* Top by views */}
+                    <div className="rounded-2xl p-5" style={{ background: '#1a2820' }}>
+                      <h3 className="text-sm font-bold text-white mb-3">Top Slugs by Views</h3>
+                      <div className="space-y-2">
+                        {topByViews.slice(0, 10).map((row, i) => (
+                          <div key={row.slug} className="flex items-center gap-3">
+                            <span className="text-[0.7rem] w-5 text-right shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }}>{i + 1}</span>
+                            <span className="font-mono text-[0.72rem] flex-1 truncate" style={{ color: TYPE_COLORS[row.entity_type] ?? '#aaa' }}>
+                              {row.entity_type}/{row.slug}
+                            </span>
+                            <span className="text-[0.72rem] shrink-0 font-semibold text-white">{(row.views as number).toLocaleString()}</span>
+                          </div>
+                        ))}
+                        {topByViews.length === 0 && <p className="text-[0.8rem]" style={{ color: 'rgba(255,255,255,0.3)' }}>No data yet</p>}
+                      </div>
+                    </div>
+
+                    {/* Top by shares */}
+                    <div className="rounded-2xl p-5" style={{ background: '#1a2820' }}>
+                      <h3 className="text-sm font-bold text-white mb-3">Top Slugs by Shares</h3>
+                      <div className="space-y-2">
+                        {topByShares.slice(0, 10).map((row, i) => (
+                          <div key={row.slug} className="flex items-center gap-3">
+                            <span className="text-[0.7rem] w-5 text-right shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }}>{i + 1}</span>
+                            <span className="font-mono text-[0.72rem] flex-1 truncate" style={{ color: TYPE_COLORS[row.entity_type] ?? '#aaa' }}>
+                              {row.entity_type}/{row.slug}
+                            </span>
+                            <span className="text-[0.72rem] shrink-0 font-semibold text-white">{(row.shares as number).toLocaleString()}</span>
+                          </div>
+                        ))}
+                        {topByShares.length === 0 && <p className="text-[0.8rem]" style={{ color: 'rgba(255,255,255,0.3)' }}>No data yet</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent events */}
+                  <div className="rounded-2xl p-5" style={{ background: '#1a2820' }}>
+                    <h3 className="text-sm font-bold text-white mb-3">Recent Events</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[0.75rem]">
+                        <thead>
+                          <tr style={{ color: 'rgba(255,255,255,0.35)' }}>
+                            <th className="text-left pb-2 pr-4 font-semibold">Type</th>
+                            <th className="text-left pb-2 pr-4 font-semibold">Slug</th>
+                            <th className="text-left pb-2 pr-4 font-semibold">Source</th>
+                            <th className="text-left pb-2 font-semibold">Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentEvents.map((e, i) => (
+                            <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td className="py-1.5 pr-4">
+                                <span className="rounded px-1.5 py-0.5 text-[10px] font-bold"
+                                  style={{
+                                    background: e.event_type === 'view' ? 'rgba(0,168,107,0.15)' : e.event_type === 'share' ? 'rgba(37,99,235,0.2)' : 'rgba(200,150,12,0.2)',
+                                    color: e.event_type === 'view' ? '#00A86B' : e.event_type === 'share' ? '#60A5FA' : '#C8960C',
+                                  }}>
+                                  {e.event_type as string}
+                                </span>
+                              </td>
+                              <td className="py-1.5 pr-4 font-mono" style={{ color: 'rgba(255,255,255,0.6)' }}>{e.slug as string}</td>
+                              <td className="py-1.5 pr-4" style={{ color: 'rgba(255,255,255,0.4)' }}>{e.source as string || '—'}</td>
+                              <td className="py-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                                {new Date(e.created_at as string).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                          {recentEvents.length === 0 && (
+                            <tr><td colSpan={4} className="py-4 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>No events yet</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
         {tab === 'setup' && (
-          <div className="p-8 max-w-2xl">
+          <div className="p-4 sm:p-8 max-w-2xl">
             <h1 className="text-[1.4rem] font-bold text-white mb-1">Setup</h1>
             <p className="text-[0.82rem] mb-8" style={{ color: 'rgba(255,255,255,0.45)' }}>One-time configuration steps</p>
 

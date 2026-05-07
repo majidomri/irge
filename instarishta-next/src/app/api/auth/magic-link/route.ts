@@ -2,14 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
-// Rate limiting: 1 request per email per 60s (in-memory, resets on cold start)
-const lastSent = new Map<string, number>();
-const RATE_MS = 60_000;
+// Per-email: max 3 requests per hour
+const emailLog = new Map<string, number[]>();
+const EMAIL_MAX   = 3;
+const EMAIL_WINDOW = 60 * 60 * 1000; // 1 hour
 
-function rateCheck(email: string): boolean {
-  const last = lastSent.get(email) ?? 0;
-  if (Date.now() - last < RATE_MS) return false;
-  lastSent.set(email, Date.now());
+// Per-IP: max 10 requests per hour (blocks email-bombing from one IP)
+const ipLog = new Map<string, number[]>();
+const IP_MAX    = 10;
+const IP_WINDOW = 60 * 60 * 1000; // 1 hour
+
+function rateCheck(key: string, store: Map<string, number[]>, max: number, windowMs: number): boolean {
+  const now  = Date.now();
+  const hits = (store.get(key) ?? []).filter(t => now - t < windowMs);
+  if (hits.length >= max) return false;
+  hits.push(now);
+  store.set(key, hits);
   return true;
 }
 
@@ -91,8 +99,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
     }
 
-    if (!rateCheck(email)) {
-      return NextResponse.json({ error: 'Please wait 60 seconds before requesting another link' }, { status: 429 });
+    const ip = (
+      request.headers.get('cf-connecting-ip') ??
+      request.headers.get('x-real-ip') ??
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+      'unknown'
+    );
+
+    if (!rateCheck(ip, ipLog, IP_MAX, IP_WINDOW)) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
+    if (!rateCheck(email, emailLog, EMAIL_MAX, EMAIL_WINDOW)) {
+      return NextResponse.json({ error: 'Too many sign-in links sent to this address. Please wait before trying again.' }, { status: 429 });
     }
 
     const resendKey     = process.env.RESEND_API_KEY;

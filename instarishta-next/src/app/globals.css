@@ -146,6 +146,15 @@ body {
   letter-spacing: 0;
 }
 
+/* Hide scrollbar utility */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Nizam admin — mobile bottom-nav clearance */
+@media (max-width: 767px) {
+  .nizam-main { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+}
+
 /* StarBorder keyframes */
 @keyframes star-movement-bottom {
   0%   { transform: translate(0%, 0%); opacity: 1; }
