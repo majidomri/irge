@@ -668,6 +668,36 @@ export default function NizamPage() {
     if (tab === 'users' && token) { loadUsers(); loadUserContent(); }
   }, [tab, token, loadUsers, loadUserContent]);
 
+  // Live credit/plan updates: subscribe to ir_user_profiles Realtime while on users tab
+  useEffect(() => {
+    if (tab !== 'users' || !session) return;
+    const channel = supabase
+      .channel('admin:ir_user_profiles')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ir_user_profiles' },
+        (payload) => {
+          const row = payload.new as Partial<UserRow> & { id: string };
+          if (!row?.id) return;
+          setUsers(prev => prev.map(u =>
+            u.id === row.id
+              ? {
+                  ...u,
+                  contact_credits: row.contact_credits ?? u.contact_credits,
+                  plan:            row.plan            ?? u.plan,
+                  plan_expires_at: row.plan_expires_at ?? u.plan_expires_at,
+                  is_banned:       row.is_banned       ?? u.is_banned,
+                  full_name:       row.full_name       ?? u.full_name,
+                  notes:           row.notes           ?? u.notes,
+                }
+              : u
+          ));
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tab, session]);
+
   const loadFeatured = useCallback(async () => {
     setFeaturedLoading(true);
     const { data } = await supabase.from('ir_featured').select('*').order('sort_order', { ascending: true });
