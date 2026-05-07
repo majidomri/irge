@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getContacts, clearContacts, type ContactEntry } from '@/lib/contact-log';
+import { getContacts, consumeRevealedNumbers, maskNumber, type ContactEntry } from '@/lib/contact-log';
 
 function fmt(iso: string) {
-  const d = new Date(iso);
+  const d    = new Date(iso);
   const date = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   const time = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   return `${date} · ${time}`;
@@ -26,32 +26,22 @@ function PhoneIcon() {
 }
 
 export default function ContactedPage() {
-  const [entries, setEntries] = useState<ContactEntry[]>([]);
-  const [mounted, setMounted] = useState(false);
-  const [showClear, setShowClear] = useState(false);
+  const [entries,  setEntries]  = useState<ContactEntry[]>([]);
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const [mounted,  setMounted]  = useState(false);
 
   useEffect(() => {
-    setEntries(getContacts());
+    // consumeRevealedNumbers: reads entries, flips revealed→false, returns freshIds for this render
+    const { entries: all, freshIds: fresh } = consumeRevealedNumbers();
+    setEntries(all);
+    setFreshIds(fresh);
     setMounted(true);
   }, []);
 
-  const waCount   = entries.filter(e => e.type === 'whatsapp').length;
-  const callCount = entries.filter(e => e.type === 'call').length;
-  const total     = entries.length;
-
-  // Group by profile number for summary
-  const profileMap = entries.reduce<Record<number, ContactEntry[]>>((acc, e) => {
-    if (!acc[e.profileNum]) acc[e.profileNum] = [];
-    acc[e.profileNum].push(e);
-    return acc;
-  }, {});
-  const uniqueProfiles = Object.keys(profileMap).length;
-
-  const handleClear = () => {
-    clearContacts();
-    setEntries([]);
-    setShowClear(false);
-  };
+  const waCount        = entries.filter(e => e.type === 'whatsapp').length;
+  const callCount      = entries.filter(e => e.type === 'call').length;
+  const total          = entries.length;
+  const uniqueProfiles = new Set(entries.map(e => e.profileNum)).size;
 
   if (!mounted) return null;
 
@@ -62,7 +52,7 @@ export default function ContactedPage() {
       <div style={{ background: '#1E3932', color: '#fff' }} className="px-4 pt-12 pb-6">
         <h1 className="text-xl font-extrabold tracking-tight mb-1">Contacted</h1>
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
-          Your outgoing contact history — transparent & private.
+          Your outgoing contact history — transparent &amp; private.
         </p>
       </div>
 
@@ -95,13 +85,24 @@ export default function ContactedPage() {
               {uniqueProfiles} unique profile{uniqueProfiles !== 1 ? 's' : ''} contacted
             </p>
             <p className="text-xs" style={{ color: '#696969' }}>
-              via InstaRishta's verified contact number
+              via InstaRishta&apos;s verified contact number
             </p>
           </div>
           <div className="ml-auto text-right">
             <p className="text-[11px] font-bold font-mono" style={{ color: '#141413' }}>+918886667121</p>
             <p className="text-[10px]" style={{ color: '#A0A0A0' }}>InstaRishta</p>
           </div>
+        </div>
+      )}
+
+      {/* Notice — number masking */}
+      {total > 0 && (
+        <div className="mx-4 mb-4 px-3 py-2 rounded-xl flex items-center gap-2"
+          style={{ background: 'rgba(200,150,12,0.08)', border: '1px solid rgba(200,150,12,0.2)' }}>
+          <span className="text-sm">🔒</span>
+          <p className="text-[11px]" style={{ color: '#8a6a00' }}>
+            Numbers are shown in full only once for privacy. After that they are permanently masked.
+          </p>
         </div>
       )}
 
@@ -116,76 +117,52 @@ export default function ContactedPage() {
         </div>
       ) : (
         <div className="px-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#A0A0A0' }}>
-              History · {total} entries
-            </p>
-            <button
-              onClick={() => setShowClear(true)}
-              className="text-xs font-semibold px-3 py-1 rounded-full border"
-              style={{ borderColor: '#F0ECE8', color: '#696969', background: '#fff' }}
-            >
-              Clear all
-            </button>
-          </div>
+          <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: '#A0A0A0' }}>
+            History · {total} entries
+          </p>
 
           <div className="flex flex-col gap-2.5 pb-4">
-            {entries.map(e => (
-              <div key={e.id}
-                className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
-                style={{ background: '#fff', border: '1px solid #F0ECE8' }}>
+            {entries.map(e => {
+              const isFresh  = freshIds.has(e.id);
+              const display  = isFresh ? e.number : maskNumber(e.number);
+              return (
+                <div key={e.id}
+                  className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
+                  style={{ background: '#fff', border: `1px solid ${isFresh ? 'rgba(0,98,65,0.2)' : '#F0ECE8'}` }}>
 
-                {/* Type badge */}
-                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: e.type === 'whatsapp' ? 'rgba(37,211,102,0.1)' : '#F3F0EE' }}>
-                  {e.type === 'whatsapp' ? <WAIcon /> : <PhoneIcon />}
+                  {/* Type badge */}
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: e.type === 'whatsapp' ? 'rgba(37,211,102,0.1)' : '#F3F0EE' }}>
+                    {e.type === 'whatsapp' ? <WAIcon /> : <PhoneIcon />}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate" style={{ color: '#141413' }}>
+                      Profile #{e.profileNum}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: '#696969' }}>
+                      {e.profileTitle || '—'}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: '#A0A0A0' }}>{fmt(e.timestamp)}</p>
+                  </div>
+
+                  {/* Number + type */}
+                  <div className="text-right shrink-0">
+                    <p className="text-[11px] font-bold font-mono" style={{ color: isFresh ? '#006241' : '#A0A0A0' }}>
+                      {display}
+                    </p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block"
+                      style={{
+                        background: e.type === 'whatsapp' ? 'rgba(37,211,102,0.1)' : '#F3F0EE',
+                        color: e.type === 'whatsapp' ? '#1a9e55' : '#696969',
+                      }}>
+                      {e.type === 'whatsapp' ? 'WA' : 'Call'}
+                    </span>
+                  </div>
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate" style={{ color: '#141413' }}>
-                    Profile #{e.profileNum}
-                  </p>
-                  <p className="text-xs truncate" style={{ color: '#696969' }}>
-                    {e.profileTitle || '—'}
-                  </p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#A0A0A0' }}>{fmt(e.timestamp)}</p>
-                </div>
-
-                {/* Type pill */}
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0"
-                  style={{
-                    background: e.type === 'whatsapp' ? 'rgba(37,211,102,0.1)' : '#F3F0EE',
-                    color: e.type === 'whatsapp' ? '#1a9e55' : '#696969',
-                  }}>
-                  {e.type === 'whatsapp' ? 'WA' : 'Call'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Clear confirmation dialog */}
-      {showClear && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.45)' }}
-          onClick={() => setShowClear(false)}>
-          <div className="w-full max-w-md rounded-t-3xl p-6 pb-8" style={{ background: '#fff' }}
-            onClick={e => e.stopPropagation()}>
-            <p className="text-base font-extrabold mb-1" style={{ color: '#141413' }}>Clear contact history?</p>
-            <p className="text-sm mb-5" style={{ color: '#696969' }}>This will permanently delete all {total} entries from this device.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setShowClear(false)}
-                className="flex-1 rounded-full py-3 text-sm font-bold border"
-                style={{ borderColor: '#D1CDC7', color: '#141413' }}>
-                Cancel
-              </button>
-              <button onClick={handleClear}
-                className="flex-1 rounded-full py-3 text-sm font-bold"
-                style={{ background: '#CF4500', color: '#fff' }}>
-                Clear all
-              </button>
-            </div>
+              );
+            })}
           </div>
         </div>
       )}

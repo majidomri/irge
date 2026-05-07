@@ -533,17 +533,18 @@ function ProfileCard({
           {canContact ? 'Contact' : `Limit (${remaining})`}
         </button>
         <AudioBtn url={profile.audio_url} />
-        <a href={`tel:${BUSINESS_WA}`} onClick={e => { e.stopPropagation(); logContact({ type: 'call', number: BUSINESS_WA, profileNum: profile._num, profileTitle: profile.title }); }}
+        <button onClick={handleContact}
           className="w-10 h-10 rounded-full flex items-center justify-center border shrink-0"
-          style={{ borderColor: '#D1CDC7', color: '#696969' }}>
+          style={{ borderColor: canContact ? '#D1CDC7' : '#F0ECE8', color: canContact ? '#696969' : '#D1CDC7' }}
+          title={canContact ? 'Call' : 'No credits'}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 01.22 4.05 2 2 0 012.2 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.91a16 16 0 006.28 6.28l1.48-1.48a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-        </a>
+        </button>
       </div>
 
       {/* Hint footer — excluded from card capture */}
       <div data-no-capture className="px-4 pb-2.5 flex justify-between items-center">
         <span className="text-[10px]" style={{ color: '#D1CDC7' }}>double-tap to save · hold for biodata</span>
-        <span className="text-[10px] font-semibold" style={{ color: '#D1CDC7' }}>IR #{profile._num}</span>
+        <span className="text-[10px] font-semibold" style={{ color: '#D1CDC7' }}>instarishta.me</span>
       </div>
     </div>
   );
