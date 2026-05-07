@@ -25,6 +25,8 @@ const REPLAY_WINDOW_MS = 5 * 60 * 1000;   // 5 minutes
 const TOKEN_COOKIE     = '__Host-ir_t';    // __Host- prefix = browser-enforced domain lock
 
 const ALLOWED_ORIGINS = new Set([
+  'https://instarishta.me',
+  'https://www.instarishta.me',
   'https://instarishta.com',
   'https://www.instarishta.com',
   ...(process.env.NODE_ENV !== 'production'

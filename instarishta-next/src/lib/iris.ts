@@ -155,6 +155,15 @@ async function audioSignal(): Promise<string> {
       if (!Ctx) { clearTimeout(bail); return resolve('no_audio'); }
 
       const ctx  = new Ctx({ sampleRate: 44100 });
+
+      // Browser requires a user gesture before AudioContext can run.
+      // If suspended, resolve with a stable fallback rather than throwing.
+      if (ctx.state === 'suspended') {
+        clearTimeout(bail);
+        try { ctx.close(); } catch { /* ignore */ }
+        return resolve('audio_suspended');
+      }
+
       const osc  = ctx.createOscillator();
       const cmp  = ctx.createDynamicsCompressor();
       const sp   = ctx.createScriptProcessor(4096, 1, 1);

@@ -1,11 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { getAuthClient } from './auth-client';
 
-const SUPABASE_URL  = 'https://cxgxyqxeakjrghfzkuko.supabase.co';
-const SUPABASE_ANON = 'sb_publishable_C2qwOBB0NvHL0KRGwpXBQg_UGZFoCis';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
-  realtime: { params: { eventsPerSecond: 10 } },
-});
+// Reuse the singleton browser client — prevents "multiple GoTrueClient instances" warning
+export const supabase = getAuthClient();
 
 export const POST_PAGE_SIZE = 9;
 
