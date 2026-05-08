@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -69,6 +70,17 @@ export default function MobileDock() {
   const router = useRouter();
   const path   = usePathname();
   const { user } = useAuth();
+
+  // When returning from WhatsApp / external app the browser restores the page
+  // from bfcache (e.persisted = true), which freezes the old React state.
+  // router.refresh() re-fetches server components so the dock shows current state.
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) router.refresh();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [router]);
 
   const accountTab: TabItem = user
     ? { key: 'account', icon: <AccountIcon active={path.startsWith('/account')} initial={user.email?.[0]} />, label: 'Account', href: '/account', match: p => p.startsWith('/account') }
