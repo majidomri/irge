@@ -1,11 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* Typography — Inter (Uber substitute) */
-  --font-sans: 'Inter', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  /* Typography — Inter (Uber substitute), self-hosted via next/font */
+  --font-sans: var(--font-inter), system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
 
   /* Mastercard surfaces */
   --color-canvas:  #F3F0EE;
@@ -131,7 +128,7 @@ body {
 
 /* Arabic/Urdu font helpers */
 .font-arab {
-  font-family: 'Noto Naskh Arabic', 'Geeza Pro', 'Al Nile', serif;
+  font-family: var(--font-arabic), 'Geeza Pro', 'Al Nile', serif;
   direction: rtl;
 }
 
@@ -140,7 +137,11 @@ body {
    Local Windows system fonts like Faiz Nastaliq / Jameel Noori Nastaliq only exist on
    Windows machines and are not available on Vercel. */
 .font-urdu {
-  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Faiz Nastaleeq', serif;
+  /* Calligraphic Nastaliq fonts first — local fonts (Faiz / Jameel Noori)
+     render immediately if installed; Noto Nastaliq Urdu loads asynchronously
+     via LazyNastaliq and swaps in after first paint. Naskh is the during-load
+     fallback so Urdu text never disappears. */
+  font-family: 'Faiz Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', var(--font-arabic), serif;
   direction: rtl;
   line-height: 2;
   letter-spacing: 0;

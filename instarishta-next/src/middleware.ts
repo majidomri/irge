@@ -43,6 +43,11 @@ export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const isAPI    = pathname.startsWith('/api/');
 
+  // Block old /admin URL — redirect silently so the route is not discoverable.
+  if (pathname.startsWith('/admin')) {
+    return NextResponse.redirect(new URL('/', req.url));
+  }
+
   // ── [INTERNAL] HTTP Method ────────────────────────────────────────────────
   // Block CONNECT, DEBUG, MOVE, TRACE, TRACK — browsers never send these.
   if (BAD_METHOD.test(req.method)) {

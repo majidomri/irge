@@ -49,12 +49,30 @@ const nextConfig: NextConfig = {
   },
   devIndicators: false,
 
+  experimental: {
+    // Inline the route's atomic Tailwind CSS into <style> tags in the
+    // document head — kills the render-blocking <link rel="stylesheet">
+    // round-trip Lighthouse keeps flagging. Equivalent to Remix's
+    // critical-CSS-in-document pattern.
+    inlineCss: true,
+  },
+
   async headers() {
     return [
       {
         // Apply security headers to every route
         source: '/(.*)',
         headers: SECURITY_HEADERS,
+      },
+      {
+        // Remix-style HTTP caching for the dynamic /profiles route. The page
+        // is server-filtered per searchParams, but the underlying data updates
+        // only every ~30 min (ISR revalidate). Letting a CDN cache for that
+        // window with stale-while-revalidate keeps p99 latency low.
+        source: '/profiles',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=1800, stale-while-revalidate=3600' },
+        ],
       },
     ];
   },

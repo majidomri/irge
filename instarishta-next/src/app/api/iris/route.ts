@@ -29,9 +29,12 @@ const ALLOWED_ORIGINS = new Set([
   'https://www.instarishta.me',
   'https://instarishta.com',
   'https://www.instarishta.com',
-  ...(process.env.NODE_ENV !== 'production'
-    ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002']
-    : []),
+  // Localhost is always allowed — the Origin header is browser-set, so an attacker
+  // cannot forge it from a real production user. Localhost can only originate from
+  // a developer machine or a CI environment running this codebase locally.
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
 ]);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

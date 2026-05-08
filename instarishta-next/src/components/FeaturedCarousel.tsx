@@ -16,13 +16,16 @@ interface FeaturedItem {
 export default function FeaturedCarousel({
   placement,
   label = 'Featured Profiles',
+  initialItems,
 }: {
   placement: 'home' | 'channels' | 'profiles';
   label?: string;
+  initialItems?: FeaturedItem[];
 }) {
-  const [items, setItems] = useState<FeaturedItem[]>([]);
+  const [items, setItems] = useState<FeaturedItem[]>(initialItems ?? []);
 
   useEffect(() => {
+    if (initialItems && initialItems.length > 0) return; // server already fetched
     const client = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -37,7 +40,7 @@ export default function FeaturedCarousel({
       .then(({ data }) => {
         if (data && data.length > 0) setItems(data);
       });
-  }, [placement]);
+  }, [placement, initialItems]);
 
   if (items.length === 0) return null;
 

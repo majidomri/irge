@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -111,14 +112,15 @@ export default function MobileDock() {
         {tabs.map(tab => {
           const isActive = tab.match(path);
           return (
-            <button
+            <Link
               key={tab.key}
-              onClick={() => router.push(tab.href)}
-              className="flex-1 flex flex-col items-center justify-center gap-[3px] py-2.5 border-0 bg-transparent cursor-pointer relative"
+              href={tab.href}
+              prefetch={true}
+              className="flex-1 flex flex-col items-center justify-center gap-[3px] py-2.5 relative"
+              style={{ textDecoration: 'none', cursor: 'pointer' }}
               aria-current={isActive ? 'page' : undefined}
               aria-label={tab.label}
             >
-              {/* Active indicator dot */}
               {isActive && (
                 <span
                   className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full"
@@ -132,7 +134,7 @@ export default function MobileDock() {
               >
                 {tab.label}
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>
