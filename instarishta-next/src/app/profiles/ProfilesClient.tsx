@@ -27,6 +27,14 @@ export interface Profile {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+/** Returns 'rtl' if text contains any Arabic/Urdu codepoints, 'ltr' otherwise. */
+const ARABIC_RE = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+function textDir(text: string): 'rtl' | 'ltr' {
+  return ARABIC_RE.test(text) ? 'rtl' : 'ltr';
+}
+
+const URDU_FONT = "'Noto Nastaliq Urdu','Noto Naskh Arabic',serif";
+
 function matchesEdu(body: string, val: string) {
   if (!val) return true;
   const b = body.toLowerCase();
@@ -286,7 +294,11 @@ function ContactModal({
               <p className="text-[0.68rem] font-bold uppercase tracking-wide" style={{ color: isFemale ? '#C0397A' : '#006241' }}>
                 IR #{num} · {isFemale ? 'Bride' : 'Groom'}
               </p>
-              <p className="text-xs font-semibold truncate mt-0.5" style={{ color: '#141413' }}>{profile.title}</p>
+              <p className="text-xs font-semibold truncate mt-0.5"
+                dir={textDir(profile.title)}
+                style={{ color: '#141413', fontFamily: textDir(profile.title) === 'rtl' ? URDU_FONT : 'inherit' }}>
+                {profile.title}
+              </p>
             </div>
           </div>
 
@@ -398,12 +410,18 @@ function BiodataModal({ profile, onClose }: { profile: DeckProfile; onClose: () 
           </div>
 
           {/* Full biodata text */}
-          <div className="rounded-2xl p-4" dir="rtl" lang="ur"
-            style={{ background: '#FAFAF9', border: '1.5px solid #F0ECE8', fontFamily: "'Noto Nastaliq Urdu','Noto Naskh Arabic',serif" }}>
-            <p className="text-base font-bold mb-3" style={{ color: '#141413', lineHeight: 1.7 }}>
+          <div className="rounded-2xl p-4"
+            style={{ background: '#FAFAF9', border: '1.5px solid #F0ECE8' }}>
+            <p className="text-base font-bold mb-3"
+              dir={textDir(profile.title)}
+              lang={textDir(profile.title) === 'rtl' ? 'ur' : undefined}
+              style={{ color: '#141413', lineHeight: 1.7, fontFamily: textDir(profile.title) === 'rtl' ? URDU_FONT : 'inherit' }}>
               {profile.title}
             </p>
-            <p className="text-sm" style={{ color: '#3A3A3A', lineHeight: 2.2, textAlign: 'justify' }}>
+            <p className="text-sm"
+              dir={textDir(profile.body)}
+              lang={textDir(profile.body) === 'rtl' ? 'ur' : undefined}
+              style={{ color: '#3A3A3A', lineHeight: textDir(profile.body) === 'rtl' ? 2.2 : 1.7, textAlign: 'justify', fontFamily: textDir(profile.body) === 'rtl' ? URDU_FONT : 'inherit' }}>
               {profile.body}
             </p>
           </div>
@@ -731,19 +749,30 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Urdu body */}
-      <div className="px-4 py-3.5" dir="rtl" lang="ur"
-        style={{ fontFamily: "'Noto Nastaliq Urdu','Noto Naskh Arabic',serif" }}>
-        <p className="font-bold mb-2" style={{ color: '#141413', lineHeight: 1.6, fontSize: '0.95rem', textAlign: 'center' }}>
+      {/* Profile body */}
+      <div className="px-4 py-3.5">
+        <p className="font-bold mb-2"
+          dir={textDir(profile.title)}
+          lang={textDir(profile.title) === 'rtl' ? 'ur' : undefined}
+          style={{
+            color: '#141413', lineHeight: 1.6, fontSize: '0.95rem',
+            textAlign: textDir(profile.title) === 'rtl' ? 'center' : 'left',
+            fontFamily: textDir(profile.title) === 'rtl' ? URDU_FONT : 'inherit',
+          }}>
           {profile.title}
         </p>
-        <p style={{
-          color: '#4B4B4B', fontSize: '0.87rem', lineHeight: 1.85,
-          textAlign: 'justify',
-          display: '-webkit-box', WebkitBoxOrient: 'vertical',
-          WebkitLineClamp: expanded ? undefined : 5,
-          overflow: expanded ? 'visible' : 'hidden',
-        }}>
+        <p
+          dir={textDir(profile.body)}
+          lang={textDir(profile.body) === 'rtl' ? 'ur' : undefined}
+          style={{
+            color: '#4B4B4B', fontSize: '0.87rem',
+            lineHeight: textDir(profile.body) === 'rtl' ? 1.85 : 1.6,
+            textAlign: textDir(profile.body) === 'rtl' ? 'justify' : 'left',
+            fontFamily: textDir(profile.body) === 'rtl' ? URDU_FONT : 'inherit',
+            display: '-webkit-box', WebkitBoxOrient: 'vertical',
+            WebkitLineClamp: expanded ? undefined : 5,
+            overflow: expanded ? 'visible' : 'hidden',
+          }}>
           {profile.body}
         </p>
         {longBody && (
