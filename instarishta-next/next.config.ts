@@ -42,7 +42,6 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
-  // Removes "X-Powered-By: Next.js" response header (fingerprinting prevention)
   poweredByHeader: false,
 
   turbopack: {

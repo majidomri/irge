@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withRoute } from '@/lib/typed-route';
 
 export const runtime = 'nodejs';
 
@@ -6,13 +7,10 @@ function escape(v: unknown): string {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRoute(async (_req, body) => {
   const token  = process.env.TELEGRAM_BOT_TOKEN?.trim();
   const target = process.env.TELEGRAM_TARGET?.trim();
   if (!token || !target) return NextResponse.json({ ok: false, error: 'Telegram not configured' }, { status: 503 });
-
-  let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return NextResponse.json({ ok: false, error: 'Bad JSON' }, { status: 400 }); }
 
   const { profileNum, profileTitle, profileBody, gender, action = 'contact' } = body;
 
@@ -49,4 +47,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: result?.description ?? `HTTP ${res.status}` }, { status: 502 });
   }
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withAdmin } from '@/lib/typed-route';
 
 function serviceClient() {
   return createClient(
@@ -9,22 +10,8 @@ function serviceClient() {
   );
 }
 
-async function verifyAdmin(req: NextRequest) {
-  const bearer = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (!bearer) return null;
-  const { data: { user } } = await serviceClient().auth.getUser(bearer);
-  if (!user) return null;
-  const allowed = process.env.ADMIN_EMAILS;
-  if (allowed && !allowed.split(',').map(e => e.trim()).includes(user.email ?? '')) return null;
-  return user;
-}
-
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const caller = await verifyAdmin(req);
-  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { id } = await params;
-  const body: Record<string, unknown> = await req.json();
+export const PATCH = withAdmin(async (_req, { body, params }) => {
+  const { id } = params;
   const sb = serviceClient();
 
   const profileFields: Record<string, unknown> = {};
@@ -42,7 +29,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Sync Supabase Auth ban state
   if ('is_banned' in body) {
     await sb.auth.admin.updateUserById(id, {
       ban_duration: body.is_banned ? '876600h' : 'none',
@@ -50,13 +36,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const caller = await verifyAdmin(req);
-  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { id } = await params;
+export const DELETE = withAdmin(async (_req, { params }) => {
+  const { id } = params;
   const sb = serviceClient();
 
   await sb.from('ir_user_profiles').delete().eq('id', id);
@@ -64,4 +47,4 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
-}
+});
