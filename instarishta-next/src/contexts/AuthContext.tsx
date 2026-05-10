@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { getAuthClient, markRegistered } from '@/lib/auth-client';
-import { logIrisEvent, initIris } from '@/lib/iris';
+import { logIrisEvent, initIris, computeFpHash } from '@/lib/iris';
 
 interface ProfileState {
   credits:         number;
@@ -80,7 +80,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = client.auth.onAuthStateChange((event, s) => {
+    const { data: { subscription } } = client.auth.onAuthStateChange(async (event, s) => {
+      // ── Hard device-bind enforcement ──
+      // On a fresh sign-in (Google or magic-link), check whether this physical
+      // device is already bound to a different user. If so, the SECURITY DEFINER
+      // RPC bans the current account and we sign them out before any UI loads.
+      if (event === 'SIGNED_IN' && s?.user) {
+        try {
+          const fpHash = await computeFpHash();
+          const { data } = await client.rpc('ir_check_device_binding', { p_fp_hash: fpHash });
+          const bind = (data ?? {}) as { blocked?: boolean; reason?: string; primary_user_id?: string };
+          if (bind.blocked) {
+            await client.auth.signOut();
+            // Defer the alert so the SIGNED_OUT listener has fired and the UI
+            // has settled into the logged-out state.
+            setTimeout(() => {
+              if (typeof window !== 'undefined') {
+                window.alert(
+                  'This device is already linked to another account. Only one Gmail per device is allowed. ' +
+                  'If this is a mistake, contact support.'
+                );
+              }
+            }, 100);
+            return;   // skip downstream profile/credit work
+          }
+        } catch {
+          // Network or RPC failure → don't lock the user out; log only.
+        }
+      }
+
       setSession(s);
       setUser(s?.user ?? null);
 

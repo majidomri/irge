@@ -358,6 +358,120 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.ir_admin_fp_events TO authenticated;`;
 
+const DEVICE_BIND_SQL = `-- DEVICE BINDING: Hard-block multiple Gmail accounts on the same physical device.
+-- Run once in Supabase SQL Editor (idempotent — safe to re-run).
+
+-- 1. One row per device → the FIRST user that signed in on it (the "primary").
+CREATE TABLE IF NOT EXISTS public.ir_device_primary (
+  fp_hash    TEXT PRIMARY KEY,
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  bound_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ir_device_primary_user_idx ON public.ir_device_primary(user_id);
+ALTER TABLE public.ir_device_primary ENABLE ROW LEVEL SECURITY;
+-- All access is via the SECURITY DEFINER RPC below — no direct client access.
+
+-- 2. RPC: called by the client right after sign-in (Google / magic-link).
+--    If a different user is already bound to this device → ban the current user
+--    (is_banned=true, contact_credits=0) and return blocked=true so the client
+--    immediately signs them out. Otherwise bind this device to this user.
+CREATE OR REPLACE FUNCTION public.ir_check_device_binding(p_fp_hash TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_uid       UUID := auth.uid();
+  v_existing  UUID;
+BEGIN
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('blocked', false, 'reason', 'no_session');
+  END IF;
+  IF p_fp_hash IS NULL OR length(p_fp_hash) < 16 THEN
+    RETURN jsonb_build_object('blocked', false, 'reason', 'no_fp');
+  END IF;
+
+  SELECT user_id INTO v_existing
+  FROM   public.ir_device_primary
+  WHERE  fp_hash = p_fp_hash;
+
+  IF v_existing IS NULL THEN
+    -- First-time bind for this device
+    INSERT INTO public.ir_device_primary (fp_hash, user_id)
+    VALUES (p_fp_hash, v_uid)
+    ON CONFLICT (fp_hash) DO NOTHING;
+    RETURN jsonb_build_object('blocked', false, 'primary', true);
+
+  ELSIF v_existing = v_uid THEN
+    -- Same user, same device → fine
+    RETURN jsonb_build_object('blocked', false, 'primary', false);
+
+  ELSE
+    -- Different account on a previously-claimed device → HARD BLOCK
+    UPDATE public.ir_user_profiles
+    SET    is_banned       = TRUE,
+           contact_credits = 0,
+           updated_at      = NOW()
+    WHERE  id = v_uid;
+
+    INSERT INTO public.ir_fp_events (fp_hash, user_id, event, metadata)
+    VALUES (
+      p_fp_hash, v_uid, 'multi_account_blocked',
+      jsonb_build_object('primary_user_id', v_existing)
+    );
+
+    RETURN jsonb_build_object(
+      'blocked',         true,
+      'reason',          'multi_account',
+      'primary_user_id', v_existing
+    );
+  END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.ir_check_device_binding TO authenticated;
+
+-- 3. Admin RPC: clear binding (recover a false positive). Route-level admin
+--    gating is enforced by /api/admin/* — this RPC simply deletes the row.
+CREATE OR REPLACE FUNCTION public.ir_admin_unbind_device(p_fp_hash TEXT)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated';
+  END IF;
+  DELETE FROM public.ir_device_primary WHERE fp_hash = p_fp_hash;
+  RETURN FOUND;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.ir_admin_unbind_device TO authenticated;
+
+-- 4. Admin RPC: list all device→user bindings (for the admin dashboard).
+CREATE OR REPLACE FUNCTION public.ir_admin_device_bindings(p_limit INT DEFAULT 200)
+RETURNS TABLE (
+  fp_hash   TEXT,
+  user_id   UUID,
+  email     TEXT,
+  bound_at  TIMESTAMPTZ,
+  last_seen TIMESTAMPTZ,
+  last_ip   TEXT
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    b.fp_hash,
+    b.user_id,
+    u.email::TEXT,
+    b.bound_at,
+    f.last_seen_at,
+    f.last_ip
+  FROM   public.ir_device_primary b
+  LEFT   JOIN auth.users u           ON u.id        = b.user_id
+  LEFT   JOIN public.ir_fingerprints f ON f.fp_hash = b.fp_hash
+  ORDER  BY b.bound_at DESC
+  LIMIT  p_limit;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.ir_admin_device_bindings TO authenticated;`;
+
 const SETUP_SQL = `-- Run this in your Supabase SQL Editor to enable User Management
 
 CREATE TABLE IF NOT EXISTS public.ir_user_profiles (
@@ -390,7 +504,7 @@ END $$;
 -- ADMIN_EMAILS=your@email.com,other@email.com`;
 
 // Combined idempotent migration — paste into Supabase SQL Editor to set up everything at once
-const FULL_MIGRATION_SQL = [IRIS_SQL, USER_USAGE_SQL, FEATURED_SQL, USER_LINK_SQL, SETUP_SQL, CREDITS_SQL].join('\n\n-- ──────────────────────────────────────\n\n');
+const FULL_MIGRATION_SQL = [IRIS_SQL, DEVICE_BIND_SQL, USER_USAGE_SQL, FEATURED_SQL, USER_LINK_SQL, SETUP_SQL, CREDITS_SQL].join('\n\n-- ──────────────────────────────────────\n\n');
 
 // ── NavItem ─────────────────────────────────────────────────────────────────
 function NavItem({ icon, label, active, badge, onClick }: {
@@ -1738,6 +1852,20 @@ export default function NizamPage() {
                 onClick={() => { navigator.clipboard.writeText(IRIS_SQL); showToast('IRIS SQL copied ✓'); }}
                 className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{ background: 'rgba(0,168,107,0.12)', color: '#00A86B', border: '1px solid rgba(0,168,107,0.25)' }}
+              >Copy SQL</button>
+            </div>
+
+            {/* DEVICE BINDING SQL — hard-block multi-Gmail abuse */}
+            <div className="mt-8 rounded-2xl border p-5" style={{ borderColor: 'rgba(207,69,0,0.25)', background: '#1a0f0a' }}>
+              <h3 className="font-bold text-white mb-1">Device-Bind SQL <span className="text-[0.65rem] font-semibold ml-2 px-2 py-0.5 rounded-full" style={{ background: 'rgba(207,69,0,0.18)', color: '#FF8B5A' }}>HARD BLOCK</span></h3>
+              <p className="text-[0.8rem] mb-4" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Hard-blocks signing in with a different Gmail on a device that already has a primary account. Auto-bans the second account. Run after IRIS Setup SQL.
+              </p>
+              <pre className="rounded-xl p-4 text-[0.7rem] leading-relaxed overflow-x-auto" style={{ background: '#0d0604', color: '#FFB591' }}>{DEVICE_BIND_SQL}</pre>
+              <button
+                onClick={() => { navigator.clipboard.writeText(DEVICE_BIND_SQL); showToast('Device-Bind SQL copied ✓'); }}
+                className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: 'rgba(207,69,0,0.15)', color: '#FF8B5A', border: '1px solid rgba(207,69,0,0.3)' }}
               >Copy SQL</button>
             </div>
           </div>
