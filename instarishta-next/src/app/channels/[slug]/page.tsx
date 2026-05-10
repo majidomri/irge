@@ -388,8 +388,8 @@ function PostModal({
   const coverForBg = imgs[carIdx] || imgs[0];
 
   return (
-    <div className="fixed inset-0 z-200 flex flex-col"
-      style={{ background: '#0d1117' }}
+    <div className="fixed inset-0 z-200 flex flex-col overflow-hidden"
+      style={{ background: '#0d1117', height: '100dvh' }}
       onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
 
       {/* Ambient blur */}
@@ -420,40 +420,41 @@ function PostModal({
         )}
       </div>
 
-      {/* ── Image carousel — shorter when audio also present so player fits without scrolling ── */}
+      {/* ── Image carousel — edge-to-edge, full-bleed; sized to fit screen with no scroll ── */}
       {hasImg && (
-        <div ref={carouselRef} className="relative z-10 shrink-0 overflow-hidden" style={{ height: isAudio ? '42vh' : '58vh' }}>
+        <div ref={carouselRef} className="relative z-10 shrink-0 overflow-hidden" style={{ height: isAudio ? '32dvh' : '54dvh' }}>
           <div ref={scrollRef}
-            className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
-            style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            className="ir-no-scrollbar absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
+            style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
             {imgs.map((url, i) => (
-              <div key={i} className="min-w-full h-full snap-center flex items-center justify-center px-5 py-3">
+              <div key={i} className="min-w-full h-full snap-center relative">
                 <img src={url} alt={`Photo ${i + 1}`}
-                  className="max-w-full max-h-full object-contain select-none"
+                  className="w-full h-full object-cover select-none"
                   loading={i === 0 ? 'eager' : 'lazy'}
-                  style={{ borderRadius: 14, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', pointerEvents: 'none' }}
+                  style={{ pointerEvents: 'none' }}
                   draggable={false} />
               </div>
             ))}
           </div>
+
+          {/* Carousel dots — overlaid on image so they're visible without scrolling */}
+          {imgs.length > 1 && (
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-2 z-10 flex justify-center gap-1.5 px-3 py-1.5 rounded-full pointer-events-none"
+              style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
+              {imgs.map((_, i) => (
+                <span key={i} className="rounded-full transition-all"
+                  style={{
+                    width: i === carIdx ? 18 : 6, height: 6,
+                    background: i === carIdx ? '#00A86B' : 'rgba(255,255,255,0.45)',
+                  }} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Scrollable content ── */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-3 pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
-        {/* Carousel dots — below image, above text */}
-        {imgs.length > 1 && (
-          <div className="flex justify-center gap-1.5 mb-4">
-            {imgs.map((_, i) => (
-              <span key={i} className="rounded-full transition-all"
-                style={{
-                  width: i === carIdx ? 18 : 6, height: 6,
-                  background: i === carIdx ? '#00A86B' : 'rgba(255,255,255,0.3)',
-                }} />
-            ))}
-          </div>
-        )}
-
+      {/* ── Content (fits in viewport, no scroll) ── */}
+      <div className="relative z-10 flex-1 min-h-0 overflow-hidden px-5 pt-3 pb-2">
         {/* Audio player */}
         {isAudio && (
           <AudioPlayer url={post.audio_url!} title={post.title} caption={post.caption} onPlayAttempt={onPlayAttempt} />
@@ -522,6 +523,12 @@ function PostModal({
           className="absolute right-2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-xl border-0"
           style={{ top: 'calc(11vh + 50px)', background: 'rgba(255,255,255,0.13)', color: '#fff' }}>›</button>
       )}
+
+      {/* Hide native scrollbars on the carousel + scroll content (WebKit + Firefox + IE) */}
+      <style>{`
+        .ir-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+        .ir-no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+      `}</style>
     </div>
   );
 }

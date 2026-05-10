@@ -18,6 +18,7 @@ interface AuthContextValue {
   profile: ProfileState;
   refreshProfile: () => Promise<void>;
   signInWithGoogleOneTap: (credential: string, nonce?: string) => Promise<{ error?: string }>;
+  signInWithGoogleRedirect: (redirectTo?: string) => Promise<{ error?: string }>;
   signInWithEmail:  (email: string, redirectTo?: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 }
@@ -138,6 +139,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error ? { error: error.message } : {};
   }, []);
 
+  // Reliable fallback when GIS is blocked (Brave, Safari ITP, ad-blockers, CSP, slow network).
+  // Uses Supabase's OAuth redirect flow → returns to /auth/callback → exchanges code for session.
+  const signInWithGoogleRedirect = useCallback(async (redirectTo?: string): Promise<{ error?: string }> => {
+    const client = getAuthClient();
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const next   = redirectTo ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
+    const { error } = await client.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        queryParams: { access_type: 'offline', prompt: 'select_account' },
+      },
+    });
+    return error ? { error: error.message } : {};
+  }, []);
+
   const signInWithEmail = useCallback(async (email: string, redirectTo = '/'): Promise<{ error?: string }> => {
     try {
       const res = await fetch('/api/auth/magic-link', {
@@ -160,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, session, loading, profile, refreshProfile,
-      signInWithGoogleOneTap, signInWithEmail, signOut,
+      signInWithGoogleOneTap, signInWithGoogleRedirect, signInWithEmail, signOut,
     }}>
       {children}
     </AuthContext.Provider>

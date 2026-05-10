@@ -19,17 +19,20 @@ const FEATURE_LABEL: Record<UsageFeature, string> = {
 };
 
 export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProps) {
-  const { signInWithGoogleOneTap, signInWithEmail } = useAuth();
+  const { signInWithGoogleOneTap, signInWithGoogleRedirect, signInWithEmail } = useAuth();
 
   const [email,         setEmail]         = useState('');
   const [sent,          setSent]          = useState(false);
   const [loadingEmail,  setLoadingEmail]  = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [googleReady,   setGoogleReady]   = useState(false);
+  const [gisBlocked,    setGisBlocked]    = useState(false);
   const [error,         setError]         = useState('');
 
-  const initedRef = useRef(false);
-  const nonceRef  = useRef('');
+  const initedRef     = useRef(false);
+  const nonceRef      = useRef('');
+  const buttonHostRef = useRef<HTMLDivElement | null>(null);
+
   const limits       = USAGE_LIMITS[feature];
   const featureLabel = FEATURE_LABEL[feature];
   const freeLimit    = limits.free < 0 ? 'Unlimited' : String(limits.free);
@@ -40,7 +43,7 @@ export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProp
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  /* ── Google One Tap ─────────────────────────────────────────────────────── */
+  /* ── Google Identity Services ───────────────────────────────────────────── */
   const handleGoogleCredential = useCallback(async (credential: string) => {
     setLoadingGoogle(true);
     setError('');
@@ -50,7 +53,7 @@ export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProp
       setError(
         result.error.toLowerCase().includes('provider')
           ? 'Google sign-in is not enabled in the dashboard yet.'
-          : result.error
+          : result.error,
       );
     } else {
       onSuccess?.();
@@ -58,7 +61,26 @@ export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProp
     }
   }, [signInWithGoogleOneTap, onSuccess, onClose]);
 
-  const initOneTap = useCallback(async () => {
+  // Renders Google's OFFICIAL sign-in button into a host div. This is the
+  // reliable path: works in Safari/Brave/Firefox-strict/incognito because it
+  // uses a popup OAuth flow on click — no third-party-cookie dependency.
+  const renderOfficialButton = useCallback(() => {
+    const host = buttonHostRef.current;
+    if (!host || !window.google?.accounts?.id) return;
+    host.innerHTML = '';
+    const width = Math.min(host.clientWidth || 360, 400);
+    window.google.accounts.id.renderButton(host, {
+      type: 'standard',
+      theme: 'filled_blue',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'pill',
+      logo_alignment: 'left',
+      width,
+    });
+  }, []);
+
+  const initGis = useCallback(async () => {
     if (initedRef.current || !GOOGLE_CLIENT_ID || !window.google?.accounts?.id) return;
     initedRef.current = true;
 
@@ -74,35 +96,78 @@ export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProp
       callback: (res) => handleGoogleCredential(res.credential),
       cancel_on_tap_outside: false,
       context: 'signin',
+      ux_mode: 'popup',
+      itp_support: true,
+      use_fedcm_for_prompt: true,
     });
+
     setGoogleReady(true);
-    window.google.accounts.id.prompt();
-  }, [handleGoogleCredential]);
+    renderOfficialButton();
+
+    // One Tap is a passive enhancement. If Google declines (cooldown, cookies,
+    // FedCM unavailable), the rendered button above still works — so we don't
+    // need to react to notifications here.
+    try { window.google.accounts.id.prompt(); } catch { /* no-op */ }
+  }, [handleGoogleCredential, renderOfficialButton]);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
 
+    let cancelled = false;
+    let timeoutId: number | undefined;
+
+    const onLoad = () => { if (!cancelled) initGis(); };
+    const onError = () => { if (!cancelled) setGisBlocked(true); };
+
     if (window.google?.accounts?.id) {
-      initOneTap();
-      return;
+      initGis();
+    } else {
+      const existing = document.getElementById('gsi-script') as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener('load', onLoad);
+        existing.addEventListener('error', onError);
+      } else {
+        const script = document.createElement('script');
+        script.id  = 'gsi-script';
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.addEventListener('load', onLoad);
+        script.addEventListener('error', onError);
+        document.head.appendChild(script);
+      }
+
+      // Guard: if GIS hasn't initialised in 3.5s, treat it as blocked and
+      // show the redirect-flow fallback button. Covers ad-blockers, CSP
+      // failures, and offline/captive-portal networks.
+      timeoutId = window.setTimeout(() => {
+        if (!cancelled && !initedRef.current) setGisBlocked(true);
+      }, 3500);
     }
 
-    const existing = document.getElementById('gsi-script');
-    if (existing) {
-      existing.addEventListener('load', initOneTap);
-      return () => existing.removeEventListener('load', initOneTap);
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      window.google?.accounts.id.cancel();
+    };
+  }, [initGis]);
+
+  // Re-render the official button if the host mounts after GIS is ready
+  // (e.g. when the modal first opens), and on viewport-driven width changes.
+  useEffect(() => {
+    if (googleReady) renderOfficialButton();
+  }, [googleReady, renderOfficialButton]);
+
+  const handleRedirectFallback = async () => {
+    setLoadingGoogle(true);
+    setError('');
+    const result = await signInWithGoogleRedirect(window.location.pathname);
+    if (result.error) {
+      setLoadingGoogle(false);
+      setError(result.error);
     }
-
-    const script = document.createElement('script');
-    script.id  = 'gsi-script';
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = initOneTap;
-    document.head.appendChild(script);
-
-    return () => { window.google?.accounts.id.cancel(); };
-  }, [initOneTap]);
+    // On success the browser is navigating away — no cleanup needed.
+  };
 
   /* ── Email magic link ───────────────────────────────────────────────────── */
   const handleEmail = async (e: React.FormEvent) => {
@@ -231,32 +296,51 @@ export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProp
                 ))}
               </div>
 
-              {/* ── Google One Tap button ── */}
+              {/* ── Google sign-in ──
+                  Renders Google's OFFICIAL button (popup OAuth on click — works
+                  in Safari/Brave/incognito). If GIS is blocked or fails to load
+                  in 3.5s, we swap in a redirect-flow fallback that hits
+                  /auth/callback via Supabase signInWithOAuth. */}
               {GOOGLE_CLIENT_ID && (
-                <button
-                  onClick={() => { setError(''); window.google?.accounts.id.prompt(); }}
-                  disabled={loadingGoogle || !googleReady}
-                  className="w-full flex items-center justify-center gap-3 rounded-full py-[13px] font-semibold text-sm mb-3 transition-all hover:shadow-lg disabled:opacity-60"
-                  style={{
-                    background: googleReady ? '#ffffff' : 'rgba(255,255,255,0.85)',
-                    color: '#1a1a1a',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
-                  }}
-                >
+                <div className="mb-3">
                   {loadingGoogle ? (
-                    <span className="w-5 h-5 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" />
-                  ) : !googleReady ? (
-                    <span className="w-5 h-5 rounded-full border-2 border-gray-300 border-t-gray-400 animate-spin" />
+                    <div
+                      className="w-full flex items-center justify-center gap-3 rounded-full py-[13px] font-semibold text-sm"
+                      style={{ background: '#ffffff', color: '#1a1a1a', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
+                    >
+                      <span className="w-5 h-5 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" />
+                      Signing in…
+                    </div>
+                  ) : gisBlocked ? (
+                    <button
+                      type="button"
+                      onClick={handleRedirectFallback}
+                      className="w-full flex items-center justify-center gap-3 rounded-full py-[13px] font-semibold text-sm transition-all hover:shadow-lg"
+                      style={{ background: '#ffffff', color: '#1a1a1a', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                      Continue with Google
+                    </button>
                   ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
+                    <>
+                      <div ref={buttonHostRef} className="w-full flex justify-center min-h-[44px]" />
+                      {!googleReady && (
+                        <div
+                          className="w-full flex items-center justify-center gap-3 rounded-full py-[13px] font-semibold text-sm"
+                          style={{ background: 'rgba(255,255,255,0.85)', color: '#1a1a1a', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
+                        >
+                          <span className="w-5 h-5 rounded-full border-2 border-gray-300 border-t-gray-400 animate-spin" />
+                          Loading Google…
+                        </div>
+                      )}
+                    </>
                   )}
-                  {loadingGoogle ? 'Signing in…' : !googleReady ? 'Loading Google…' : 'Continue with Google'}
-                </button>
+                </div>
               )}
 
               {/* ── OR divider ── */}
