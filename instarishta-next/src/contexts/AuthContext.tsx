@@ -2,7 +2,8 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { getAuthClient, markRegistered } from '@/lib/auth-client';
-import { logIrisEvent, initIris, computeFpHash, getSessionUid } from '@/lib/iris';
+import { logIrisEvent, initIris, computeFpHash } from '@/lib/iris';
+import { logSession as dalLogSession } from '@/lib/dal/sessions';
 
 interface ProfileState {
   credits:         number;
@@ -33,25 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileState>(DEFAULT_PROFILE);
 
-  // Log this browser as an active session for the user. Posts to our own
-  // server route so the IP + Cloudflare-Geo headers are captured (the client
-  // can't read its own IP reliably).
-  const logSession = useCallback(async (accessToken: string): Promise<void> => {
-    try {
-      const fpHash = await computeFpHash();
-      await fetch('/api/account/sessions/log', {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          session_uid: getSessionUid(),
-          fp_hash:     fpHash,
-        }),
-      });
-    } catch { /* silent */ }
-  }, []);
+  // Delegates to the sessions DAL — keeps the auth-aware fetch logic in one
+  // place so it can be reused by /account/devices and any future surface.
+  const logSession = useCallback((accessToken: string) => dalLogSession(accessToken), []);
 
   // Call ensure-profile API → guarantees DB row exists → returns current state
   const ensureProfile = useCallback(async (accessToken: string): Promise<ProfileState> => {

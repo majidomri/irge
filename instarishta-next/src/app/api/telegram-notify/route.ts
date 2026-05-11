@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { withRoute } from '@/lib/typed-route';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
 export const runtime = 'nodejs';
 
@@ -7,7 +7,28 @@ function escape(v: unknown): string {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-export const POST = withRoute(async (_req, body) => {
+export async function POST(req: NextRequest) {
+  // Cookie-based auth: only signed-in users can trigger Telegram notifications.
+  // A shared secret in the client bundle would be trivially extractable, and
+  // Bearer headers require client-side wiring everywhere this is called from.
+  // Cookies are sent automatically with same-origin fetches — zero client work.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: () => { /* no-op: this route doesn't mutate cookies */ },
+      },
+    },
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+
+  let body: Record<string, unknown> = {};
+  try { body = (await req.json()) as Record<string, unknown>; } catch { /* empty body OK */ }
+
   const token  = process.env.TELEGRAM_BOT_TOKEN?.trim();
   const target = process.env.TELEGRAM_TARGET?.trim();
   if (!token || !target) return NextResponse.json({ ok: false, error: 'Telegram not configured' }, { status: 503 });
@@ -47,4 +68,4 @@ export const POST = withRoute(async (_req, body) => {
     return NextResponse.json({ ok: false, error: result?.description ?? `HTTP ${res.status}` }, { status: 502 });
   }
   return NextResponse.json({ ok: true });
-});
+}

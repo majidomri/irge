@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import {
   BAD_METHOD,
   BAD_URI,
@@ -28,6 +29,12 @@ import {
 
 const SAFE_MODE = process.env.FIREWALL_SAFE_MODE === '1';
 
+// Route guards — page-level auth enforcement runs in middleware so unauthenticated
+// requests are redirected BEFORE Next.js renders the page shell. Matches the
+// Bytegrad / Next.js docs recommendation: keep auth in middleware, not layouts.
+const ACCOUNT_ROUTE = /^\/account(\/.*)?$/;
+const ADMIN_ROUTE   = /^\/nizam(\/.*)?$/;
+
 function block(reason: string, req: NextRequest): NextResponse {
   const label = `[8G${SAFE_MODE ? '-AUDIT' : '-BLOCK'}]`;
   console.warn(
@@ -39,7 +46,7 @@ function block(reason: string, req: NextRequest): NextResponse {
   return new NextResponse(null, { status: 403 });
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const isAPI    = pathname.startsWith('/api/');
 
@@ -91,6 +98,63 @@ export function middleware(req: NextRequest) {
     if (referer && BAD_REFERER.test(referer)) {
       return block('bad-referer', req);
     }
+  }
+
+  // ── [AUTH] Protected page routes ─────────────────────────────────────────────
+  // After firewall passes, gate /account/* and /nizam/* by verifying the user's
+  // Supabase session server-side via getUser() (which validates the JWT against
+  // Supabase Auth — unlike getSession() which trusts the local cookie blindly).
+  // Returns the redirect BEFORE the page renders, so unauthenticated users never
+  // see the protected page shell.
+  const needsAuth  = ACCOUNT_ROUTE.test(pathname);
+  const needsAdmin = ADMIN_ROUTE.test(pathname);
+
+  if (needsAuth || needsAdmin) {
+    let supabaseResponse = NextResponse.next({ request: req });
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => req.cookies.getAll(),
+          setAll: (cookiesToSet) => {
+            // Forward refreshed auth cookies back to the browser. The Supabase
+            // SDK may rotate tokens here, so we must include them in the response.
+            supabaseResponse = NextResponse.next({ request: req });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options),
+            );
+          },
+        },
+      },
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      // Not signed in → bounce to home with a flag so the UI can open the
+      // auth modal automatically. Includes the original destination so we
+      // can return them after login.
+      const url = req.nextUrl.clone();
+      url.pathname = '/';
+      url.searchParams.set('signin', '1');
+      url.searchParams.set('next', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    // Admin routes additionally require the user's email to be in ADMIN_EMAILS.
+    if (needsAdmin) {
+      const allowed = (process.env.ADMIN_EMAILS ?? '')
+        .split(',').map(e => e.trim()).filter(Boolean);
+      if (allowed.length > 0 && !allowed.includes(user.email ?? '')) {
+        const url = req.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+    }
+
+    return supabaseResponse;
   }
 
   return NextResponse.next();

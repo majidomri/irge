@@ -2,21 +2,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAuthClient } from '@/lib/auth-client';
-import { getSessionUid, computeFpHash } from '@/lib/iris';
+import { getSessionUid } from '@/lib/iris';
+import {
+  listSessions,
+  logSession,
+  revokeSession,
+  type SessionRow,
+} from '@/lib/dal/sessions';
 import GradientText from '@/components/ui/GradientText';
-
-interface SessionRow {
-  session_uid:  string;
-  fp_hash:      string | null;
-  ip:           string | null;
-  user_agent:   string | null;
-  country:      string | null;
-  city:         string | null;
-  created_at:   string;
-  last_seen_at: string;
-  revoked_at:   string | null;
-}
 
 // Naive UA → label parser. Good-enough for "iPhone 17 · Safari" style hints
 // without pulling in ua-parser-js (~30 KB).
@@ -83,9 +76,7 @@ export default function DevicesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await getAuthClient().rpc('ir_user_sessions_list');
-      if (error) throw error;
-      setRows((data as SessionRow[]) ?? []);
+      setRows(await listSessions());
     } catch {
       setRows([]);
     } finally {
@@ -100,24 +91,12 @@ export default function DevicesPage() {
     let cancelled = false;
     (async () => {
       try {
-        // Force a server-side log first so the row for THIS device exists
-        // before we fetch the list. Covers users who were signed in before
-        // the sessions feature shipped and never had a SIGNED_IN event fire.
-        // Token comes from AuthContext (no extra getSession lock acquisition).
-        const fpHash = await computeFpHash();
-        await fetch('/api/account/sessions/log', {
-          method:  'POST',
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ session_uid: getSessionUid(), fp_hash: fpHash }),
-        }).catch(() => {});
-
-        const { data, error } = await getAuthClient().rpc('ir_user_sessions_list');
-        if (cancelled) return;
-        if (error) throw error;
-        setRows((data as SessionRow[]) ?? []);
+        // Force a log first so the row for THIS device exists before the
+        // list fetch — covers users who were signed in before this feature
+        // shipped (no SIGNED_IN event has fired for them yet).
+        await logSession(token);
+        const data = await listSessions();
+        if (!cancelled) setRows(data);
       } catch {
         if (!cancelled) setRows([]);
       } finally {
@@ -136,20 +115,10 @@ export default function DevicesPage() {
     scope: 'session' | 'others' | 'global',
     target?: string,
   ): Promise<boolean> => {
-    // Use the token already held by AuthContext — avoids re-acquiring the
-    // Supabase auth lock here and racing with the subsequent signOut().
+    // Token comes from AuthContext (no extra getSession lock acquisition).
     const token = session?.access_token;
     if (!token) return false;
-
-    const res = await fetch('/api/account/sessions/revoke', {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ scope, session_uid: target, current_uid: currentUid }),
-    });
-    return res.ok;
+    return revokeSession({ accessToken: token, scope, target, currentUid });
   };
 
   const handleSignOutDevice = async (row: SessionRow) => {
