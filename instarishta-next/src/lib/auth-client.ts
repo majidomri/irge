@@ -7,11 +7,21 @@ const SUPABASE_ANON = 'sb_publishable_C2qwOBB0NvHL0KRGwpXBQg_UGZFoCis';
 export const createAuthClient = () =>
   createBrowserClient(SUPABASE_URL, SUPABASE_ANON);
 
-// Singleton for client components
-let _client: ReturnType<typeof createAuthClient> | null = null;
-export const getAuthClient = () => {
-  if (!_client) _client = createAuthClient();
-  return _client;
+// Singleton pinned to globalThis so it SURVIVES Next.js Fast Refresh (HMR).
+// Without this, every hot reload re-evaluates this module and creates a fresh
+// GoTrueClient, while the previous one is still held by un-reloaded modules.
+// The duplicates fight for the same lock:sb-...auth-token → "Lock stolen" /
+// NavigatorLockAcquireTimeoutError on every auth-aware RPC (sign-out, RPC
+// calls, getSession). Pinning to globalThis means HMR returns the existing
+// client. Production is unaffected (modules load once, no HMR).
+type Client = ReturnType<typeof createAuthClient>;
+const GLOBAL_KEY = '__ir_supabase_auth_client__';
+type GlobalWithClient = typeof globalThis & { [GLOBAL_KEY]?: Client };
+
+export const getAuthClient = (): Client => {
+  const g = globalThis as GlobalWithClient;
+  if (!g[GLOBAL_KEY]) g[GLOBAL_KEY] = createAuthClient();
+  return g[GLOBAL_KEY]!;
 };
 
 // ── Limits ────────────────────────────────────────────────────────────────────
