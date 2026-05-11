@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getAuthClient } from '@/lib/auth-client';
 import dynamic from 'next/dynamic';
 
 const Carousel = dynamic(() => import('@/components/ui/Carousel'), { ssr: false });
@@ -26,11 +26,11 @@ export default function FeaturedCarousel({
 
   useEffect(() => {
     if (initialItems && initialItems.length > 0) return; // server already fetched
-    const client = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    client
+    // Reuse the singleton browser client — creating a separate one here causes
+    // "Multiple GoTrueClient instances detected" and fights getAuthClient() for
+    // the auth-token lock, which surfaces as NavigatorLockAcquireTimeoutError
+    // on every other auth-aware RPC (sign-out, contact unlocks, etc.).
+    getAuthClient()
       .from('ir_featured')
       .select('id, title, description, image_url, link_url')
       .eq('active', true)
