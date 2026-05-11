@@ -251,7 +251,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: {
         redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        queryParams: { access_type: 'offline', prompt: 'select_account' },
+        // Minimum + non-sensitive scopes per Google's OAuth scope guidance:
+        // openid → required for ID token issuance (JWT we hand to Supabase)
+        // email  → primary identifier for our user row
+        // profile → display name + avatar shown in the header
+        // No Drive/Calendar/Contacts/Gmail — keeps us in the "no Google
+        // verification needed" tier and lets the consent screen render
+        // without scope warnings.
+        scopes: 'openid email profile',
+        // Note: deliberately NOT requesting access_type=offline. That asks
+        // Google for a refresh token we'd use to call Google APIs while the
+        // user is away — we don't call any Google API. Supabase issues its
+        // own refresh token for the Supabase session, independent of Google.
+        // Including it just adds "Make Google requests when not present"
+        // to the consent screen, which scares users for no benefit.
+        queryParams: { prompt: 'select_account' },
       },
     });
     return error ? { error: error.message } : {};
