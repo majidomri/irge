@@ -1,8 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import ShinyText from '@/components/ui/ShinyText';
+import { useSession, signOut } from '@/lib/auth-client';
+import AuthModal from '@/components/AuthModal';
 
 const DESKTOP_LINKS = [
   { label: 'How It Works', href: '/#how-it-works' },
@@ -20,6 +22,10 @@ const LogoNode = () => (
 
 export default function Navbar() {
   const path = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const [showAuth, setShowAuth] = useState(false);
   const isHome = path === '/';
   const [scrolled, setScrolled] = useState(!isHome);
 
@@ -71,6 +77,23 @@ export default function Navbar() {
 
           {/* Right CTAs — fixed width right column */}
           <div className="flex items-center gap-3 w-[176px] justify-end flex-shrink-0">
+            <div className="w-px h-[18px] bg-white/15 flex-shrink-0" />
+            {user ? (
+              <button
+                onClick={async () => { await signOut(); router.refresh(); }}
+                className="text-white/65 text-[0.875rem] font-medium hover:text-white transition-colors duration-200 px-2 bg-transparent border-0 cursor-pointer"
+                title={user.email}
+              >
+                Sign out
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuth(true)}
+                className="text-white/65 text-[0.875rem] font-medium hover:text-white transition-colors duration-200 px-2 bg-transparent border-0 cursor-pointer"
+              >
+                Sign in
+              </button>
+            )}
             <Link
               href="/profiles"
               className="inline-flex items-center gap-1.5 text-[0.875rem] font-semibold no-underline px-5 py-[9px] rounded-full bg-white text-[#0d1a14] hover:bg-white/90 transition-all duration-200"
@@ -98,8 +121,29 @@ export default function Navbar() {
       >
         <div className="flex items-center justify-between px-5 h-14">
           <LogoNode />
+          {user ? (
+            <button
+              onClick={async () => { await signOut(); router.refresh(); }}
+              className="text-xs font-semibold rounded-full px-3 py-1.5 border-0 cursor-pointer"
+              style={{ background: 'rgba(255,255,255,0.10)', color: '#fff' }}
+            >
+              {user.email?.[0]?.toUpperCase()}
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="text-xs font-semibold rounded-full px-3 py-1.5 border-0 cursor-pointer"
+              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+            >
+              Sign in
+            </button>
+          )}
         </div>
       </nav>
+
+      {showAuth && (
+        <AuthModal onClose={() => setShowAuth(false)} onSuccess={() => setShowAuth(false)} />
+      )}
     </>
   );
 }

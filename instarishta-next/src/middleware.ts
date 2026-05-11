@@ -28,6 +28,10 @@ import {
 
 const SAFE_MODE = process.env.FIREWALL_SAFE_MODE === '1';
 
+// Admin-gated route. Anything matching is checked for both a valid
+// better-auth session AND for the user's email being on ADMIN_EMAILS.
+const ADMIN_ROUTE = /^\/nizam(\/.*)?$/;
+
 function block(reason: string, req: NextRequest): NextResponse {
   const label = `[8G${SAFE_MODE ? '-AUDIT' : '-BLOCK'}]`;
   console.warn(
@@ -90,6 +94,26 @@ export function middleware(req: NextRequest) {
     const referer = req.headers.get('referer') ?? '';
     if (referer && BAD_REFERER.test(referer)) {
       return block('bad-referer', req);
+    }
+  }
+
+  // ── [AUTH] /nizam admin gate ─────────────────────────────────────────────────
+  // Fast path: check that the better-auth session cookie exists at all. The
+  // full session-load + ADMIN_EMAILS check happens inside the /nizam page +
+  // /api/admin/* routes (where we already have access to lib/auth's getSession).
+  // That keeps middleware off the Postgres path while still bouncing
+  // unauthenticated visitors before they see the dashboard shell.
+  if (ADMIN_ROUTE.test(pathname)) {
+    const cookies = req.headers.get('cookie') ?? '';
+    const hasSessionCookie =
+      /better-auth\.session_token=|__Secure-better-auth\.session_token=/.test(cookies);
+
+    if (!hasSessionCookie) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/';
+      url.searchParams.set('signin', '1');
+      url.searchParams.set('next', pathname);
+      return NextResponse.redirect(url);
     }
   }
 
