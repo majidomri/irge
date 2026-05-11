@@ -282,7 +282,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await getAuthClient().auth.signOut();
+    const client = getAuthClient();
+    try {
+      await client.auth.signOut();
+    } catch (err) {
+      // Supabase's navigator-lock can be stolen mid-signout when the SDK's
+      // background auto-refresh is in flight. The SDK still emits SIGNED_OUT
+      // and clears storage, so we should not block the caller. Force a local
+      // wipe as a safety net so the UI definitely reflects signed-out state.
+      const msg = (err as Error)?.message ?? '';
+      if (msg.includes('stole') || msg.includes('Lock') || msg.includes('lock')) {
+        await client.auth.signOut({ scope: 'local' }).catch(() => {});
+        return;
+      }
+      throw err;
+    }
   }, []);
 
   return (

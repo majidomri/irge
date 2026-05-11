@@ -147,64 +147,47 @@ function webglSignal(): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function audioSignal(): Promise<string> {
-  // Cached: a single AudioContext is built once per page load and the result
-  // is memoised. Prevents InvalidStateError from racing close()s and stops
-  // logIrisEvent / computeFpHash from creating multiple contexts back-to-back.
+  // Cached: rendered once per page load, result memoised. Uses OfflineAudioContext
+  // (the modern, non-deprecated path). The output of a DynamicsCompressor fed by
+  // a triangle oscillator differs per audio subsystem (OS + browser DSP), which
+  // is the signal we hash. No ScriptProcessorNode → no deprecation warning, no
+  // manual close, no suspended-state edge case.
   if (_audioPromise) return _audioPromise;
-  _audioPromise = new Promise(resolve => {
-    const bail = setTimeout(() => resolve('audio_timeout'), 2500);
-
+  _audioPromise = (async () => {
     try {
       const win = window as unknown as Record<string, unknown>;
-      const Ctx = (win.AudioContext ?? win.webkitAudioContext) as typeof AudioContext | undefined;
-      if (!Ctx) { clearTimeout(bail); return resolve('no_audio'); }
+      const OAC = (win.OfflineAudioContext ?? win.webkitOfflineAudioContext) as
+        typeof OfflineAudioContext | undefined;
+      if (!OAC) return 'no_audio';
 
-      const ctx  = new Ctx({ sampleRate: 44100 });
+      // 1 channel, 1s @ 44.1 kHz — renders in <50 ms on every browser tested.
+      const ctx = new OAC(1, 44100, 44100);
 
-      // Browser requires a user gesture before AudioContext can run.
-      // If suspended, resolve with a stable fallback rather than throwing.
-      if (ctx.state === 'suspended') {
-        clearTimeout(bail);
-        try { ctx.close(); } catch { /* ignore */ }
-        return resolve('audio_suspended');
-      }
-
-      const osc  = ctx.createOscillator();
-      const cmp  = ctx.createDynamicsCompressor();
-      const sp   = ctx.createScriptProcessor(4096, 1, 1);
-      const gain = ctx.createGain();
-
-      // DynamicsCompressor params interact differently with each browser/OS DSP engine
-      cmp.threshold.setValueAtTime(-50, ctx.currentTime);
-      cmp.knee.setValueAtTime(40, ctx.currentTime);
-      cmp.ratio.setValueAtTime(12, ctx.currentTime);
-      cmp.attack.setValueAtTime(0, ctx.currentTime);
-      cmp.release.setValueAtTime(0.25, ctx.currentTime);
-
-      gain.gain.value = 0;  // silent — we only sample the signal, not play it
+      const osc = ctx.createOscillator();
       osc.type = 'triangle';
+      osc.frequency.value = 10000;
+
+      const cmp = ctx.createDynamicsCompressor();
+      cmp.threshold.value = -50;
+      cmp.knee.value      = 40;
+      cmp.ratio.value     = 12;
+      cmp.attack.value    = 0;
+      cmp.release.value   = 0.25;
+
       osc.connect(cmp);
-      cmp.connect(sp);
-      sp.connect(gain);
-      gain.connect(ctx.destination);
+      cmp.connect(ctx.destination);
       osc.start(0);
 
-      sp.onaudioprocess = (e: AudioProcessingEvent) => {
-        clearTimeout(bail);
-        const buf = e.inputBuffer.getChannelData(0);
-        let sum = 0;
-        for (let i = 0; i < buf.length; i++) sum += Math.abs(buf[i]);
-
-        sp.disconnect(); cmp.disconnect(); osc.disconnect(); gain.disconnect();
-        try { ctx.close(); } catch { /* ignore */ }
-
-        resolve(sum.toFixed(8));
-      };
+      const buf  = await ctx.startRendering();
+      const data = buf.getChannelData(0);
+      // Sum a stable middle window so the hash isn't sensitive to attack/release
+      let sum = 0;
+      for (let i = 4500; i < 5000; i++) sum += Math.abs(data[i]);
+      return sum.toFixed(8);
     } catch {
-      clearTimeout(bail);
-      resolve('audio_err');
+      return 'audio_err';
     }
-  });
+  })();
   return _audioPromise;
 }
 

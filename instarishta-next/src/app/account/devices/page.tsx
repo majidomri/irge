@@ -67,7 +67,7 @@ function fmtLocation(s: SessionRow): string {
 
 export default function DevicesPage() {
   const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, session, loading: authLoading, signOut } = useAuth();
 
   const [rows, setRows]         = useState<SessionRow[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -95,28 +95,26 @@ export default function DevicesPage() {
 
   useEffect(() => {
     if (!user) return;
+    const token = session?.access_token;
+    if (!token) return;
     let cancelled = false;
     (async () => {
       try {
         // Force a server-side log first so the row for THIS device exists
         // before we fetch the list. Covers users who were signed in before
         // the sessions feature shipped and never had a SIGNED_IN event fire.
-        const client = getAuthClient();
-        const { data: { session } } = await client.auth.getSession();
-        const token = session?.access_token;
-        if (token) {
-          const fpHash = await computeFpHash();
-          await fetch('/api/account/sessions/log', {
-            method:  'POST',
-            headers: {
-              'Content-Type':  'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ session_uid: getSessionUid(), fp_hash: fpHash }),
-          }).catch(() => {});
-        }
+        // Token comes from AuthContext (no extra getSession lock acquisition).
+        const fpHash = await computeFpHash();
+        await fetch('/api/account/sessions/log', {
+          method:  'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ session_uid: getSessionUid(), fp_hash: fpHash }),
+        }).catch(() => {});
 
-        const { data, error } = await client.rpc('ir_user_sessions_list');
+        const { data, error } = await getAuthClient().rpc('ir_user_sessions_list');
         if (cancelled) return;
         if (error) throw error;
         setRows((data as SessionRow[]) ?? []);
@@ -127,7 +125,7 @@ export default function DevicesPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, session]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -138,8 +136,8 @@ export default function DevicesPage() {
     scope: 'session' | 'others' | 'global',
     target?: string,
   ): Promise<boolean> => {
-    const client  = getAuthClient();
-    const { data: { session } } = await client.auth.getSession();
+    // Use the token already held by AuthContext — avoids re-acquiring the
+    // Supabase auth lock here and racing with the subsequent signOut().
     const token = session?.access_token;
     if (!token) return false;
 
