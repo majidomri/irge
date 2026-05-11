@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthClient } from '@/lib/auth-client';
-import { getSessionUid } from '@/lib/iris';
+import { getSessionUid, computeFpHash } from '@/lib/iris';
 import GradientText from '@/components/ui/GradientText';
 
 interface SessionRow {
@@ -98,7 +98,25 @@ export default function DevicesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await getAuthClient().rpc('ir_user_sessions_list');
+        // Force a server-side log first so the row for THIS device exists
+        // before we fetch the list. Covers users who were signed in before
+        // the sessions feature shipped and never had a SIGNED_IN event fire.
+        const client = getAuthClient();
+        const { data: { session } } = await client.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const fpHash = await computeFpHash();
+          await fetch('/api/account/sessions/log', {
+            method:  'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ session_uid: getSessionUid(), fp_hash: fpHash }),
+          }).catch(() => {});
+        }
+
+        const { data, error } = await client.rpc('ir_user_sessions_list');
         if (cancelled) return;
         if (error) throw error;
         setRows((data as SessionRow[]) ?? []);
@@ -257,6 +275,36 @@ export default function DevicesPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Device fingerprint — our "MAC equivalent" since browsers
+                      do not expose real MAC addresses to JavaScript. */}
+                  <details className="mb-3 group">
+                    <summary
+                      className="cursor-pointer text-[10px] font-semibold flex items-center gap-1.5 list-none"
+                      style={{ color: 'rgba(255,255,255,0.4)' }}
+                    >
+                      <span className="transition-transform group-open:rotate-90">›</span>
+                      Device details
+                    </summary>
+                    <div className="mt-2 grid grid-cols-[68px_1fr] gap-x-2 gap-y-1 text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}>IP</span>
+                      <span className="font-mono break-all">{row.ip ?? '—'}</span>
+
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}>Device hash</span>
+                      <span className="font-mono break-all" title="Stable browser fingerprint (canvas+WebGL+audio+fonts+env)">
+                        {row.fp_hash ? `${row.fp_hash.slice(0, 16)}…` : '—'}
+                      </span>
+
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}>Country</span>
+                      <span>{row.country ?? '—'}</span>
+
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}>UA</span>
+                      <span className="font-mono break-all" style={{ wordBreak: 'break-all' }}>
+                        {row.user_agent ? row.user_agent.slice(0, 90) + (row.user_agent.length > 90 ? '…' : '') : '—'}
+                      </span>
+                    </div>
+                  </details>
+
                   <button
                     onClick={() => handleSignOutDevice(row)}
                     disabled={busy === row.session_uid}
@@ -328,8 +376,10 @@ export default function DevicesPage() {
           </>
         )}
 
-        <p className="text-[10px] text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <p className="text-[10px] text-center leading-relaxed" style={{ color: 'rgba(255,255,255,0.25)' }}>
           We track sessions to protect your account. Locations are approximate (based on IP).
+          Browsers do not expose hardware MAC addresses, so each device is identified by a
+          stable browser fingerprint (canvas + WebGL + audio + fonts + GPU + timezone).
         </p>
 
         {/* Toast */}

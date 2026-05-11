@@ -33,6 +33,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileState>(DEFAULT_PROFILE);
 
+  // Log this browser as an active session for the user. Posts to our own
+  // server route so the IP + Cloudflare-Geo headers are captured (the client
+  // can't read its own IP reliably).
+  const logSession = useCallback(async (accessToken: string): Promise<void> => {
+    try {
+      const fpHash = await computeFpHash();
+      await fetch('/api/account/sessions/log', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          session_uid: getSessionUid(),
+          fp_hash:     fpHash,
+        }),
+      });
+    } catch { /* silent */ }
+  }, []);
+
   // Call ensure-profile API → guarantees DB row exists → returns current state
   const ensureProfile = useCallback(async (accessToken: string): Promise<ProfileState> => {
     try {
@@ -93,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.session?.user) {
           markRegistered();
           ensureProfile(data.session.access_token).catch(() => {});
+          logSession(data.session.access_token);   // populate /account/devices even when no fresh sign-in
           logIrisEvent('login', { source: 'session_restore' }).catch(() => {});
         } else {
           setProfile(DEFAULT_PROFILE);
@@ -136,12 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          // 2. Session log (populates /account/devices). Sequential, not racing.
-          await client.rpc('ir_log_session', {
-            p_session_uid: getSessionUid(),
-            p_fp_hash:     fpHash,
-            p_user_agent:  navigator.userAgent.slice(0, 300),
-          });
+          // (Session log moved to the POST below — it goes through our server
+          // route which captures IP + Cloudflare geo headers.)
+          void fpHash;
         } catch {
           // Network or RPC failure → don't lock the user out; the rest of the
           // handler still runs so they get a session + UI.
@@ -153,9 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (s?.user) {
         markRegistered();
-        // Both POSTs below hit our own API routes (not Supabase JS rpc), so
-        // they don't contend for the auth lock.
+        // All three POSTs below hit our own API routes (not Supabase JS rpc),
+        // so they don't contend for the auth lock.
         ensureProfile(s.access_token).catch(() => {});
+        logSession(s.access_token);   // upsert ir_user_sessions with IP + geo
         logIrisEvent('login', {
           email:    s.user.email,
           provider: s.user.app_metadata?.provider,
@@ -168,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [ensureProfile]);
+  }, [ensureProfile, logSession]);
 
   // Session heartbeat: refresh last_seen_at when this tab regains focus,
   // throttled so it can't fire more than once every 5 minutes. Without the
@@ -186,17 +205,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (now - lastBeatAt < HEARTBEAT_MS) return;
       lastBeatAt = now;
       try {
-        const fpHash = await computeFpHash();
-        await client.rpc('ir_log_session', {
-          p_session_uid: getSessionUid(),
-          p_fp_hash:     fpHash,
-          p_user_agent:  navigator.userAgent.slice(0, 300),
-        });
+        const { data } = await client.auth.getSession();
+        if (data.session?.access_token) await logSession(data.session.access_token);
       } catch { /* silent */ }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [user]);
+  }, [user, logSession]);
 
   // Supabase Realtime: subscribe to ir_user_profiles changes for this user
   // Fires instantly when admin edits credits/plan — no polling needed
