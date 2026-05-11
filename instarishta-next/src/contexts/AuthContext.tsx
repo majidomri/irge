@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { getAuthClient, markRegistered } from '@/lib/auth-client';
-import { logIrisEvent, initIris, computeFpHash } from '@/lib/iris';
+import { logIrisEvent, initIris, computeFpHash, getSessionUid } from '@/lib/iris';
 
 interface ProfileState {
   credits:         number;
@@ -65,20 +65,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const client = getAuthClient();
 
-    client.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+    // Stale refresh tokens (left over from prior sessions, key rotation, or our
+    // own signOut path) cause Supabase to log "Invalid Refresh Token: Refresh
+    // Token Not Found" before emitting SIGNED_OUT. Catch it and wipe local
+    // storage without a network round-trip so the next load is clean.
+    const isRefreshTokenError = (err: unknown): boolean => {
+      const msg = (err as { message?: string } | null)?.message?.toLowerCase() ?? '';
+      return msg.includes('refresh token') || msg.includes('refresh_token');
+    };
 
-      if (data.session?.user) {
-        markRegistered();
-        ensureProfile(data.session.access_token).catch(() => {});
-        logIrisEvent('login', { source: 'session_restore' }).catch(() => {});
-      } else {
+    client.auth.getSession()
+      .then(({ data, error }) => {
+        if (error && isRefreshTokenError(error)) {
+          // Stale token — silently clear local storage, no server call.
+          client.auth.signOut({ scope: 'local' }).catch(() => {});
+          setSession(null);
+          setUser(null);
+          setProfile(DEFAULT_PROFILE);
+          initIris().catch(() => {});
+          setLoading(false);
+          return;
+        }
+
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+
+        if (data.session?.user) {
+          markRegistered();
+          ensureProfile(data.session.access_token).catch(() => {});
+          logIrisEvent('login', { source: 'session_restore' }).catch(() => {});
+        } else {
+          setProfile(DEFAULT_PROFILE);
+          initIris().catch(() => {});
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (isRefreshTokenError(err)) {
+          client.auth.signOut({ scope: 'local' }).catch(() => {});
+        }
+        setSession(null);
+        setUser(null);
         setProfile(DEFAULT_PROFILE);
-        initIris().catch(() => {});
-      }
-      setLoading(false);
-    });
+        setLoading(false);
+      });
 
     const { data: { subscription } } = client.auth.onAuthStateChange(async (event, s) => {
       // ── Hard device-bind enforcement ──
@@ -121,6 +151,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           provider: s.user.app_metadata?.provider,
           event,
         }).catch(() => {});
+
+        // Log this browser as an active session row for the user — populates
+        // the "Where you're signed in" page.
+        if (event === 'SIGNED_IN') {
+          (async () => {
+            try {
+              const fpHash = await computeFpHash();
+              await client.rpc('ir_log_session', {
+                p_session_uid: getSessionUid(),
+                p_fp_hash:     fpHash,
+                p_user_agent:  navigator.userAgent.slice(0, 300),
+              });
+            } catch { /* silent */ }
+          })();
+        }
       } else if (event === 'SIGNED_OUT') {
         setProfile(DEFAULT_PROFILE);
         logIrisEvent('signout').catch(() => {});
@@ -129,6 +174,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [ensureProfile]);
+
+  // Session heartbeat: refresh last_seen_at when this tab regains focus.
+  // Keeps the "Where you're signed in" list accurate without polling.
+  useEffect(() => {
+    if (!user) return;
+    const client = getAuthClient();
+    const heartbeat = async () => {
+      try {
+        const fpHash = await computeFpHash();
+        await client.rpc('ir_log_session', {
+          p_session_uid: getSessionUid(),
+          p_fp_hash:     fpHash,
+          p_user_agent:  navigator.userAgent.slice(0, 300),
+        });
+      } catch { /* silent */ }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') heartbeat(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user]);
 
   // Supabase Realtime: subscribe to ir_user_profiles changes for this user
   // Fires instantly when admin edits credits/plan — no polling needed

@@ -116,6 +116,25 @@ export default function AccountPage() {
           </div>
         </div>
 
+        {/* Security */}
+        <p className="text-xs font-bold uppercase tracking-[0.08em] mb-3 mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          Security
+        </p>
+        <button
+          onClick={() => router.push('/account/devices')}
+          className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 mb-6 transition-all hover:bg-white/[0.08]"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🖥️</span>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-white">Where you&apos;re signed in</p>
+              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Manage devices and active sessions</p>
+            </div>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>›</span>
+        </button>
+
         {/* Reset note */}
         <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
           Limits reset every hour · Free forever · No credit card

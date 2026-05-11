@@ -434,6 +434,29 @@ export async function computeFpHash(): Promise<string> {
 /** Return stored hash from any persistence channel without recomputing */
 export const getStoredFpHash = (): Promise<string | null> => readPersisted();
 
+/**
+ * Stable per-browser session identifier — independent of Supabase's rotating
+ * refresh token. Stored in localStorage so the same browser keeps the same
+ * session_uid across reloads. Used by the "Where you're signed in" page to
+ * mark the current device row.
+ */
+export function getSessionUid(): string {
+  if (typeof window === 'undefined') return '';
+  const KEY = 'ir_session_uid';
+  try {
+    let v = localStorage.getItem(KEY);
+    if (!v) {
+      v = (typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : `${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+      localStorage.setItem(KEY, v);
+    }
+    return v;
+  } catch {
+    return `mem-${Math.random().toString(36).slice(2)}`;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. Audit log entry builder — logger.class.php pattern
 //    Field separator: \t (tab), same as logger.class.php $this->separator = chr(9)

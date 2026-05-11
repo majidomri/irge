@@ -61,6 +61,40 @@ export function withAdmin(handler: AdminHandler) {
   };
 }
 
+export interface UserCtx {
+  userId:     string;
+  userEmail:  string;
+  token:      string;
+  body:       Record<string, unknown>;
+}
+
+type UserHandler = (req: NextRequest, ctx: UserCtx) => Promise<NextResponse>;
+
+/** Wrapper for signed-in user routes (no admin check). */
+export function withUser(handler: UserHandler) {
+  return async (req: NextRequest) => {
+    try {
+      const token = req.headers.get('authorization')?.replace('Bearer ', '').trim();
+      if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+      const sb = serviceClient();
+      const { data: { user }, error: authErr } = await sb.auth.getUser(token);
+      if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+      let body: Record<string, unknown> = {};
+      const ct = req.headers.get('content-type') ?? '';
+      if (ct.includes('application/json')) {
+        body = await req.json().catch(() => ({}));
+      }
+
+      return await handler(req, { userId: user.id, userEmail: user.email ?? '', token, body });
+    } catch (e) {
+      console.error('[withUser]', e);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+  };
+}
+
 /** Lightweight wrapper for public routes — just parses body + catches errors. */
 export function withRoute(handler: (req: NextRequest, body: Record<string, unknown>) => Promise<NextResponse>) {
   return async (req: NextRequest) => {
