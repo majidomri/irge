@@ -19,7 +19,7 @@ const FEATURE_LABEL: Record<UsageFeature, string> = {
 };
 
 export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProps) {
-  const { signInWithGoogleOneTap, signInWithEmail } = useAuth();
+  const { signInWithGoogleOneTap, signInWithGoogleRedirect, signInWithEmail } = useAuth();
 
   const [email,         setEmail]         = useState('');
   const [sent,          setSent]          = useState(false);
@@ -231,11 +231,32 @@ export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProp
                 ))}
               </div>
 
-              {/* ── Google One Tap button ── */}
+              {/* ── Google sign-in button ──
+                  Tries GIS One Tap first. If GIS isn't ready, or if Google
+                  declines the prompt (cookies blocked, ITP/Safari, exponential
+                  cooldown, FedCM 403 on localhost iPhone-emulator, etc.), we
+                  fall back to a full OAuth redirect via Supabase
+                  signInWithOAuth → /auth/callback. The redirect path doesn't
+                  use GIS at all so it works in every browser. */}
               {GOOGLE_CLIENT_ID && (
                 <button
-                  onClick={() => { setError(''); window.google?.accounts.id.prompt(); }}
-                  disabled={loadingGoogle || !googleReady}
+                  onClick={() => {
+                    setError('');
+                    setLoadingGoogle(true);
+                    const redirect = () => signInWithGoogleRedirect(window.location.pathname)
+                      .then(r => { if (r.error) { setLoadingGoogle(false); setError(r.error); } });
+
+                    if (!googleReady || !window.google?.accounts?.id) {
+                      redirect();
+                      return;
+                    }
+                    window.google.accounts.id.prompt((n) => {
+                      // Google declined to show One Tap (cooldown, blocked
+                      // cookies, ITP, FedCM 403) → use redirect flow.
+                      if (n.isNotDisplayed() || n.isSkippedMoment()) redirect();
+                    });
+                  }}
+                  disabled={loadingGoogle}
                   className="w-full flex items-center justify-center gap-3 rounded-full py-[13px] font-semibold text-sm mb-3 transition-all hover:shadow-lg disabled:opacity-60"
                   style={{
                     background: googleReady ? '#ffffff' : 'rgba(255,255,255,0.85)',
