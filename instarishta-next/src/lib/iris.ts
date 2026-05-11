@@ -67,8 +67,9 @@ const HMAC_SEED = 'ir_iris_v1';   // audit signing seed (not secret — integrit
 // The HttpOnly __Host- cookie (issued by /api/iris) is the real authentication layer.
 const CLIENT_SEED = process.env.NEXT_PUBLIC_IRIS_CLIENT_SEED ?? 'ir_iris_v1_instarishta';
 
-// In-memory singleton — computed once per page load
-let _fpHash: string | null = null;
+// In-memory singletons — computed once per page load
+let _fpHash:      string | null         = null;
+let _audioPromise: Promise<string> | null = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1a. Canvas fingerprint — GPU + font + anti-aliasing differences
@@ -146,7 +147,11 @@ function webglSignal(): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function audioSignal(): Promise<string> {
-  return new Promise(resolve => {
+  // Cached: a single AudioContext is built once per page load and the result
+  // is memoised. Prevents InvalidStateError from racing close()s and stops
+  // logIrisEvent / computeFpHash from creating multiple contexts back-to-back.
+  if (_audioPromise) return _audioPromise;
+  _audioPromise = new Promise(resolve => {
     const bail = setTimeout(() => resolve('audio_timeout'), 2500);
 
     try {
@@ -200,6 +205,7 @@ async function audioSignal(): Promise<string> {
       resolve('audio_err');
     }
   });
+  return _audioPromise;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

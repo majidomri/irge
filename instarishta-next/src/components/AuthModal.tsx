@@ -104,10 +104,11 @@ export default function AuthModal({ feature, onClose, onSuccess }: AuthModalProp
     setGoogleReady(true);
     renderOfficialButton();
 
-    // One Tap is a passive enhancement. If Google declines (cooldown, cookies,
-    // FedCM unavailable), the rendered button above still works — so we don't
-    // need to react to notifications here.
-    try { window.google.accounts.id.prompt(); } catch { /* no-op */ }
+    // Note: we deliberately do NOT call google.accounts.id.prompt() — the
+    // rendered button handles sign-in reliably across all browsers, and
+    // prompt() with use_fedcm_for_prompt=true produces a noisy AbortError
+    // in the console every time the modal unmounts while FedCM is in
+    // flight. Rendered button = same UX with zero log noise.
   }, [handleGoogleCredential, renderOfficialButton]);
 
   useEffect(() => {

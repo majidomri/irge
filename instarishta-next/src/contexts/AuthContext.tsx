@@ -111,19 +111,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
     const { data: { subscription } } = client.auth.onAuthStateChange(async (event, s) => {
-      // ── Hard device-bind enforcement ──
-      // On a fresh sign-in (Google or magic-link), check whether this physical
-      // device is already bound to a different user. If so, the SECURITY DEFINER
-      // RPC bans the current account and we sign them out before any UI loads.
+      // SIGNED_IN: run our auth-aware RPCs SEQUENTIALLY, not in parallel.
+      // The Supabase JS client uses navigator.locks for getSession() under
+      // every rpc(); two RPCs in flight cause "lock stolen" rejections that
+      // cascade into unrelated calls (e.g. ir_decrement_credit for contact
+      // unlocks) silently failing.
       if (event === 'SIGNED_IN' && s?.user) {
         try {
           const fpHash = await computeFpHash();
-          const { data } = await client.rpc('ir_check_device_binding', { p_fp_hash: fpHash });
-          const bind = (data ?? {}) as { blocked?: boolean; reason?: string; primary_user_id?: string };
+
+          // 1. Device-bind enforcement (may sign the user out).
+          const { data: bindData } = await client.rpc('ir_check_device_binding', { p_fp_hash: fpHash });
+          const bind = (bindData ?? {}) as { blocked?: boolean; reason?: string; primary_user_id?: string };
           if (bind.blocked) {
             await client.auth.signOut();
-            // Defer the alert so the SIGNED_OUT listener has fired and the UI
-            // has settled into the logged-out state.
             setTimeout(() => {
               if (typeof window !== 'undefined') {
                 window.alert(
@@ -132,10 +133,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 );
               }
             }, 100);
-            return;   // skip downstream profile/credit work
+            return;
           }
+
+          // 2. Session log (populates /account/devices). Sequential, not racing.
+          await client.rpc('ir_log_session', {
+            p_session_uid: getSessionUid(),
+            p_fp_hash:     fpHash,
+            p_user_agent:  navigator.userAgent.slice(0, 300),
+          });
         } catch {
-          // Network or RPC failure → don't lock the user out; log only.
+          // Network or RPC failure → don't lock the user out; the rest of the
+          // handler still runs so they get a session + UI.
         }
       }
 
@@ -144,28 +153,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (s?.user) {
         markRegistered();
+        // Both POSTs below hit our own API routes (not Supabase JS rpc), so
+        // they don't contend for the auth lock.
         ensureProfile(s.access_token).catch(() => {});
-        const irisEvent = event === 'SIGNED_IN' ? 'login' : 'login';
-        logIrisEvent(irisEvent, {
+        logIrisEvent('login', {
           email:    s.user.email,
           provider: s.user.app_metadata?.provider,
           event,
         }).catch(() => {});
-
-        // Log this browser as an active session row for the user — populates
-        // the "Where you're signed in" page.
-        if (event === 'SIGNED_IN') {
-          (async () => {
-            try {
-              const fpHash = await computeFpHash();
-              await client.rpc('ir_log_session', {
-                p_session_uid: getSessionUid(),
-                p_fp_hash:     fpHash,
-                p_user_agent:  navigator.userAgent.slice(0, 300),
-              });
-            } catch { /* silent */ }
-          })();
-        }
       } else if (event === 'SIGNED_OUT') {
         setProfile(DEFAULT_PROFILE);
         logIrisEvent('signout').catch(() => {});
@@ -175,12 +170,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [ensureProfile]);
 
-  // Session heartbeat: refresh last_seen_at when this tab regains focus.
-  // Keeps the "Where you're signed in" list accurate without polling.
+  // Session heartbeat: refresh last_seen_at when this tab regains focus,
+  // throttled so it can't fire more than once every 5 minutes. Without the
+  // throttle, rapid tab switching causes back-to-back ir_log_session RPCs
+  // that steal the auth lock from concurrent contact-unlock RPCs.
   useEffect(() => {
     if (!user) return;
     const client = getAuthClient();
-    const heartbeat = async () => {
+    let lastBeatAt = 0;
+    const HEARTBEAT_MS = 5 * 60 * 1000;
+
+    const onVisible = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastBeatAt < HEARTBEAT_MS) return;
+      lastBeatAt = now;
       try {
         const fpHash = await computeFpHash();
         await client.rpc('ir_log_session', {
@@ -190,7 +194,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       } catch { /* silent */ }
     };
-    const onVisible = () => { if (document.visibilityState === 'visible') heartbeat(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [user]);
