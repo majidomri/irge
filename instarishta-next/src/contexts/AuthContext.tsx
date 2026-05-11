@@ -239,8 +239,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Uses Supabase's OAuth redirect flow → returns to /auth/callback → exchanges code for session.
   const signInWithGoogleRedirect = useCallback(async (redirectTo?: string): Promise<{ error?: string }> => {
     const client = getAuthClient();
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const next   = redirectTo ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
+    // Rewrite 0.0.0.0 → localhost. Next.js prints the network URL (0.0.0.0)
+    // alongside localhost in dev; if a developer accidentally opens that one,
+    // Chrome refuses to navigate back to 0.0.0.0 after the OAuth round trip
+    // (ERR_ADDRESS_INVALID). Forcing localhost here means sign-in works
+    // regardless of which dev URL was typed.
+    const rawOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin    = rawOrigin.replace(/^(https?:\/\/)0\.0\.0\.0(:\d+)?/, '$1localhost$2');
+    const next      = redirectTo ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
     const { error } = await client.auth.signInWithOAuth({
       provider: 'google',
       options: {

@@ -4,7 +4,11 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams, origin: rawOrigin } = new URL(request.url);
+  // Defensively rewrite 0.0.0.0 → localhost. Chrome refuses ERR_ADDRESS_INVALID
+  // on 0.0.0.0 navigations, so if anything in the OAuth chain happened to land
+  // here with that hostname, send the user back to a working address.
+  const origin = rawOrigin.replace(/^(https?:\/\/)0\.0\.0\.0(:\d+)?/, '$1localhost$2');
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/';
 
