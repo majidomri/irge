@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Inter, Noto_Naskh_Arabic } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
-import { AuthProvider } from '@/contexts/AuthContext';
 import PreloadResources from '@/components/PreloadResources';
 import LazyNastaliq from '@/components/LazyNastaliq';
 
@@ -63,9 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <PreloadResources />
         <LazyNastaliq />
-        <AuthProvider>
-          <SiteShell>{children}</SiteShell>
-        </AuthProvider>
+        <SiteShell>{children}</SiteShell>
       </body>
     </html>
   );

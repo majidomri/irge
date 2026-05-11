@@ -12,8 +12,6 @@ import {
 import GradientText from '@/components/ui/GradientText';
 import TextType from '@/components/ui/TextType';
 import ClickSpark from '@/components/ui/ClickSpark';
-import { useUsageLimit } from '@/hooks/useUsageLimit';
-import AuthModal from '@/components/AuthModal';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
@@ -553,15 +551,10 @@ export default function ChannelFeedPage() {
 
   const [modalPost,  setModalPost]  = useState<IPost | null>(null);
   const [liked,      setLiked]      = useState<Set<string>>(new Set());
-  const [audioGate,  setAudioGate]  = useState(false);
 
-  const { consume: consumeAudio } = useUsageLimit('audio');
-
-  const handlePlayAttempt = useCallback(async (): Promise<boolean> => {
-    const ok = await consumeAudio();
-    if (!ok) { setAudioGate(true); return false; }
-    return true;
-  }, [consumeAudio]);
+  // Audio is unlimited now (no auth gating). Pass a no-op attempter so the
+  // AudioPlayer keeps its existing onPlayAttempt contract without changes.
+  const handlePlayAttempt = useCallback(async (): Promise<boolean> => true, []);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -861,13 +854,6 @@ export default function ChannelFeedPage() {
         />
       )}
 
-      {audioGate && (
-        <AuthModal
-          feature="audio"
-          onClose={() => setAudioGate(false)}
-          onSuccess={() => setAudioGate(false)}
-        />
-      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
-import { getAuthClient } from './auth-client';
+import { getDb } from './db';
 
 // Reuse the singleton browser client — prevents "multiple GoTrueClient instances" warning
-export const supabase = getAuthClient();
+export const supabase = getDb();
 
 export const POST_PAGE_SIZE = 9;
 
@@ -154,21 +154,6 @@ export async function deleteStory(storyId: string) {
   if (error) throw error;
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data;
-}
-
-export async function signOut() { await supabase.auth.signOut(); }
-
-export async function getSession() {
-  const { data } = await supabase.auth.getSession();
-  return data.session;
-}
-
 // ── Realtime ──────────────────────────────────────────────────────────────────
 
 export function subscribeChannel(channelId: string, onInsert: (post: IPost) => void) {
@@ -177,7 +162,7 @@ export function subscribeChannel(channelId: string, onInsert: (post: IPost) => v
     .on('postgres_changes', {
       event: 'INSERT', schema: 'public',
       table: 'ir_posts', filter: 'channel_id=eq.' + channelId,
-    }, (payload) => onInsert(payload.new as IPost));
+    }, (payload: { new: IPost }) => onInsert(payload.new));
   ch.subscribe();
   return ch;
 }

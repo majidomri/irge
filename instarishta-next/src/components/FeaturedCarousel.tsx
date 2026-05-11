@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getAuthClient } from '@/lib/auth-client';
+import { getDb } from '@/lib/db';
 import dynamic from 'next/dynamic';
 
 const Carousel = dynamic(() => import('@/components/ui/Carousel'), { ssr: false });
@@ -26,18 +26,14 @@ export default function FeaturedCarousel({
 
   useEffect(() => {
     if (initialItems && initialItems.length > 0) return; // server already fetched
-    // Reuse the singleton browser client — creating a separate one here causes
-    // "Multiple GoTrueClient instances detected" and fights getAuthClient() for
-    // the auth-token lock, which surfaces as NavigatorLockAcquireTimeoutError
-    // on every other auth-aware RPC (sign-out, contact unlocks, etc.).
-    getAuthClient()
+    getDb()
       .from('ir_featured')
       .select('id, title, description, image_url, link_url')
       .eq('active', true)
       .or(`placement.eq.all,placement.eq.${placement}`)
       .order('sort_order', { ascending: true })
       .limit(10)
-      .then(({ data }) => {
+      .then(({ data }: { data: FeaturedItem[] | null }) => {
         if (data && data.length > 0) setItems(data);
       });
   }, [placement, initialItems]);

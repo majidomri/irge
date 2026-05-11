@@ -4,10 +4,6 @@ import dynamic from 'next/dynamic';
 import { useRouter, usePathname } from 'next/navigation';
 import GradientText from '@/components/ui/GradientText';
 import CountUp from '@/components/ui/CountUp';
-import { useUsageLimit } from '@/hooks/useUsageLimit';
-import { USAGE_LIMITS } from '@/lib/auth-client';
-import { logIrisEvent } from '@/lib/iris';
-import { useAuth } from '@/contexts/AuthContext';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 import {
   type Profile,
@@ -25,9 +21,7 @@ import {
 const MagicRings    = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const ContactModal  = dynamic(() => import('./_modals/ContactModal'),     { ssr: false });
 const BiodataModal  = dynamic(() => import('./_modals/BiodataModal'),     { ssr: false });
-const PaymentModal  = dynamic(() => import('./_modals/PaymentModal'),     { ssr: false });
 const FilterDrawer  = dynamic(() => import('./_components/FilterDrawer'), { ssr: false });
-const AuthModal     = dynamic(() => import('@/components/AuthModal'),     { ssr: false });
 
 export type { Profile } from './_shared';
 
@@ -532,21 +526,19 @@ export default function ProfilesClient({
   const [contact,      setContact]      = useState<DeckProfile | null>(null);
   const [biodata,      setBiodata]      = useState<DeckProfile | null>(null);
   const [drawerOpen,   setDrawerOpen]   = useState(false);
-  const [authGate,     setAuthGate]     = useState(false);
-  const [paymentModal, setPaymentModal] = useState(false);
   const [, startTransition] = useTransition();
 
-  const { remaining, resetLabel, consume: consumeContact, canUse: canContact, isAnon } = useUsageLimit('contact');
-  const { user } = useAuth();
-  const contactLimit = USAGE_LIMITS.contact.anon;
+  // Auth + usage limits removed: contact unlocks are unlimited for now.
+  // The props below still feed into ProfileCard / ContactModal so the
+  // existing UI keeps working with sentinel "no limit" values.
+  const canContact = true;
+  const remaining  = 999;
+  const resetLabel = '';
+  const onLimitHit = () => { /* no-op — no gating */ };
 
-  const handleContactRequest = useCallback(async (p: DeckProfile) => {
-    if (isAnon) { setAuthGate(true); return; }
-    const ok = await consumeContact();
-    if (!ok) { setPaymentModal(true); return; }
+  const handleContactRequest = useCallback((p: DeckProfile) => {
     setContact(p);
-    logIrisEvent('contact_unlock', { profileTitle: p.title, profileNum: p._num }).catch(() => { /* ignore */ });
-  }, [consumeContact, isAnon]);
+  }, []);
 
   // Push a URL-param update. Defaults are removed from the URL to keep it tidy.
   const pushParams = useCallback((updates: Partial<Record<keyof FilterParams | 'q' | 'urgent', string | number | boolean | null>>) => {
@@ -789,7 +781,7 @@ export default function ProfilesClient({
                   canContact={canContact}
                   remaining={remaining}
                   resetLabel={resetLabel}
-                  onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
+                  onLimitHit={onLimitHit}
                 />
               ) : (
                 <div className="flex flex-col gap-4">
@@ -802,7 +794,7 @@ export default function ProfilesClient({
                       canContact={canContact}
                       remaining={remaining}
                       resetLabel={resetLabel}
-                      onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
+                      onLimitHit={onLimitHit}
                     />
                   ))}
                 </div>
@@ -822,7 +814,7 @@ export default function ProfilesClient({
                   canContact={canContact}
                   remaining={remaining}
                   resetLabel={resetLabel}
-                  onLimitHit={isAnon ? () => setAuthGate(true) : () => setPaymentModal(true)}
+                  onLimitHit={onLimitHit}
                 />
               ))}
             </div>
@@ -858,10 +850,10 @@ export default function ProfilesClient({
           sort={sort} setSort={setSort}
           onClear={clearAll}
           stats={stats}
-          contactLimit={contactLimit}
+          contactLimit={999}
           remaining={remaining}
           resetLabel={resetLabel}
-          isAnon={isAnon}
+          isAnon={false}
         />
       )}
 
@@ -869,25 +861,10 @@ export default function ProfilesClient({
         <ContactModal
           profile={contact} num={contact._num}
           onClose={() => setContact(null)}
-          remaining={remaining}
-          resetLabel={resetLabel}
-          contactLimit={contactLimit}
-          isAnon={isAnon}
-        />
-      )}
-
-      {authGate && (
-        <AuthModal
-          feature="contact"
-          onClose={() => setAuthGate(false)}
-          onSuccess={() => setAuthGate(false)}
-        />
-      )}
-
-      {paymentModal && (
-        <PaymentModal
-          userEmail={user?.email ?? ''}
-          onClose={() => setPaymentModal(false)}
+          remaining={999}
+          resetLabel=""
+          contactLimit={999}
+          isAnon={false}
         />
       )}
 

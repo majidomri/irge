@@ -2,7 +2,6 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
@@ -42,15 +41,7 @@ function ContactedIcon({ active }: { active: boolean }) {
   );
 }
 
-function AccountIcon({ active, initial }: { active: boolean; initial?: string }) {
-  if (initial) {
-    return (
-      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
-        style={{ background: active ? '#00A86B' : 'rgba(255,255,255,0.15)', color: '#fff', border: active ? '2px solid #00A86B' : '2px solid rgba(255,255,255,0.3)' }}>
-        {initial.toUpperCase()}
-      </div>
-    );
-  }
+function BiodataIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#00A86B' : 'rgba(255,255,255,0.55)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4"/>
@@ -70,7 +61,6 @@ type TabItem = {
 export default function MobileDock() {
   const router = useRouter();
   const path   = usePathname();
-  const { user } = useAuth();
 
   // When returning from WhatsApp / external app the browser restores the page
   // from bfcache (e.persisted = true), which freezes the old React state.
@@ -83,16 +73,12 @@ export default function MobileDock() {
     return () => window.removeEventListener('pageshow', onPageShow);
   }, [router]);
 
-  const accountTab: TabItem = user
-    ? { key: 'account', icon: <AccountIcon active={path.startsWith('/account')} initial={user.email?.[0]} />, label: 'Account', href: '/account', match: p => p.startsWith('/account') }
-    : { key: 'biodata', icon: <AccountIcon active={path.startsWith('/biodata')} />, label: 'Biodata', href: '/biodata', match: p => p.startsWith('/biodata') };
-
   const tabs: TabItem[] = [
     { key: 'home',      icon: <HomeIcon      active={path === '/'} />,                      label: 'Home',      href: '/',          match: p => p === '/' },
     { key: 'profiles',  icon: <ProfilesIcon  active={path.startsWith('/profiles')} />,      label: 'Profiles',  href: '/profiles',  match: p => p.startsWith('/profiles') },
     { key: 'channels',  icon: <ChannelsIcon  active={path.startsWith('/channels')} />,      label: 'Channels',  href: '/channels',  match: p => p.startsWith('/channels') },
     { key: 'contacted', icon: <ContactedIcon active={path.startsWith('/contacted')} />,     label: 'Contacted', href: '/contacted', match: p => p.startsWith('/contacted') },
-    accountTab,
+    { key: 'biodata',   icon: <BiodataIcon   active={path.startsWith('/biodata')} />,       label: 'Biodata',   href: '/biodata',   match: p => p.startsWith('/biodata') },
   ];
 
   return (
