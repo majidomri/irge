@@ -49,6 +49,9 @@ export const metadata: Metadata = {
     type: 'website',
     images: [{ url: '/logo.svg', width: 512, height: 512, alt: 'InstaRishta' }],
   },
+  verification: {
+    google: 'fe-DSxzYfbTmx1W4Mid5V-GEOz2s-QdQEOaBIERNpuI',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
