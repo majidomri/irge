@@ -42,14 +42,25 @@ interface FeaturedItem {
   created_at:   string;
 }
 
-type Tab = 'channels' | 'posts' | 'stories' | 'featured';
+type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
   { key: 'posts',    label: 'Posts',    icon: '📝' },
   { key: 'stories',  label: 'Stories',  icon: '⭕' },
   { key: 'featured', label: 'Featured', icon: '⭐' },
+  { key: 'users',    label: 'Users',    icon: '👤' },
 ];
+
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  contact_credits: number;
+  plan: string;
+  is_banned: boolean;
+  created_at: string;
+}
 
 const BG       = '#0a1a14';
 const PANEL    = '#0f2419';
@@ -149,6 +160,9 @@ export default function NizamClient({
         )}
         {tab === 'featured' && (
           <FeaturedTab toast={showToast} />
+        )}
+        {tab === 'users' && (
+          <UsersTab toast={showToast} />
         )}
       </main>
 
@@ -565,5 +579,123 @@ function SubmitBtn({ busy, label }: { busy: boolean; label: string }) {
       style={{ background: GREEN, color: '#fff' }}>
       {busy ? 'Working…' : label}
     </button>
+  );
+}
+
+// ── Users + credits manager ──────────────────────────────────────────────────
+const PLAN_OPTIONS = [
+  { value: 'none',     label: 'Free' },
+  { value: 'silver',   label: 'Silver' },
+  { value: 'gold',     label: 'Gold' },
+  { value: 'diamond',  label: 'Diamond' },
+  { value: 'platinum', label: 'Platinum' },
+];
+
+function UsersTab({ toast }: { toast: (m: string) => void }) {
+  const [users, setUsers]     = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [q, setQ]             = useState('');
+
+  const load = useCallback(async (query = '') => {
+    setLoading(true);
+    try {
+      const res  = await fetch(`/api/admin/users${query ? `?q=${encodeURIComponent(query)}` : ''}`);
+      const data = await res.json();
+      setUsers(data.users ?? []);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { queueMicrotask(() => load()); }, [load]);
+
+  const save = useCallback(async (id: string, patch: Partial<UserProfile>) => {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...patch }),
+    });
+    if (res.ok) {
+      const { user } = await res.json();
+      setUsers(us => us.map(u => (u.id === id ? { ...u, ...user } : u)));
+      toast('Saved — user sees it live');
+    } else {
+      toast('Save failed');
+    }
+  }, [toast]);
+
+  return (
+    <div>
+      <h1 className="text-xl font-extrabold mb-1">Users &amp; credits</h1>
+      <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        Edit contact credits, plan, or ban status. Changes reflect on the user&apos;s account in real-time.
+      </p>
+
+      <form onSubmit={e => { e.preventDefault(); load(q); }} className="flex gap-2 mb-5">
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search by email…"
+          className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
+          style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+        <button type="submit" className="rounded-xl px-5 py-2.5 text-sm font-bold" style={{ background: GREEN, color: '#fff' }}>
+          Search
+        </button>
+      </form>
+
+      {loading ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
+      ) : users.length === 0 ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No users found.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {users.map(u => <UserRow key={u.id} user={u} onSave={save} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, patch: Partial<UserProfile>) => Promise<void> }) {
+  const [credits, setCredits] = useState(String(user.contact_credits));
+  const [plan, setPlan]       = useState(user.plan ?? 'none');
+  const [busy, setBusy]       = useState(false);
+
+  const dirty = Number(credits) !== user.contact_credits || plan !== (user.plan ?? 'none');
+
+  const save = async () => {
+    setBusy(true);
+    try { await onSave(user.id, { contact_credits: Math.max(0, Math.floor(Number(credits) || 0)), plan }); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="rounded-2xl p-4" style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white truncate">{user.full_name || user.email}</p>
+          <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{user.email}</p>
+        </div>
+        <button
+          onClick={() => onSave(user.id, { is_banned: !user.is_banned })}
+          className="text-[11px] font-bold rounded-full px-3 py-1.5 shrink-0"
+          style={user.is_banned
+            ? { background: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,0.3)' }
+            : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+          {user.is_banned ? 'Banned · Unban' : 'Ban'}
+        </button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+        <label className="text-[11px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          Contact credits
+          <input type="number" min={0} value={credits} onChange={e => setCredits(e.target.value)}
+            className="w-full mt-1 rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+        </label>
+        <label className="text-[11px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          Plan
+          <div className="mt-1"><Select value={plan} setValue={setPlan} options={PLAN_OPTIONS} /></div>
+        </label>
+        <button onClick={save} disabled={busy || !dirty}
+          className="rounded-xl py-2.5 text-sm font-bold disabled:opacity-40"
+          style={{ background: GREEN, color: '#fff' }}>
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </div>
   );
 }

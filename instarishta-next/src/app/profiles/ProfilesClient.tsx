@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import GradientText from '@/components/ui/GradientText';
 import CountUp from '@/components/ui/CountUp';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
+import { useContactCredits } from '@/lib/hooks/useContactCredits';
 import {
   type Profile,
   type DeckProfile,
@@ -21,6 +22,8 @@ import {
 const MagicRings    = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const ContactModal  = dynamic(() => import('./_modals/ContactModal'),     { ssr: false });
 const BiodataModal  = dynamic(() => import('./_modals/BiodataModal'),     { ssr: false });
+const PaymentModal  = dynamic(() => import('./_modals/PaymentModal'),     { ssr: false });
+const AuthModal     = dynamic(() => import('@/components/AuthModal'),      { ssr: false });
 const FilterDrawer  = dynamic(() => import('./_components/FilterDrawer'), { ssr: false });
 
 export type { Profile } from './_shared';
@@ -528,17 +531,24 @@ export default function ProfilesClient({
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [, startTransition] = useTransition();
 
-  // Auth + usage limits removed: contact unlocks are unlimited for now.
-  // The props below still feed into ProfileCard / ContactModal so the
-  // existing UI keeps working with sentinel "no limit" values.
-  const canContact = true;
-  const remaining  = 999;
+  // Contact-credit gating (better-auth): anon → sign-in; signed-in → spend a
+  // credit; out of credits → upgrade. See src/lib/hooks/useContactCredits.ts.
+  const { remaining, canUse: canContact, isAnon, email, consume, refresh } = useContactCredits();
   const resetLabel = '';
-  const onLimitHit = () => { /* no-op — no gating */ };
+  const [authGate,     setAuthGate]     = useState(false);
+  const [paymentModal, setPaymentModal] = useState(false);
 
-  const handleContactRequest = useCallback((p: DeckProfile) => {
+  const onLimitHit = useCallback(() => {
+    if (isAnon) setAuthGate(true);
+    else        setPaymentModal(true);
+  }, [isAnon]);
+
+  const handleContactRequest = useCallback(async (p: DeckProfile) => {
+    if (isAnon) { setAuthGate(true); return; }
+    const ok = await consume();          // spends one contact credit
+    if (!ok) { setPaymentModal(true); return; }
     setContact(p);
-  }, []);
+  }, [isAnon, consume]);
 
   // Push a URL-param update. Defaults are removed from the URL to keep it tidy.
   const pushParams = useCallback((updates: Partial<Record<keyof FilterParams | 'q' | 'urgent', string | number | boolean | null>>) => {
@@ -850,10 +860,10 @@ export default function ProfilesClient({
           sort={sort} setSort={setSort}
           onClear={clearAll}
           stats={stats}
-          contactLimit={999}
+          contactLimit={20}
           remaining={remaining}
           resetLabel={resetLabel}
-          isAnon={false}
+          isAnon={isAnon}
         />
       )}
 
@@ -861,14 +871,26 @@ export default function ProfilesClient({
         <ContactModal
           profile={contact} num={contact._num}
           onClose={() => setContact(null)}
-          remaining={999}
-          resetLabel=""
-          contactLimit={999}
+          remaining={remaining}
+          resetLabel={resetLabel}
+          contactLimit={20}
           isAnon={false}
         />
       )}
 
       {biodata && <BiodataModal profile={biodata} onClose={() => setBiodata(null)} />}
+
+      {authGate && (
+        <AuthModal
+          redirectTo="/profiles"
+          onClose={() => setAuthGate(false)}
+          onSuccess={() => { setAuthGate(false); refresh(); }}
+        />
+      )}
+
+      {paymentModal && (
+        <PaymentModal userEmail={email} onClose={() => setPaymentModal(false)} />
+      )}
     </div>
   );
 }

@@ -33,6 +33,23 @@ function serviceClient(): AdminDb {
   );
 }
 
+// Mutating HTTP methods that should require a *fresh* session when step-up is on.
+const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+// Opt-in fresh-session step-up for admin mutations (xavio "fresh-session for
+// mutations" parallel). OFF by default — this app has no re-auth challenge UI,
+// so requiring re-login every `session.freshAge` (15 min) would block the
+// admin's normal CRUD. Set ADMIN_FRESH_SESSION=1 to enforce; the client then
+// gets a 401 { code: 'fresh_session_required' } and must sign in again.
+const REQUIRE_FRESH = process.env.ADMIN_FRESH_SESSION === '1';
+const FRESH_AGE_MS  = 60 * 15 * 1000; // keep in sync with session.freshAge in lib/auth.ts
+
+function isFreshSession(createdAt: Date | string | null | undefined): boolean {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  return Number.isFinite(t) && (Date.now() - t) < FRESH_AGE_MS;
+}
+
 export function withAdmin(handler: AdminHandler) {
   return async (
     req: NextRequest,
@@ -45,6 +62,12 @@ export function withAdmin(handler: AdminHandler) {
       }
       if (!isAdminEmail(session.user.email)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (REQUIRE_FRESH && MUTATING.has(req.method) && !isFreshSession(session.session?.createdAt)) {
+        return NextResponse.json(
+          { error: 'Re-authentication required', code: 'fresh_session_required' },
+          { status: 401 },
+        );
       }
 
       let body: Record<string, unknown> = {};

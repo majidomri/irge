@@ -8,16 +8,36 @@ interface AuthModalProps {
   onSuccess?: () => void;
   // Where to land after successful OAuth callback (server-side redirect target).
   redirectTo?: string;
+  // Pre-filled error (e.g. an OAuth failure code read from the URL by the opener).
+  initialError?: string;
 }
 
 type Mode = 'choose' | 'password' | 'magic';
 
-export default function AuthModal({ onClose, onSuccess, redirectTo }: AuthModalProps) {
+// Humanize the error codes better-auth appends to the URL when an OAuth
+// round-trip fails (see better-auth callback redirectOnError).
+function humanizeAuthError(code: string): string {
+  const map: Record<string, string> = {
+    access_denied: 'Sign-in was cancelled.',
+    oauth_provider_not_found: 'Google sign-in isn’t configured yet. Please try email instead.',
+    unable_to_get_user_info: 'Could not read your Google profile. Please try again.',
+    email_not_found: 'Your Google account has no email we can use.',
+    invalid_code: 'Google sign-in expired. Please try again.',
+    state_not_found: 'Sign-in session expired. Please try again.',
+    "email_doesn't_match": 'That Google account’s email doesn’t match the account you’re linking.',
+    account_already_linked_to_different_user: 'That Google account is already linked to a different user.',
+    unable_to_link_account: 'Could not link your Google account. Please try again.',
+  };
+  return map[code] ?? 'Google sign-in failed. Please try again.';
+}
+
+export default function AuthModal({ onClose, onSuccess, redirectTo, initialError }: AuthModalProps) {
   const [mode,     setMode]     = useState<Mode>('choose');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState<'google' | 'email' | 'magic' | null>(null);
-  const [error,    setError]    = useState('');
+  // Seed from any OAuth-failure code the opener read off the URL (humanized).
+  const [error,    setError]    = useState(initialError ? humanizeAuthError(initialError) : '');
   const [sent,     setSent]     = useState(false);
 
   useEffect(() => {
@@ -29,7 +49,11 @@ export default function AuthModal({ onClose, onSuccess, redirectTo }: AuthModalP
 
   const handleGoogle = async () => {
     setError(''); setLoading('google');
-    const { error } = await signIn.social({ provider: 'google', callbackURL: next });
+    // On failure better-auth redirects to errorCallbackURL with ?error=<code>.
+    // Send it back to this page with ?signin=1 so the modal re-opens and the
+    // mount effect above can show the humanized error.
+    const errorCallbackURL = `${next}${next.includes('?') ? '&' : '?'}signin=1`;
+    const { error } = await signIn.social({ provider: 'google', callbackURL: next, errorCallbackURL });
     if (error) { setError(error.message ?? 'Google sign-in failed'); setLoading(null); }
     // On success the browser is being redirected to Google — no further work.
   };

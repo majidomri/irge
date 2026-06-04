@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import ShinyText from '@/components/ui/ShinyText';
-import { useSession, signOut } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth-client';
 import AuthModal from '@/components/AuthModal';
 
 const DESKTOP_LINKS = [
@@ -26,8 +26,33 @@ export default function Navbar() {
   const { data: session } = useSession();
   const user = session?.user;
   const [showAuth, setShowAuth] = useState(false);
+  const [authNext, setAuthNext] = useState<string | undefined>(undefined);
+  const [authError, setAuthError] = useState<string | undefined>(undefined);
   const isHome = path === '/';
   const [scrolled, setScrolled] = useState(!isHome);
+
+  // Open the sign-in modal automatically when an auth-gated redirect lands here
+  // with ?signin=1 (set by middleware, /nizam, and the OAuth errorCallbackURL).
+  // `next` carries where to return after sign-in; `error` is an OAuth-failure
+  // code to surface. Read from window (not useSearchParams) so static pages
+  // don't bail out of prerendering. Strip the params afterwards so a refresh is
+  // clean. Deferred via queueMicrotask to avoid a synchronous setState cascade.
+  useEffect(() => {
+    if (user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('signin') !== '1') return;
+    queueMicrotask(() => {
+      setAuthNext(params.get('next') ?? undefined);
+      setAuthError(params.get('error') ?? undefined);
+      setShowAuth(true);
+    });
+    params.delete('signin');
+    params.delete('next');
+    params.delete('error');
+    params.delete('error_description');
+    const qs = params.toString();
+    router.replace(path + (qs ? `?${qs}` : ''));
+  }, [user, path, router]);
 
   useEffect(() => {
     if (!isHome) { setScrolled(true); return; }
@@ -79,13 +104,13 @@ export default function Navbar() {
           <div className="flex items-center gap-3 w-[176px] justify-end flex-shrink-0">
             <div className="w-px h-[18px] bg-white/15 flex-shrink-0" />
             {user ? (
-              <button
-                onClick={async () => { await signOut(); router.refresh(); }}
-                className="text-white/65 text-[0.875rem] font-medium hover:text-white transition-colors duration-200 px-2 bg-transparent border-0 cursor-pointer"
-                title={user.email}
+              <Link
+                href="/account"
+                className="text-white/65 text-[0.875rem] font-medium hover:text-white transition-colors duration-200 px-2 no-underline"
+                title={user.email ?? 'Account'}
               >
-                Sign out
-              </button>
+                Account
+              </Link>
             ) : (
               <button
                 onClick={() => setShowAuth(true)}
@@ -122,13 +147,17 @@ export default function Navbar() {
         <div className="flex items-center justify-between px-5 h-14">
           <LogoNode />
           {user ? (
-            <button
-              onClick={async () => { await signOut(); router.refresh(); }}
-              className="text-xs font-semibold rounded-full px-3 py-1.5 border-0 cursor-pointer"
+            <Link
+              href="/account"
+              aria-label="Account"
+              className="w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-full no-underline overflow-hidden"
               style={{ background: 'rgba(255,255,255,0.10)', color: '#fff' }}
             >
-              {user.email?.[0]?.toUpperCase()}
-            </button>
+              {user.image
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={user.image} alt="" className="w-full h-full object-cover" />
+                : (user.name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? '?')}
+            </Link>
           ) : (
             <button
               onClick={() => setShowAuth(true)}
@@ -142,7 +171,12 @@ export default function Navbar() {
       </nav>
 
       {showAuth && (
-        <AuthModal onClose={() => setShowAuth(false)} onSuccess={() => setShowAuth(false)} />
+        <AuthModal
+          redirectTo={authNext}
+          initialError={authError}
+          onClose={() => setShowAuth(false)}
+          onSuccess={() => setShowAuth(false)}
+        />
       )}
     </>
   );
