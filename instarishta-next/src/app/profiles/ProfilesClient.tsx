@@ -671,16 +671,42 @@ export default function ProfilesClient({
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
               {MARITAL_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
             </select>
-            {/* Opens the full drawer (sort, state, community, age, profile ID) —
-                these have no inline control on desktop otherwise. */}
-            <button type="button" onClick={() => setDrawerOpen(true)}
-              className="rounded-full px-4 py-2.5 text-sm font-semibold border-0 outline-none flex items-center gap-1.5 cursor-pointer"
-              style={{ background: '#fff', color: '#141413' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/>
-              </svg>
-              All filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
-            </button>
+          </div>
+
+          {/* Desktop: the rest of the filters, inline (mobile keeps the drawer). */}
+          <div className="hidden md:flex gap-3 flex-wrap items-center mb-3">
+            <select value={sort} onChange={e => setSort(e.target.value)}
+              className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
+              style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label === 'Default' ? 'Sort: Default' : o.label}</option>)}
+            </select>
+            <select value={state} onChange={e => setState(e.target.value)}
+              className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
+              style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
+              {STATE_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
+            </select>
+            <select value={community} onChange={e => setCommunity(e.target.value)}
+              className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
+              style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
+              {COMMUNITY_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
+            </select>
+            <input type="text" inputMode="numeric" pattern="[0-9]*" value={idFilter}
+              onChange={e => setIdFilter(e.target.value.replace(/\D/g, ''))}
+              placeholder="Profile ID"
+              className="rounded-full px-4 py-2.5 text-sm w-32 outline-none border-0 placeholder:text-white/50"
+              style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }} />
+            <div className="flex items-center gap-1.5 rounded-full px-4 py-1.5" style={{ background: 'rgba(255,255,255,0.13)' }}>
+              <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>Age</span>
+              <input type="number" min={18} max={60} value={ageMin}
+                onChange={e => setAgeMin(Math.min(Math.max(+e.target.value || 18, 18), ageMax - 1))}
+                aria-label="Minimum age"
+                className="w-10 bg-transparent text-sm text-white outline-none text-center" />
+              <span style={{ color: 'rgba(255,255,255,0.4)' }}>–</span>
+              <input type="number" min={18} max={60} value={ageMax}
+                onChange={e => setAgeMax(Math.max(Math.min(+e.target.value || 60, 60), ageMin + 1))}
+                aria-label="Maximum age"
+                className="w-10 bg-transparent text-sm text-white outline-none text-center" />
+            </div>
           </div>
 
           <div className="hidden md:flex gap-2 justify-center">
