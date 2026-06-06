@@ -638,6 +638,19 @@ export default function ProfilesClient({
             </GradientText>
           </h1>
 
+          {/* Mobile: search + "All filters" (desktop has its own bar below). */}
+          <div className="flex md:hidden gap-2 mb-3">
+            <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search by education, location…"
+              className="flex-1 min-w-0 rounded-full px-4 py-2.5 text-sm outline-none border-0"
+              style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }} />
+            <button onClick={() => setDrawerOpen(true)}
+              className="shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold border-0 flex items-center gap-1.5"
+              style={{ background: '#fff', color: '#141413' }}>
+              ⚙ Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+            </button>
+          </div>
+
           <div className="hidden md:flex gap-3 flex-wrap items-center mb-3">
             <div className="relative flex-1 min-w-55">
               <input type="search" value={search} onChange={e => setSearch(e.target.value)}
@@ -655,6 +668,16 @@ export default function ProfilesClient({
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
               {MARITAL_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
             </select>
+            {/* Opens the full drawer (sort, state, community, age, profile ID) —
+                these have no inline control on desktop otherwise. */}
+            <button type="button" onClick={() => setDrawerOpen(true)}
+              className="rounded-full px-4 py-2.5 text-sm font-semibold border-0 outline-none flex items-center gap-1.5 cursor-pointer"
+              style={{ background: '#fff', color: '#141413' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/>
+              </svg>
+              All filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+            </button>
           </div>
 
           <div className="hidden md:flex gap-2 justify-center">
