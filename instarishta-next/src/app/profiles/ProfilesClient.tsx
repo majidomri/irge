@@ -15,6 +15,9 @@ import {
   isUrgent,
   EDUCATION_OPTIONS,
   MARITAL_OPTIONS,
+  STATE_OPTIONS,
+  COMMUNITY_OPTIONS,
+  SORT_OPTIONS,
   activeFilterCount as countFilters,
 } from './_shared';
 
@@ -727,7 +730,7 @@ export default function ProfilesClient({
             )}
             {search && (
               <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
-                "{search}" <button onClick={() => setSearch('')}>×</button>
+                &ldquo;{search}&rdquo; <button type="button" onClick={() => setSearch('')}>×</button>
               </span>
             )}
             {education && (
@@ -739,10 +742,46 @@ export default function ProfilesClient({
             {marital && (
               <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
                 {MARITAL_OPTIONS.find(o => o.value === marital)?.label}
-                <button onClick={() => setMarital('')}>×</button>
+                <button type="button" onClick={() => setMarital('')}>×</button>
               </span>
             )}
-            <button onClick={clearAll} className="text-xs font-medium underline" style={{ color: '#696969' }}>Clear all</button>
+            {state && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
+                {STATE_OPTIONS.find(o => o.value === state)?.label ?? state}
+                <button type="button" onClick={() => setState('')}>×</button>
+              </span>
+            )}
+            {community && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
+                {COMMUNITY_OPTIONS.find(o => o.value === community)?.label ?? community}
+                <button type="button" onClick={() => setCommunity('')}>×</button>
+              </span>
+            )}
+            {sort !== 'default' && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
+                Sort: {SORT_OPTIONS.find(o => o.value === sort)?.label ?? sort}
+                <button type="button" onClick={() => setSort('default')}>×</button>
+              </span>
+            )}
+            {urgentOnly && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
+                Urgent only
+                <button type="button" onClick={() => pushParams({ urgentOnly: false })}>×</button>
+              </span>
+            )}
+            {idFilter && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
+                ID #{idFilter}
+                <button type="button" onClick={() => setIdFilter('')}>×</button>
+              </span>
+            )}
+            {(ageMin > 18 || ageMax < 60) && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: '#1E3932', color: '#fff' }}>
+                Age {ageMin}–{ageMax}
+                <button type="button" onClick={() => { setAgeMin(18); setAgeMax(60); }}>×</button>
+              </span>
+            )}
+            <button type="button" onClick={clearAll} className="text-xs font-medium underline" style={{ color: '#696969' }}>Clear all</button>
           </div>
         )}
 
