@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   PLANS, TOPUP, FREE_CREDITS, FREE_INTERESTS, FREE_ENTITLEMENTS,
   entitlementsFor, fmtAllowance, totalCredits, pricePerCredit,
 } from '@/lib/plans';
+import type { OrderPlanId } from '@/lib/orders';
 
 /**
  * Two terms, not four packages. Cards deliberately lead with TOTAL CREDITS and
@@ -95,7 +97,7 @@ const FAQS = [
   },
   {
     q: 'How do I pay?',
-    a: 'UPI — Google Pay, PhonePe, BHIM or Paytm. Submit your transaction reference after paying and our team activates your plan, usually within 2–4 hours.',
+    a: 'UPI — Google Pay, PhonePe, BHIM or Paytm. Pick a plan and we show you a checkout page with a QR code and an exact amount. Pay it, tap "I\'ve paid", and your credits go live immediately — no waiting, and nothing to send us. Pay the exact amount shown, paise included: those last two digits are how we recognise your payment.',
   },
   {
     q: 'Can I get a refund?',
@@ -114,7 +116,43 @@ function Check({ yes }: { yes: boolean }) {
 }
 
 export default function PricingPage() {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const router = useRouter();
+  const [openFaq,  setOpenFaq]  = useState<number | null>(null);
+  const [busy,     setBusy]     = useState<OrderPlanId | null>(null);
+  const [buyError, setBuyError] = useState<string | null>(null);
+
+  /**
+   * Reserve an amount and hand off to /pay/[id].
+   *
+   * Anonymous visitors are the common case on this page, so a 401 is not an
+   * error to show — it means "sign in first", and we bounce them through auth
+   * with ?next set so they land back here and can pick up where they left off.
+   */
+  async function startCheckout(plan: OrderPlanId) {
+    setBusy(plan);
+    setBuyError(null);
+    try {
+      const res = await fetch('/api/orders', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ plan }),
+      });
+      if (res.status === 401) {
+        router.push(`/?signin=1&next=${encodeURIComponent('/pricing')}`);
+        return;
+      }
+      const json = await res.json() as { order?: { id: string }; error?: string };
+      if (!res.ok || !json.order) {
+        setBuyError(json.error ?? 'Could not start checkout. Please try again.');
+        setBusy(null);
+        return;
+      }
+      router.push(`/pay/${json.order.id}`);   // busy stays set under the navigation
+    } catch {
+      setBuyError('Network error. Check your connection and try again.');
+      setBusy(null);
+    }
+  }
 
   return (
     <main className="min-h-screen" style={{ background: '#F3F0EE', fontFamily: 'Inter, sans-serif' }}>
@@ -193,17 +231,21 @@ export default function PricingPage() {
                 </div>
 
                 <div className="mt-auto px-6 pb-6">
-                  <Link
-                    href="/profiles"
+                  <button
+                    type="button"
+                    onClick={() => startCheckout(plan.id)}
+                    disabled={busy !== null}
                     className="w-full block text-center py-2.5 rounded-full font-bold text-[0.88rem] transition-all active:scale-95 no-underline"
                     style={{
                       background: plan.popular ? s.color : 'transparent',
                       color:      plan.popular ? '#fff' : s.color,
                       border:     `2px solid ${s.color}`,
+                      opacity:    busy !== null && busy !== plan.id ? 0.5 : 1,
+                      cursor:     busy !== null ? 'wait' : 'pointer',
                     }}
                   >
-                    Choose {plan.name}
-                  </Link>
+                    {busy === plan.id ? 'Opening checkout…' : `Choose ${plan.name}`}
+                  </button>
                 </div>
               </div>
             );
@@ -218,11 +260,30 @@ export default function PricingPage() {
               {TOPUP.credits} extra credits, one time — they never reset and never expire.
             </p>
           </div>
-          <span className="text-[1.1rem] font-extrabold" style={{ color: '#006241' }}>₹{TOPUP.price}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[1.1rem] font-extrabold" style={{ color: '#006241' }}>₹{TOPUP.price}</span>
+            <button
+              type="button"
+              onClick={() => startCheckout(TOPUP.id)}
+              disabled={busy !== null}
+              className="px-5 py-2 rounded-full font-bold text-[0.82rem] transition-all active:scale-95"
+              style={{
+                background: '#006241', color: '#fff',
+                opacity: busy !== null && busy !== TOPUP.id ? 0.5 : 1,
+                cursor:  busy !== null ? 'wait' : 'pointer',
+              }}
+            >
+              {busy === TOPUP.id ? 'Opening…' : 'Get top-up'}
+            </button>
+          </div>
         </div>
 
+        {buyError && (
+          <p className="text-center text-[0.8rem] font-semibold mt-4" style={{ color: '#CF4500' }}>{buyError}</p>
+        )}
+
         <p className="text-center text-[0.75rem] text-[rgba(0,0,0,0.42)] mt-6">
-          All prices inclusive of GST · Plans activate within 2–4 hours of payment confirmation<br />
+          All prices inclusive of GST · Credits activate the moment you confirm payment<br />
           No auto-renewal · All payments are final and non-refundable
         </p>
       </section>
@@ -262,13 +323,13 @@ export default function PricingPage() {
       {/* Payment methods */}
       <section className="px-4 pb-16 max-w-3xl mx-auto text-center">
         <h2 className="text-[1.2rem] font-bold text-[rgba(0,0,0,0.87)] mb-2">How to Pay</h2>
-        <p className="text-[0.85rem] text-[rgba(0,0,0,0.52)] mb-8">Pay by UPI, share the reference, and we activate your plan</p>
+        <p className="text-[0.85rem] text-[rgba(0,0,0,0.52)] mb-8">Three taps, and your credits are live</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: '📱', title: '1. Pay via UPI', desc: 'Google Pay · PhonePe · BHIM · Paytm' },
-            { icon: '🧾', title: '2. Share the UTR', desc: 'Submit your transaction reference in the app' },
-            { icon: '✅', title: '3. We activate', desc: 'Usually within 2–4 hours, credits go live' },
+            { icon: '🛒', title: '1. Pick a plan',    desc: 'We reserve an exact amount just for you' },
+            { icon: '📱', title: '2. Pay via UPI',    desc: 'Scan the QR or open PhonePe, GPay or Paytm' },
+            { icon: '⚡', title: '3. Tap "I\'ve paid"', desc: 'Credits activate instantly — nothing to send us' },
           ].map(m => (
             <div key={m.title} className="rounded-xl p-5 border border-[rgba(0,0,0,0.07)] text-left" style={{ background: '#fff' }}>
               <div className="text-2xl mb-2">{m.icon}</div>
