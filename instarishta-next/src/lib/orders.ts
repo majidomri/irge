@@ -11,9 +11,30 @@
  */
 import { getPlan, TOPUP, totalCredits } from '@/lib/plans';
 
-/** The VPA money is collected into. A personal PhonePe handle — see 008 §0. */
-export const UPI_VPA  = '918886667121@ybl';
-export const UPI_NAME = 'InstaRishta';
+/**
+ * The VPA money is collected into. A personal PhonePe handle — see 008 §0.
+ *
+ * No 91 country prefix: the handle is registered as `8886667121@ybl`, and
+ * `918886667121@ybl` is a different (non-existent) address. Paying the prefixed
+ * form fails to resolve, which is why an earlier version of this file collected
+ * nothing.
+ */
+export const UPI_VPA = '8886667121@ybl';
+
+/**
+ * Payee name for the `pn` parameter, or null to omit it.
+ *
+ * Null on purpose. The account is registered under a personal name, not
+ * "InstaRishta", and passing a `pn` that disagrees with the bank's record makes
+ * UPI apps display our string over the real account holder — which reads as a
+ * mismatched or spoofed payee and stops people mid-payment. Omitted, every app
+ * resolves the VPA and shows the genuine registered name.
+ *
+ * NPCI's linking spec lists `pn` as mandatory and apps tolerate its absence in
+ * practice rather than by guarantee. If some app ever refuses the link, set this
+ * to the exact name the bank has on file — never to a brand name.
+ */
+export const UPI_NAME: string | null = null;
 
 /** Everything sellable through checkout: the two terms plus the top-up. */
 export type OrderPlanId = 'ir6' | 'ir12' | 'topup25';
@@ -140,12 +161,13 @@ export function upiLink(
   const base   = entry.scheme ?? 'upi://pay';
   const params = new URLSearchParams({
     pa: UPI_VPA,
-    pn: UPI_NAME,
     am: amountParam(order.amount_paise),
     cu: 'INR',
     tn: `InstaRishta ${describeOrder(order.plan_id).label}`,
     tr: order.id,
   });
+  // Only when we have a name that matches the bank's record — see UPI_NAME.
+  if (UPI_NAME) params.set('pn', UPI_NAME);
   return `${base}?${params.toString()}`;
 }
 
