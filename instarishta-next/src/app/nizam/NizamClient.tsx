@@ -845,9 +845,17 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
       <CatalogPanel />
 
       <form onSubmit={e => { e.preventDefault(); load(q); }} className="flex gap-2 mb-5">
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search by email…"
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="Search by user ID, email, or name…"
           className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
           style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+        {q && (
+          <button type="button" onClick={() => { setQ(''); load(''); }}
+            className="rounded-xl px-4 py-2.5 text-sm font-bold"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            Clear
+          </button>
+        )}
         <button type="submit" className="rounded-xl px-5 py-2.5 text-sm font-bold" style={{ background: GREEN, color: '#fff' }}>
           Search
         </button>
@@ -856,7 +864,13 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
       {loading ? (
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
       ) : users.length === 0 ? (
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No users found.</p>
+        <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <p>No users found.</p>
+          <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Email and name match on any part. A user ID must be the <strong>complete</strong> value —
+            partial IDs can&apos;t be matched. Tap the ID under any user to copy it.
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           {users.map(u => <UserRow key={u.id} user={u} onSave={save} />)}
@@ -946,6 +960,7 @@ function CatalogPanel() {
 function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, patch: Record<string, unknown>) => Promise<void> }) {
   const [credits, setCredits] = useState(String(user.contact_credits));
   const [busy, setBusy]       = useState(false);
+  const [copied, setCopied]   = useState(false);
 
   const dirty      = Number(credits) !== user.contact_credits;
   const activePlan = getPlan(user.plan);
@@ -964,6 +979,18 @@ function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, pat
         <div className="min-w-0">
           <p className="text-sm font-semibold text-white truncate">{user.full_name || user.email}</p>
           <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{user.email}</p>
+          {/* Click to copy — this is the value the ID search expects. */}
+          <button type="button" title="Copy user ID"
+            onClick={() => {
+              navigator.clipboard?.writeText(user.id).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }).catch(() => {});
+            }}
+            className="mt-1 text-[10px] font-mono rounded px-1.5 py-0.5 max-w-full truncate"
+            style={{ background: 'rgba(255,255,255,0.05)', color: copied ? GREEN : 'rgba(255,255,255,0.3)' }}>
+            {copied ? 'ID copied' : `ID ${user.id}`}
+          </button>
         </div>
         <button
           onClick={() => run({ is_banned: !user.is_banned })}

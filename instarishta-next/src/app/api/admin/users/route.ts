@@ -26,11 +26,35 @@ const COLS = 'id, email, full_name, contact_credits, bonus_credits, plan, plan_s
  * interest usage, so /nizam can show the full picture — contact credits,
  * interests, audio, term, expiry — instead of just a credit number.
  */
+/** ir_user_profiles.id — a v4 uuid. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * PostgREST's `or=` filter is a comma-separated list wrapped in parens, so a
+ * search term containing , ( ) or . would corrupt the expression. Strip them —
+ * none are meaningful inside an email, a name, or a uuid.
+ */
+function sanitise(term: string): string {
+  return term.replace(/[,()*"']/g, ' ').trim();
+}
+
 export const GET = withAdmin(async (req, { db }) => {
   const url = new URL(req.url);
   const q = url.searchParams.get('q')?.trim();
+
   let query = db.from('ir_user_profiles').select(COLS).order('created_at', { ascending: false }).limit(200);
-  if (q) query = query.ilike('email', `%${q}%`);
+
+  if (q) {
+    if (UUID_RE.test(q)) {
+      // A full user ID — exact match. Postgres cannot ILIKE a uuid column
+      // without a cast, so partial ids are not searchable; paste the whole one.
+      query = query.eq('id', q);
+    } else {
+      const term = sanitise(q);
+      if (term) query = query.or(`email.ilike.%${term}%,full_name.ilike.%${term}%`);
+    }
+  }
+
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
