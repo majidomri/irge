@@ -18,6 +18,7 @@
 import { NextResponse } from 'next/server';
 import { withAdmin } from '@/lib/admin-route';
 import { entitlementsFor, FREE_ENTITLEMENTS, PLANS } from '@/lib/plans';
+import { getProfiles } from '@/lib/data';
 
 const COLS = 'id, email, full_name, contact_credits, bonus_credits, plan, plan_started_at, plan_expires_at, monthly_credits, credits_reset_at, is_banned, created_at';
 
@@ -39,6 +40,45 @@ function parseIrNumber(term: string): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
+export interface IrProfile {
+  num: number;
+  id: number | null;
+  title: string;
+  body: string;
+  gender: string;
+  age: number | null;
+  education: string | null;
+  priority: string | null;
+  phone: string | null;
+}
+
+/**
+ * Resolve an IR # to the actual profile.
+ *
+ * The number visitors see is the profile's 1-based POSITION in the feed
+ * (_shared.ts applyFilters: `allProfiles.map((p, i) => ({ ...p, _num: i + 1 }))`),
+ * so IR #12 is simply the 12th entry of the unfiltered list — the same thing
+ * /profiles?id=12 shows. Reads through the same cached getProfiles() the public
+ * page uses, so admin and visitors can never see different numbering.
+ */
+async function lookupIrProfile(num: number): Promise<IrProfile | null> {
+  const all = (await getProfiles()) as Array<Record<string, unknown>>;
+  const p = all[num - 1];
+  if (!p) return null;
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null);
+  return {
+    num,
+    id:        typeof p.id === 'number' ? p.id : null,
+    title:     String(p.title ?? ''),
+    body:      String(p.body ?? ''),
+    gender:    String(p.gender ?? ''),
+    age:       typeof p.age === 'number' ? p.age : null,
+    education: str(p.education),
+    priority:  str(p.priority),
+    phone:     str(p.phone) ?? str(p.whatsapp),
+  };
+}
+
 /**
  * PostgREST's `or=` filter is a comma-separated list wrapped in parens, so a
  * search term containing , ( ) or . would corrupt the expression. Strip them —
@@ -55,21 +95,30 @@ export const GET = withAdmin(async (req, { db }) => {
   let query = db.from('ir_user_profiles').select(COLS).order('created_at', { ascending: false }).limit(200);
   const irNumber = q ? parseIrNumber(q) : null;
 
+  let irProfile: IrProfile | null = null;
+
   if (q) {
     if (irNumber !== null) {
-      // An IR # is a PROFILE, not an account — so this answers "who is
-      // interested in IR #12?" by resolving the profile to the members who
-      // sent an interest on it. profile_num is the number shown at send time;
-      // profile_id is the upstream feed id, matched too so either works.
+      // An IR # is a PROFILE, not an account. Resolve it against the live feed
+      // so the admin sees WHICH profile it is, then list the members who sent
+      // an interest on it.
+      irProfile = await lookupIrProfile(irNumber);
+
+      // profile_num is the IR # recorded at send time; profile_id is the feed
+      // id. Match both — the two are different number spaces (position vs feed
+      // key), so matching only one would miss rows.
+      const filters = [`profile_num.eq.${irNumber}`];
+      if (irProfile?.id != null) filters.push(`profile_id.eq.${irProfile.id}`);
+
       const { data: leads } = await db
         .from('ir_interests')
         .select('from_email')
-        .or(`profile_num.eq.${irNumber},profile_id.eq.${irNumber}`)
+        .or(filters.join(','))
         .limit(500);
 
       const senders = [...new Set((leads ?? []).map((l: { from_email: string }) => l.from_email))];
       if (senders.length === 0) {
-        return NextResponse.json({ users: [], catalog: [], noLeadsForIr: irNumber });
+        return NextResponse.json({ users: [], catalog: [], irProfile, noLeadsForIr: irNumber });
       }
       query = query.in('email', senders);
     } else if (UUID_RE.test(q)) {
@@ -109,6 +158,7 @@ export const GET = withAdmin(async (req, { db }) => {
   }
 
   return NextResponse.json({
+    irProfile,
     users: users.map(u => ({
       ...u,
       entitlements: entitlementsFor((u as { plan?: string }).plan),

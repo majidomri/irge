@@ -93,6 +93,19 @@ interface Entitlements {
 
 interface InterestUsage { month: number; total: number; accepted: number; connected: number }
 
+/** A profile resolved from an IR # against the live feed. */
+interface IrProfile {
+  num: number;
+  id: number | null;
+  title: string;
+  body: string;
+  gender: string;
+  age: number | null;
+  education: string | null;
+  priority: string | null;
+  phone: string | null;
+}
+
 interface UserProfile {
   id: string;
   email: string;
@@ -835,6 +848,9 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
   // Set when an IR # search matched a profile nobody has shown interest in —
   // so we can say that, rather than the misleading "no users found".
   const [noLeadsForIr, setNoLeadsForIr] = useState<number | null>(null);
+  // The actual profile behind an IR #, resolved from the same live feed
+  // /profiles reads, so the admin sees who the number refers to.
+  const [irProfile, setIrProfile] = useState<IrProfile | null>(null);
 
   const load = useCallback(async (query = '') => {
     setLoading(true);
@@ -843,6 +859,7 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
       const data = await res.json();
       setUsers(data.users ?? []);
       setNoLeadsForIr(typeof data.noLeadsForIr === 'number' ? data.noLeadsForIr : null);
+      setIrProfile(data.irProfile ?? null);
     } finally { setLoading(false); }
   }, []);
 
@@ -889,15 +906,61 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
         </button>
       </form>
 
+      {/* The profile an IR # refers to — same feed and numbering as /profiles. */}
+      {irProfile && (
+        <div className="rounded-2xl p-4 mb-4" style={{ background: PANEL, border: `1px solid ${GREEN}` }}>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold" style={{ color: GREEN }}>
+                IR #{irProfile.num} · {irProfile.gender === 'female' ? 'Bride' : 'Groom'}
+                {irProfile.priority && (
+                  <span className="ml-2 text-[10px] font-bold rounded-full px-2 py-0.5"
+                    style={{ background: 'rgba(255,107,107,0.15)', color: '#FF6B6B' }}>
+                    {irProfile.priority}
+                  </span>
+                )}
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                {[irProfile.age ? `${irProfile.age} yrs` : null, irProfile.education,
+                  irProfile.id != null ? `feed id ${irProfile.id}` : null]
+                  .filter(Boolean).join(' · ')}
+              </p>
+            </div>
+            <a href={`https://www.instarishta.me/profiles?id=${irProfile.num}`}
+              target="_blank" rel="noopener noreferrer"
+              className="text-[11px] font-bold rounded-full px-3 py-1.5 shrink-0 no-underline"
+              style={{ background: GREEN_BG, color: GREEN }}>
+              View on site ↗
+            </a>
+          </div>
+
+          <p className="text-sm font-semibold mb-1" dir="auto" style={{ color: '#fff' }}>{irProfile.title}</p>
+          <p className="text-[12px] leading-relaxed mb-2" dir="auto"
+            style={{ color: 'rgba(255,255,255,0.6)' }}>
+            {irProfile.body.length > 260 ? `${irProfile.body.slice(0, 260)}…` : irProfile.body}
+          </p>
+          {irProfile.phone && (
+            <p className="text-[11px] font-mono" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              {irProfile.phone} · relay number, same on every profile
+            </p>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
       ) : users.length === 0 ? (
         <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
           {noLeadsForIr !== null ? (
             <>
-              <p>Nobody has sent an interest on <strong style={{ color: '#fff' }}>IR #{noLeadsForIr}</strong> yet.</p>
+              <p>
+                {irProfile
+                  ? <>No member has sent an interest on <strong style={{ color: '#fff' }}>IR #{noLeadsForIr}</strong> yet.</>
+                  : <>No profile exists at <strong style={{ color: '#fff' }}>IR #{noLeadsForIr}</strong> — the feed has fewer entries than that.</>}
+              </p>
               <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                An IR # is a profile, not an account — searching one lists the members interested in it.
+                An IR # is a profile, not an account — searching one shows the profile above and lists the
+                members interested in it.
               </p>
             </>
           ) : (
