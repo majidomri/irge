@@ -6,20 +6,26 @@ import { useSession, signOut } from '@/lib/auth-client';
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
 import { useRealtimeProfile } from '@/lib/hooks/useRealtimeProfile';
 import GradientText from '@/components/ui/GradientText';
+import { planLabel, FREE_CREDITS } from '@/lib/plans';
+import MyInterests from './_components/MyInterests';
 
 interface UsageSummary {
   email: string;
   full_name: string | null;
-  credits: number;
+  credits: number;              // cycle balance
+  bonus_credits: number;        // persistent top-ups
+  total_credits: number;
   plan: string;
   plan_expires_at: string | null;
+  monthly_credits: number;      // 0 when not subscribed
+  credits_reset_at: string | null;
   is_banned: boolean;
-  audio: { remaining: number; limit: number };
+  audio: { remaining: number | null; limit: number };
   view: { remaining: number | null; limit: number };
 }
 
-function UsageStat({ label, remaining, limit, icon }: {
-  label: string; remaining: number | null; limit: number; icon: string;
+function UsageStat({ label, remaining, limit, icon, note }: {
+  label: string; remaining: number | null; limit: number; icon: string; note?: string;
 }) {
   const unlimited = limit < 0 || remaining === null;
   const pct = !unlimited && limit > 0 ? Math.round(((remaining as number) / limit) * 100) : 100;
@@ -38,11 +44,28 @@ function UsageStat({ label, remaining, limit, icon }: {
       {!unlimited && limit > 0 && (
         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
           <div className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, background: low ? '#FF6B6B' : '#00A86B' }} />
+            style={{ width: `${Math.min(100, pct)}%`, background: low ? '#FF6B6B' : '#00A86B' }} />
         </div>
+      )}
+      {note && (
+        <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.42)' }}>{note}</p>
       )}
     </div>
   );
+}
+
+/** "refills in 9 days" / "refills tomorrow" / "refills today". */
+function refillNote(iso: string | null): string | undefined {
+  if (!iso) return undefined;
+  const days = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  if (days <= 0) return 'Refills shortly';
+  if (days === 1) return 'Refills tomorrow';
+  return `Refills in ${days} days`;
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export default function AccountPage() {
@@ -84,7 +107,8 @@ export default function AccountPage() {
     );
   }
 
-  const planLabel = summary && summary.plan !== 'none' ? summary.plan : 'Free account';
+  const planName    = planLabel(summary?.plan);
+  const subscribed  = !!summary && summary.monthly_credits > 0;
   const displayName = summary?.full_name ?? user.name ?? user.email;
 
   return (
@@ -121,7 +145,12 @@ export default function AccountPage() {
             <p className="text-sm font-bold text-white truncate">{displayName}</p>
             <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>{user.email}</p>
             <span className="inline-block mt-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-              style={{ background: 'rgba(0,168,107,0.2)', color: '#00C87A' }}>{planLabel}</span>
+              style={{ background: 'rgba(0,168,107,0.2)', color: '#00C87A' }}>{planName}</span>
+            {subscribed && summary?.plan_expires_at && (
+              <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Expires {fmtDate(summary.plan_expires_at)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -138,14 +167,35 @@ export default function AccountPage() {
             </div>
           ) : summary ? (
             <div className="flex flex-col gap-3">
-              <UsageStat icon="💍" label="Profile contacts" remaining={summary.credits} limit={20} />
-              <UsageStat icon="🎙️" label="Audio plays (per hour)" remaining={summary.audio.remaining} limit={summary.audio.limit} />
+              <UsageStat
+                icon="💍"
+                label={subscribed ? 'Contacts this month' : 'Profile contacts'}
+                remaining={summary.credits}
+                limit={subscribed ? summary.monthly_credits : FREE_CREDITS}
+                note={subscribed ? refillNote(summary.credits_reset_at) : 'Welcome credits — these do not refill'}
+              />
+              {summary.bonus_credits > 0 && (
+                <UsageStat
+                  icon="✨" label="Top-up credits" remaining={summary.bonus_credits} limit={-1}
+                  note="Permanent — never reset, never expire"
+                />
+              )}
+              <UsageStat
+                icon="🎙️"
+                label={summary.audio.limit < 0 ? 'Audio biodata' : 'Audio plays (per day)'}
+                remaining={summary.audio.remaining}
+                limit={summary.audio.limit}
+                note={summary.audio.limit < 0 ? 'Unlimited on your plan' : 'Resets daily · unlimited on any plan'}
+              />
               <UsageStat icon="📋" label="Profile views" remaining={summary.view.remaining} limit={summary.view.limit} />
             </div>
           ) : (
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Could not load usage.</p>
           )}
         </div>
+
+        {/* Interests / leads */}
+        <MyInterests enabled={!!user} onCreditsChanged={loadSummary} />
 
         {/* Plans */}
         <Link
@@ -156,8 +206,12 @@ export default function AccountPage() {
           <div className="flex items-center gap-3">
             <span className="text-lg">✨</span>
             <div className="text-left">
-              <p className="text-sm font-semibold text-white">View Plans &amp; Pricing</p>
-              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Upgrade for more contacts &amp; features</p>
+              <p className="text-sm font-semibold text-white">
+                {subscribed ? 'Renew or upgrade' : 'View Plans & Pricing'}
+              </p>
+              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                {subscribed ? 'Extend your term or top up credits' : 'Get fresh contact credits every month'}
+              </p>
             </div>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.4)' }}>›</span>
@@ -183,7 +237,9 @@ export default function AccountPage() {
         </button>
 
         <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
-          Audio limits reset every hour · Family-first matchmaking
+          {subscribed
+            ? 'Contact credits refill monthly · unused credits do not carry over'
+            : 'Audio limits reset every hour · Family-first matchmaking'}
         </p>
       </div>
     </div>

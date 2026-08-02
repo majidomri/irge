@@ -1,12 +1,14 @@
 /**
  * GET /api/account/profile
  * Returns the signed-in user's profile + live usage summary (credits, audio).
- * Also acts as ensure-profile: guarantees an ir_user_profiles row exists.
- * Gated by a better-auth session. Node runtime (better-auth uses pg).
+ * Also acts as ensure-profile AND as the lazy subscription tick: it guarantees
+ * an ir_user_profiles row exists, expires a finished term, and applies any due
+ * monthly credit refill. Gated by a better-auth session. Node runtime.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { serviceClient, getUsageSummary } from '@/lib/credits';
+import { entitlementsFor } from '@/lib/plans';
 
 export const runtime = 'nodejs';
 
@@ -24,9 +26,13 @@ export async function GET(req: NextRequest) {
     session.user.name ?? null,
   );
 
+  // Infinity isn't valid JSON — send null to mean "unlimited" on every axis.
+  const unl = (n: number) => (Number.isFinite(n) ? n : null);
+
   return NextResponse.json({
     ...summary,
-    // Infinity isn't valid JSON — send null to mean "unlimited".
-    view: { remaining: summary.view.remaining === Infinity ? null : summary.view.remaining, limit: summary.view.limit },
+    entitlements: entitlementsFor(summary.plan),
+    audio: { remaining: unl(summary.audio.remaining), limit: summary.audio.limit },
+    view:  { remaining: unl(summary.view.remaining),  limit: summary.view.limit },
   });
 }

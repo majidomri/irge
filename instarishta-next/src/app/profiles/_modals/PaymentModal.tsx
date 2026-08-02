@@ -1,21 +1,35 @@
 'use client';
 import { useState, useRef } from 'react';
 
-const PLANS = [
-  { id: 'silver',   label: 'Silver',   credits: 20,  price: 99  },
-  { id: 'gold',     label: 'Gold',     credits: 50,  price: 199 },
-  { id: 'platinum', label: 'Platinum', credits: 100, price: 349 },
+import { PLANS, TOPUP, totalCredits, pricePerCredit } from '@/lib/plans';
+
+/** Subscription terms plus the standalone top-up, as one selectable list. */
+const OPTIONS = [
+  ...PLANS.map(p => ({
+    id:       p.id as string,
+    label:    p.name,
+    price:    p.price,
+    headline: `${p.monthlyCredits} credits / month · ${p.months} months`,
+    sub:      `${totalCredits(p)} total · ₹${pricePerCredit(p).toFixed(2)} per credit`,
+  })),
+  {
+    id:       TOPUP.id as string,
+    label:    TOPUP.name,
+    price:    TOPUP.price,
+    headline: `${TOPUP.credits} extra credits, one time`,
+    sub:      'Never expire · for when you run out mid-month',
+  },
 ];
 
 export default function PaymentModal({ userEmail, onClose }: { userEmail: string; onClose: () => void }) {
-  const [plan,      setPlan]      = useState(PLANS[0].id);
+  const [plan,      setPlan]      = useState(OPTIONS[0].id);
   const [utr,       setUtr]       = useState('');
   const [file,      setFile]      = useState<File | null>(null);
   const [status,    setStatus]    = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
   const [copied,    setCopied]    = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const selected = PLANS.find(p => p.id === plan)!;
+  const selected = OPTIONS.find(p => p.id === plan)!;
   const upiId    = '918886667121@ybl';
   const upiLink  = `upi://pay?pa=${upiId}&pn=InstaRishta&am=${selected.price}&cu=INR`;
 
@@ -72,18 +86,21 @@ export default function PaymentModal({ userEmail, onClose }: { userEmail: string
               <div>
                 <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: '#A0A0A0' }}>Choose a plan</p>
                 <div className="flex flex-col gap-2">
-                  {PLANS.map(p => (
+                  {OPTIONS.map(p => (
                     <button type="button" key={p.id} onClick={() => setPlan(p.id)}
-                      className="flex items-center justify-between rounded-2xl px-4 py-3 border-2 text-left transition-all"
+                      className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 border-2 text-left transition-all"
                       style={{
                         borderColor: plan === p.id ? '#006241' : '#E8E4E0',
                         background:  plan === p.id ? '#EEF6F0' : '#FAFAF9',
                       }}>
-                      <div>
-                        <span className="text-sm font-bold" style={{ color: plan === p.id ? '#006241' : '#141413' }}>{p.label}</span>
-                        <span className="text-xs ml-2" style={{ color: '#696969' }}>{p.credits} credits</span>
+                      <div className="min-w-0">
+                        <span className="text-sm font-bold block" style={{ color: plan === p.id ? '#006241' : '#141413' }}>{p.label}</span>
+                        <span className="text-[11px] block mt-0.5" style={{ color: '#141413' }}>{p.headline}</span>
+                        <span className="text-[10px] block" style={{ color: '#696969' }}>{p.sub}</span>
                       </div>
-                      <span className="text-base font-extrabold" style={{ color: plan === p.id ? '#006241' : '#141413' }}>₹{p.price}</span>
+                      <span className="text-base font-extrabold shrink-0" style={{ color: plan === p.id ? '#006241' : '#141413' }}>
+                        ₹{p.price.toLocaleString('en-IN')}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -156,7 +173,8 @@ export default function PaymentModal({ userEmail, onClose }: { userEmail: string
               </button>
 
               <p className="text-center text-[10px]" style={{ color: '#B0A8A0' }}>
-                Credits added manually by admin · Usually within 2–4 hours
+                Activated manually by admin · Usually within 2–4 hours<br />
+                All payments are final — no refunds once a plan is activated.
               </p>
             </form>
           )}

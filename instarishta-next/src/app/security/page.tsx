@@ -20,7 +20,7 @@ const SAFETY_ITEMS = [
 const LEGAL_LINKS = [
   { label: 'Privacy Policy', href: '/privacy', desc: 'How we collect, use, and protect your personal data. Includes Google data usage disclosure.', icon: '🔒' },
   { label: 'Terms of Service', href: '/toc', desc: 'Rules governing use of the InstaRishta platform, eligibility, and user conduct.', icon: '📋' },
-  { label: 'Refund Policy', href: '/refund-policy', desc: 'Cancellation and refund terms for any paid premium services.', icon: '💳' },
+  { label: 'No-Refund Policy', href: '/refund-policy', desc: 'Membership payments are final and non-refundable. Read before purchasing.', icon: '💳' },
   { label: 'Child Safety Policy', href: '/child-safety', desc: 'Our zero-tolerance policy for minors and how to report safety concerns.', icon: '🛡️' },
   { label: 'Disclaimer', href: '/disclaimer', desc: 'User agreement, platform disclaimer, and end-user consent terms.', icon: '📄' },
 ];

@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-const PLANS: Record<string, { credits: number; price: number }> = {
-  silver:   { credits: 20,  price: 99  },
-  gold:     { credits: 50,  price: 199 },
-  platinum: { credits: 100, price: 349 },
-};
+import { getPlan, totalCredits, TOPUP } from '@/lib/plans';
+
+/** Human summary of what the user says they paid for, from the shared catalog. */
+function describe(id: string): { label: string; detail: string; price: number | null } {
+  const plan = getPlan(id);
+  if (plan) {
+    return {
+      label:  plan.name,
+      detail: `${plan.monthlyCredits} credits/month × ${plan.months} months = ${totalCredits(plan)} total`,
+      price:  plan.price,
+    };
+  }
+  if (id === TOPUP.id) {
+    return { label: TOPUP.name, detail: `${TOPUP.credits} one-time credits (never expire)`, price: TOPUP.price };
+  }
+  return { label: id || 'unknown', detail: 'UNRECOGNISED — verify manually', price: null };
+}
 
 function esc(v: unknown): string {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -61,18 +73,25 @@ export async function POST(req: NextRequest) {
     email = body.email ?? '';
   }
 
-  const planInfo = PLANS[plan];
+  const info     = describe(plan);
   const threadId = process.env.TELEGRAM_MESSAGE_THREAD_ID?.trim();
+
+  const action = getPlan(plan)
+    ? `Verify payment, then <b>/nizam → Users → Activate ${info.label}</b>.`
+    : plan === TOPUP.id
+      ? `Verify payment, then <b>/nizam → Users → +${TOPUP.credits} top-up</b>.`
+      : `⚠️ Unrecognised plan id — do not activate until confirmed with the user.`;
 
   const lines = [
     `<b>💳 InstaRishta Payment Request</b>`,
     ``,
-    `<b>Plan:</b> ${esc(plan.charAt(0).toUpperCase() + plan.slice(1))} — ${planInfo?.credits ?? '?'} credits / ₹${planInfo?.price ?? '?'}`,
+    `<b>Plan:</b> ${esc(info.label)} — ₹${info.price ?? '?'}`,
+    `<b>Grants:</b> ${esc(info.detail)}`,
     `<b>User:</b> ${esc(email)}`,
     `<b>UTR / Txn ID:</b> <code>${esc(utr)}</code>`,
     `<b>Screenshot:</b> ${screenshotBytes ? 'Attached below' : 'Not provided'}`,
     ``,
-    `<b>Action needed:</b> Verify payment & top up credits in Supabase.`,
+    `<b>Action needed:</b> ${action}`,
     `<b>Time:</b> ${new Date().toISOString()}`,
   ];
 

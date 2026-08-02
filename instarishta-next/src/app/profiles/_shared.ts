@@ -3,9 +3,21 @@
 // can reuse the same logic without re-bundling it.
 
 export interface Profile {
+  /**
+   * Upstream feed id — stable and unique (verified 500/500, none null).
+   * This, NOT `_num`, is the identity to persist against. `_num` is only the
+   * position in the filtered array and shifts whenever the feed changes.
+   */
+  id?: number;
   title: string;
   body: string;
   gender: 'male' | 'female' | string;
+  /** Advertiser contact. Currently the business relay number on every profile. */
+  phone?: string;
+  whatsapp?: string;
+  age?: number;
+  education?: string;
+  priority?: string;
   audio_url?: string;
   instagram_post_id?: string;
 }

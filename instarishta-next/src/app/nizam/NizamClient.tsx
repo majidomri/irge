@@ -2,6 +2,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
+import {
+  PLANS, TOPUP, getPlan, LEGACY_PLAN_IDS,
+  entitlementsFor, fmtAllowance, FREE_ENTITLEMENTS as FREE_ENT,
+} from '@/lib/plans';
+import { chipLabel } from '@/lib/interest-chips';
 
 export interface Channel {
   id:           string;
@@ -42,24 +47,67 @@ interface FeaturedItem {
   created_at:   string;
 }
 
-type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users';
+interface Interest {
+  id: string;
+  from_email: string;
+  from_name: string | null;
+  profile_id: number | null;
+  profile_num: number | null;
+  profile_title: string | null;
+  profile_gender: string | null;
+  chip: string | null;
+  note: string | null;                 // legacy free-text rows, pre-007
+  status: 'new' | 'seen' | 'forwarded' | 'rejected' | 'accepted' | 'declined' | 'connected';
+  responded_at: string | null;
+  revealed_at: string | null;
+  created_at: string;
+}
+
+type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
   { key: 'posts',    label: 'Posts',    icon: '📝' },
   { key: 'stories',  label: 'Stories',  icon: '⭕' },
   { key: 'featured', label: 'Featured', icon: '⭐' },
+  { key: 'interests', label: 'Interests', icon: '💚' },
   { key: 'users',    label: 'Users',    icon: '👤' },
 ];
+
+interface Entitlements {
+  planId: string;
+  name: string;
+  price: number;
+  termMonths: number;
+  contactPerCycle: number;
+  welcomeCredits: number;
+  refillsMonthly: boolean;
+  interestsPerMonth: number;
+  interestsPerDay: number;
+  audioPerDay: number;
+  profileViews: number;
+  support: string;
+  verifiedBadge: boolean;
+  priorityListing: boolean;
+}
+
+interface InterestUsage { month: number; total: number; accepted: number; connected: number }
 
 interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
-  contact_credits: number;
+  contact_credits: number;      // cycle balance — reset monthly
+  bonus_credits: number | null; // purchased top-ups — persistent
   plan: string;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+  monthly_credits: number | null;
+  credits_reset_at: string | null;
   is_banned: boolean;
   created_at: string;
+  entitlements: Entitlements;
+  interests: InterestUsage;
 }
 
 const BG       = '#0a1a14';
@@ -163,6 +211,9 @@ export default function NizamClient({
         )}
         {tab === 'users' && (
           <UsersTab toast={showToast} />
+        )}
+        {tab === 'interests' && (
+          <InterestsTab toast={showToast} />
         )}
       </main>
 
@@ -583,13 +634,175 @@ function SubmitBtn({ busy, label }: { busy: boolean; label: string }) {
 }
 
 // ── Users + credits manager ──────────────────────────────────────────────────
-const PLAN_OPTIONS = [
-  { value: 'none',     label: 'Free' },
-  { value: 'silver',   label: 'Silver' },
-  { value: 'gold',     label: 'Gold' },
-  { value: 'diamond',  label: 'Diamond' },
-  { value: 'platinum', label: 'Platinum' },
+// ── Interests (moderation queue) ─────────────────────────────────────────────
+// Interests are private signals to a family, never public comments — so this
+// queue is the only place they are ever displayed. See migration 006.
+
+const INTEREST_FILTERS: { key: string; label: string }[] = [
+  { key: 'new',       label: 'New' },
+  { key: 'forwarded', label: 'Told advertiser' },
+  { key: 'accepted',  label: 'Wants to connect' },
+  { key: 'connected', label: 'Connected' },
+  { key: 'declined',  label: 'Declined' },
+  { key: '',          label: 'All' },
 ];
+
+const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
+  new:       { bg: 'rgba(0,168,107,0.15)',   fg: '#00C87A' },
+  seen:      { bg: 'rgba(255,255,255,0.08)', fg: 'rgba(255,255,255,0.6)' },
+  forwarded: { bg: 'rgba(96,165,250,0.15)',  fg: '#60A5FA' },
+  accepted:  { bg: 'rgba(0,168,107,0.22)',   fg: '#00C87A' },
+  connected: { bg: 'rgba(240,192,64,0.15)',  fg: '#F0C040' },
+  declined:  { bg: 'rgba(255,255,255,0.06)', fg: 'rgba(255,255,255,0.45)' },
+  rejected:  { bg: 'rgba(255,107,107,0.15)', fg: '#FF6B6B' },
+};
+
+/** What the admin can set next, in the order the workflow actually happens. */
+const NEXT_ACTIONS: { key: 'forwarded' | 'accepted' | 'declined'; label: string }[] = [
+  { key: 'forwarded', label: 'Told advertiser' },
+  { key: 'accepted',  label: 'Wants to connect' },
+  { key: 'declined',  label: 'Declined' },
+];
+
+function InterestsTab({ toast }: { toast: (m: string) => void }) {
+  const [items, setItems]     = useState<Interest[]>([]);
+  const [filter, setFilter]   = useState('new');
+  const [loading, setLoading] = useState(false);
+  const [newCount, setNewCount] = useState(0);
+
+  const load = useCallback(async (status: string) => {
+    setLoading(true);
+    try {
+      const res  = await fetch(`/api/admin/interests${status ? `?status=${status}` : ''}`);
+      const data = await res.json();
+      setItems(data.interests ?? []);
+      setNewCount(data.newCount ?? 0);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { queueMicrotask(() => load(filter)); }, [load, filter]);
+
+  const setStatus = async (id: string, status: Interest['status']) => {
+    const res = await fetch('/api/admin/interests', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.status === 409) {
+      const d = await res.json().catch(() => ({}));
+      toast(d.error ?? 'Already connected');
+      return;
+    }
+    if (res.ok) {
+      // Drop it from the list when it no longer matches the active filter.
+      setItems(list => (filter && status !== filter ? list.filter(i => i.id !== id)
+                                                    : list.map(i => (i.id === id ? { ...i, status } : i))));
+      if (status !== 'new') setNewCount(c => Math.max(0, c - 1));
+      toast(`Marked ${status}`);
+    } else {
+      toast('Update failed');
+    }
+  };
+
+  return (
+    <div>
+      <h1 className="text-xl font-extrabold mb-1">
+        Interests {newCount > 0 && <span style={{ color: GREEN }}>· {newCount} new</span>}
+      </h1>
+      <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        Leads from members — private, never shown publicly. Tell the advertiser, then record their answer.
+      </p>
+      <p className="text-xs mb-5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        Only <strong style={{ color: '#00C87A' }}>Wants to connect</strong> lets the member spend a credit to
+        see the number. Sending the interest was free, and a declined lead never costs them anything.
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-5">
+        {INTEREST_FILTERS.map(f => (
+          <button key={f.key} onClick={() => setFilter(f.key)}
+            className="rounded-full px-4 py-1.5 text-xs font-bold"
+            style={filter === f.key
+              ? { background: GREEN, color: '#fff' }
+              : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Nothing here.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {items.map(i => {
+            const s = STATUS_STYLE[i.status] ?? STATUS_STYLE.seen;
+            return (
+              <div key={i.id} className="rounded-2xl p-4" style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      IR #{i.profile_num ?? '?'} · {i.profile_gender === 'female' ? 'Bride' : 'Groom'}
+                    </p>
+                    <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }} dir="auto">
+                      {i.profile_title || '—'}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold rounded-full px-2.5 py-1 shrink-0 uppercase"
+                    style={{ background: s.bg, color: s.fg }}>
+                    {i.status}
+                  </span>
+                </div>
+
+                <p className="text-[11px] mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  From {i.from_name || i.from_email} · {i.from_email} · {fmtDate(i.created_at)}
+                </p>
+
+                <p className="text-[12px] rounded-xl px-3 py-2 mb-3"
+                  style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.75)' }}>
+                  {/* Pre-007 rows may still carry free text; newer ones are chips only. */}
+                  {i.chip ? chipLabel(i.chip) : i.note ? `“${i.note}”` : '—'}
+                </p>
+
+                {i.status === 'connected' ? (
+                  <p className="text-[11px]" style={{ color: '#F0C040' }}>
+                    Member paid a credit and has the number{i.revealed_at ? ` · ${fmtDate(i.revealed_at)}` : ''}. Locked.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {NEXT_ACTIONS
+                      .filter(a => a.key !== i.status)
+                      .map(a => (
+                        <button key={a.key} onClick={() => setStatus(i.id, a.key)}
+                          className="rounded-xl px-3 py-1.5 text-[11px] font-bold"
+                          style={{ background: STATUS_STYLE[a.key].bg, color: STATUS_STYLE[a.key].fg }}>
+                          {a.label}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** dd MMM yyyy, or '—'. */
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/** "in 9 days" / "today" / "overdue". */
+function fmtIn(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const days = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  if (days < 0)  return 'overdue';
+  if (days === 0) return 'today';
+  return `in ${days} day${days === 1 ? '' : 's'}`;
+}
 
 function UsersTab({ toast }: { toast: (m: string) => void }) {
   const [users, setUsers]     = useState<UserProfile[]>([]);
@@ -607,7 +820,7 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
 
   useEffect(() => { queueMicrotask(() => load()); }, [load]);
 
-  const save = useCallback(async (id: string, patch: Partial<UserProfile>) => {
+  const save = useCallback(async (id: string, patch: Record<string, unknown>) => {
     const res = await fetch('/api/admin/users', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...patch }),
@@ -623,10 +836,13 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
 
   return (
     <div>
-      <h1 className="text-xl font-extrabold mb-1">Users &amp; credits</h1>
+      <h1 className="text-xl font-extrabold mb-1">Users &amp; subscriptions</h1>
       <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
-        Edit contact credits, plan, or ban status. Changes reflect on the user&apos;s account in real-time.
+        Activate a term after verifying payment. Changes reflect on the user&apos;s account in real-time.
+        Cycle credits refill monthly; top-ups are permanent.
       </p>
+
+      <CatalogPanel />
 
       <form onSubmit={e => { e.preventDefault(); load(q); }} className="flex gap-2 mb-5">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search by email…"
@@ -650,17 +866,96 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
   );
 }
 
-function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, patch: Partial<UserProfile>) => Promise<void> }) {
+/** One metered node: what they hold vs what the plan grants. */
+function Node({ label, value, sub, accent }: {
+  label: string; value: string; sub?: string; accent?: string;
+}) {
+  return (
+    <div className="rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
+      <p className="text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        {label}
+      </p>
+      <p className="text-sm font-extrabold mt-0.5" style={{ color: accent ?? '#fff' }}>{value}</p>
+      {sub && <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{sub}</p>}
+    </div>
+  );
+}
+
+/**
+ * What each plan grants, straight from the shared catalog. Here so the team can
+ * see the entitlement model without leaving the page — and so nothing in this
+ * UI restates plan numbers that could drift from src/lib/plans.ts.
+ */
+function CatalogPanel() {
+  const [open, setOpen] = useState(false);
+  const rows = [FREE_ENT, ...PLANS.map(p => entitlementsFor(p.id))];
+
+  return (
+    <div className="rounded-2xl mb-5 overflow-hidden" style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left">
+        <span className="text-sm font-bold text-white">What each plan grants</span>
+        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>{open ? 'Hide' : 'Show'}</span>
+      </button>
+
+      {open && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]" style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <th className="text-left px-4 py-2 font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>Entitlement</th>
+                {rows.map(r => (
+                  <th key={r.planId} className="px-3 py-2 text-center font-bold"
+                    style={{ color: r.planId === 'none' ? 'rgba(255,255,255,0.5)' : GREEN }}>{r.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {([
+                ['Price',              (r: Entitlements) => r.price ? `₹${r.price.toLocaleString('en-IN')}` : 'Free'],
+                ['Term',               (r: Entitlements) => r.termMonths ? `${r.termMonths} months` : '—'],
+                ['Contact credits',    (r: Entitlements) => r.refillsMonthly ? `${r.contactPerCycle} / month` : `${r.welcomeCredits} once`],
+                ['Refills monthly',    (r: Entitlements) => (r.refillsMonthly ? 'Yes' : 'No')],
+                ['Interests',          (r: Entitlements) => `${r.interestsPerMonth} / 30d`],
+                ['Interests per day',  (r: Entitlements) => `${r.interestsPerDay} (fair use)`],
+                ['Audio plays',        (r: Entitlements) => fmtAllowance(r.audioPerDay, '/ day')],
+                ['Profile views',      (r: Entitlements) => fmtAllowance(r.profileViews)],
+                ['Support',            (r: Entitlements) => r.support],
+                ['Verified badge*',    (r: Entitlements) => (r.verifiedBadge ? 'Yes' : '—')],
+                ['Priority listing*',  (r: Entitlements) => (r.priorityListing ? 'Yes' : '—')],
+              ] as [string, (r: Entitlements) => string][]).map(([label, fn]) => (
+                <tr key={label} style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <td className="px-4 py-2">{label}</td>
+                  {rows.map(r => (
+                    <td key={r.planId} className="px-3 py-2 text-center font-semibold">{fn(r)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="px-4 py-2 text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            * Not enforced anywhere in code — profiles come from the external feed, which has no badge or
+            ranking field. These are promises the team keeps by hand.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, patch: Record<string, unknown>) => Promise<void> }) {
   const [credits, setCredits] = useState(String(user.contact_credits));
-  const [plan, setPlan]       = useState(user.plan ?? 'none');
   const [busy, setBusy]       = useState(false);
 
-  const dirty = Number(credits) !== user.contact_credits || plan !== (user.plan ?? 'none');
+  const dirty      = Number(credits) !== user.contact_credits;
+  const activePlan = getPlan(user.plan);
+  const isLegacy   = (LEGACY_PLAN_IDS as readonly string[]).includes(user.plan);
+  // Server-computed so admin and the limiters read the same entitlement map.
+  const ent        = user.entitlements ?? entitlementsFor(user.plan);
 
-  const save = async () => {
+  const run = async (patch: Record<string, unknown>) => {
     setBusy(true);
-    try { await onSave(user.id, { contact_credits: Math.max(0, Math.floor(Number(credits) || 0)), plan }); }
-    finally { setBusy(false); }
+    try { await onSave(user.id, patch); } finally { setBusy(false); }
   };
 
   return (
@@ -671,7 +966,7 @@ function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, pat
           <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{user.email}</p>
         </div>
         <button
-          onClick={() => onSave(user.id, { is_banned: !user.is_banned })}
+          onClick={() => run({ is_banned: !user.is_banned })}
           className="text-[11px] font-bold rounded-full px-3 py-1.5 shrink-0"
           style={user.is_banned
             ? { background: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,0.3)' }
@@ -679,18 +974,81 @@ function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, pat
           {user.is_banned ? 'Banned · Unban' : 'Ban'}
         </button>
       </div>
+
+      {/* Plan header */}
+      <div className="rounded-xl px-3 py-2.5 mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]"
+        style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <span className="font-bold" style={{ color: activePlan ? GREEN : 'rgba(255,255,255,0.5)' }}>
+          {activePlan ? `${ent.name} · ₹${ent.price.toLocaleString('en-IN')} / ${ent.termMonths}mo`
+            : isLegacy ? `${user.plan} (legacy)` : 'Free account'}
+        </span>
+        {activePlan && (
+          <>
+            <span style={{ color: 'rgba(255,255,255,0.45)' }}>refills {fmtIn(user.credits_reset_at)}</span>
+            <span style={{ color: 'rgba(255,255,255,0.45)' }}>expires {fmtDate(user.plan_expires_at)}</span>
+          </>
+        )}
+        {isLegacy && (
+          <span style={{ color: 'rgba(255,255,255,0.45)' }}>
+            expires {fmtDate(user.plan_expires_at)} · no refill, free-tier entitlements
+          </span>
+        )}
+      </div>
+
+      {/* Every metered node, granted vs used */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+        <Node label="Contact credits"
+          value={activePlan ? `${user.contact_credits}/${user.monthly_credits ?? 0}` : String(user.contact_credits)}
+          sub={activePlan ? 'this cycle' : `welcome ${ent.welcomeCredits}, no refill`} />
+        <Node label="Top-up credits" value={String(user.bonus_credits ?? 0)}
+          sub="permanent" accent={(user.bonus_credits ?? 0) > 0 ? '#F0C040' : undefined} />
+        <Node label="Interests"
+          value={`${user.interests?.month ?? 0}/${ent.interestsPerMonth}`}
+          sub={`30d · max ${ent.interestsPerDay}/day`} />
+        <Node label="Audio plays"
+          value={ent.audioPerDay < 0 ? 'Unlimited' : `${ent.audioPerDay}/day`}
+          sub="profile views unlimited" />
+      </div>
+
+      {/* Leads + the entitlements nothing in code enforces */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-[10px]"
+        style={{ color: 'rgba(255,255,255,0.4)' }}>
+        <span>Leads: {user.interests?.total ?? 0} sent</span>
+        <span style={{ color: '#00C87A' }}>{user.interests?.accepted ?? 0} awaiting reveal</span>
+        <span style={{ color: '#F0C040' }}>{user.interests?.connected ?? 0} connected</span>
+        <span>· Support: {ent.support}</span>
+        {ent.verifiedBadge   && <span title="Not enforced in code — done by hand">Verified badge (manual)</span>}
+        {ent.priorityListing && <span title="Not enforced in code — done by hand">Priority listing (manual)</span>}
+      </div>
+
+      {/* Sell a term. One call sets plan, anchor, allowance and cycle 0. */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {PLANS.map(p => (
+          <button key={p.id} disabled={busy}
+            onClick={() => run({ activate: p.id })}
+            className="rounded-xl px-3 py-2 text-[11px] font-bold disabled:opacity-40"
+            style={{ background: GREEN_BG, color: GREEN, border: `1px solid ${GREEN}` }}>
+            Activate {p.name} · ₹{p.price.toLocaleString('en-IN')}
+          </button>
+        ))}
+        <button disabled={busy}
+          onClick={() => run({ bonus_add: TOPUP.credits })}
+          className="rounded-xl px-3 py-2 text-[11px] font-bold disabled:opacity-40"
+          style={{ background: 'rgba(240,192,64,0.12)', color: '#F0C040', border: '1px solid rgba(240,192,64,0.4)' }}>
+          +{TOPUP.credits} top-up · ₹{TOPUP.price}
+        </button>
+      </div>
+
+      {/* Support override — raw cycle balance. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-        <label className="text-[11px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          Contact credits
+        <label className="text-[11px] sm:col-span-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          Cycle credits (override — resets next refill)
           <input type="number" min={0} value={credits} onChange={e => setCredits(e.target.value)}
             className="w-full mt-1 rounded-xl px-3 py-2 text-sm outline-none"
             style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
         </label>
-        <label className="text-[11px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          Plan
-          <div className="mt-1"><Select value={plan} setValue={setPlan} options={PLAN_OPTIONS} /></div>
-        </label>
-        <button onClick={save} disabled={busy || !dirty}
+        <button onClick={() => run({ contact_credits: Math.max(0, Math.floor(Number(credits) || 0)) })}
+          disabled={busy || !dirty}
           className="rounded-xl py-2.5 text-sm font-bold disabled:opacity-40"
           style={{ background: GREEN, color: '#fff' }}>
           {busy ? 'Saving…' : 'Save'}

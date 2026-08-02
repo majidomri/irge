@@ -6,6 +6,7 @@ import GradientText from '@/components/ui/GradientText';
 import CountUp from '@/components/ui/CountUp';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 import { useContactCredits } from '@/lib/hooks/useContactCredits';
+import { useInterests } from '@/lib/hooks/useInterests';
 import {
   type Profile,
   type DeckProfile,
@@ -26,6 +27,7 @@ const MagicRings    = dynamic(() => import('@/components/ui/MagicRings'), { ssr:
 const ContactModal  = dynamic(() => import('./_modals/ContactModal'),     { ssr: false });
 const BiodataModal  = dynamic(() => import('./_modals/BiodataModal'),     { ssr: false });
 const PaymentModal  = dynamic(() => import('./_modals/PaymentModal'),     { ssr: false });
+const InterestModal = dynamic(() => import('./_modals/InterestModal'),    { ssr: false });
 const AuthModal     = dynamic(() => import('@/components/AuthModal'),      { ssr: false });
 const FilterDrawer  = dynamic(() => import('./_components/FilterDrawer'), { ssr: false });
 
@@ -125,6 +127,7 @@ function AudioBtn({ url }: { url?: string }) {
 
 const ProfileCard = memo(function ProfileCard({
   profile, onContact, onBiodata, canContact, remaining, resetLabel, onLimitHit,
+  onInterest, interestStatus,
 }: {
   profile: DeckProfile;
   onContact: (p: DeckProfile) => void;
@@ -133,7 +136,11 @@ const ProfileCard = memo(function ProfileCard({
   remaining: number;
   resetLabel: string;
   onLimitHit?: () => void;
+  onInterest: (p: DeckProfile) => void;
+  interestStatus: string | null;
 }) {
+  const interestSent = interestStatus !== null;
+  const interestAccepted = interestStatus === 'accepted' || interestStatus === 'connected';
   const cardRef         = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [limitToast,   setLimitToast]   = useState(false);
@@ -310,21 +317,26 @@ const ProfileCard = memo(function ProfileCard({
           </button>
         )}
         <AudioBtn url={profile.audio_url} />
-        {canContact ? (
-          <button onClick={handleContact}
-            className="w-10 h-10 rounded-full flex items-center justify-center border shrink-0"
-            style={{ borderColor: '#D1CDC7', color: '#696969' }}
-            title="Contact">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 01.22 4.05 2 2 0 012.2 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.91a16 16 0 006.28 6.28l1.48-1.48a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-          </button>
-        ) : (
-          <button onClick={handleContact}
-            className="w-10 h-10 rounded-full flex items-center justify-center border shrink-0"
-            style={{ borderColor: '#1E3932', color: '#1E3932' }}
-            title="Get Credits">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </button>
-        )}
+        {/* Interest — private, costs no contact credit. */}
+        <button
+          onClick={e => { e.stopPropagation(); if (!interestSent) onInterest(profile); }}
+          disabled={interestSent}
+          className="w-10 h-10 rounded-full flex items-center justify-center border shrink-0"
+          style={interestAccepted
+            ? { borderColor: '#00A86B', background: '#00A86B', color: '#fff' }
+            : interestSent
+              ? { borderColor: '#00A86B', background: '#EEF6F0', color: '#006241' }
+              : { borderColor: '#D1CDC7', color: '#696969' }}
+          title={
+            interestAccepted ? 'They want to connect — see My interests'
+            : interestSent   ? 'Interest sent — awaiting their reply'
+            : 'Express interest (free)'
+          }>
+          <svg width="15" height="15" viewBox="0 0 24 24"
+            fill={interestSent ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21.2l7.7-7.8 1.1-1a5.5 5.5 0 0 0 0-7.8z"/>
+          </svg>
+        </button>
       </div>
 
       <div className="mx-4 mb-3 rounded-xl px-3 py-2.5 flex items-center justify-between"
@@ -352,13 +364,15 @@ const ProfileCard = memo(function ProfileCard({
   prev.profile.body   === next.profile.body   &&
   prev.canContact     === next.canContact     &&
   prev.remaining      === next.remaining      &&
-  prev.resetLabel     === next.resetLabel
+  prev.resetLabel     === next.resetLabel     &&
+  prev.interestStatus === next.interestStatus
 );
 
 // ── SwipeDeck ─────────────────────────────────────────────────────────────────
 
 function SwipeDeck({
   profiles, onContact, onBiodata, canContact, remaining, resetLabel, onLimitHit,
+  onInterest, statusFor,
 }: {
   profiles: DeckProfile[];
   onContact: (p: DeckProfile) => void;
@@ -367,6 +381,8 @@ function SwipeDeck({
   remaining: number;
   resetLabel: string;
   onLimitHit?: () => void;
+  onInterest: (p: DeckProfile) => void;
+  statusFor: (profileId: number | undefined) => string | null;
 }) {
   const [idx,     setIdx]     = useState(0);
   const [swipeX,  setSwipeX]  = useState(0);
@@ -485,6 +501,8 @@ function SwipeDeck({
               remaining={remaining}
               resetLabel={resetLabel}
               onLimitHit={onLimitHit}
+              onInterest={onInterest}
+              interestStatus={statusFor(p.id)}
             />
           </div>
         ))}
@@ -540,6 +558,15 @@ export default function ProfilesClient({
   const resetLabel = '';
   const [authGate,     setAuthGate]     = useState(false);
   const [paymentModal, setPaymentModal] = useState(false);
+
+  // Interests — private, metered separately, and free of contact credits.
+  const interests = useInterests(!isAnon);
+  const [interest, setInterest] = useState<DeckProfile | null>(null);
+
+  const handleInterestRequest = useCallback((p: DeckProfile) => {
+    if (isAnon) { setAuthGate(true); return; }
+    setInterest(p);
+  }, [isAnon]);
 
   const onLimitHit = useCallback(() => {
     if (isAnon) setAuthGate(true);
@@ -880,6 +907,8 @@ export default function ProfilesClient({
                   remaining={remaining}
                   resetLabel={resetLabel}
                   onLimitHit={onLimitHit}
+                  onInterest={handleInterestRequest}
+                  statusFor={interests.statusFor}
                 />
               ) : (
                 <div className="flex flex-col gap-4">
@@ -893,6 +922,8 @@ export default function ProfilesClient({
                       remaining={remaining}
                       resetLabel={resetLabel}
                       onLimitHit={onLimitHit}
+                      onInterest={handleInterestRequest}
+                      interestStatus={interests.statusFor(p.id)}
                     />
                   ))}
                 </div>
@@ -913,6 +944,8 @@ export default function ProfilesClient({
                   remaining={remaining}
                   resetLabel={resetLabel}
                   onLimitHit={onLimitHit}
+                  onInterest={handleInterestRequest}
+                  interestStatus={interests.statusFor(p.id)}
                 />
               ))}
             </div>
@@ -948,7 +981,7 @@ export default function ProfilesClient({
           sort={sort} setSort={setSort}
           onClear={clearAll}
           stats={stats}
-          contactLimit={20}
+          contactLimit={remaining}
           remaining={remaining}
           resetLabel={resetLabel}
           isAnon={isAnon}
@@ -961,7 +994,7 @@ export default function ProfilesClient({
           onClose={() => setContact(null)}
           remaining={remaining}
           resetLabel={resetLabel}
-          contactLimit={20}
+          contactLimit={remaining}
           isAnon={false}
         />
       )}
@@ -978,6 +1011,16 @@ export default function ProfilesClient({
 
       {paymentModal && (
         <PaymentModal userEmail={email} onClose={() => setPaymentModal(false)} />
+      )}
+
+      {interest && (
+        <InterestModal
+          profile={interest}
+          usedMonth={interests.usedMonth}
+          monthly={interests.monthly}
+          onSent={(used) => interests.markSent(interest.id, used)}
+          onClose={() => setInterest(null)}
+        />
       )}
     </div>
   );
