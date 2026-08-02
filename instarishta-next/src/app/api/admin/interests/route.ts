@@ -24,12 +24,30 @@ const COLS = 'id, from_email, from_name, profile_id, profile_num, profile_title,
 /** Statuses an admin may set. 'connected' is deliberately absent. */
 const SETTABLE = ['new', 'seen', 'forwarded', 'rejected', 'accepted', 'declined'] as const;
 
+/** "12", "#12", "IR 12", "IR #12" → 12. The number shown on every profile card. */
+function parseIrNumber(term: string): number | null {
+  const m = term.trim().match(/^(?:ir)?\s*#?\s*(\d{1,6})$/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
 export const GET = withAdmin(async (req, { db }) => {
   const url    = new URL(req.url);
   const status = url.searchParams.get('status');
+  const q      = url.searchParams.get('q')?.trim();
 
   let query = db.from('ir_interests').select(COLS).order('created_at', { ascending: false }).limit(200);
   if (status) query = query.eq('status', status);
+
+  if (q) {
+    const ir = parseIrNumber(q);
+    if (ir !== null) {
+      // Leads for one profile — by the IR # members see, or the feed id.
+      query = query.or(`profile_num.eq.${ir},profile_id.eq.${ir}`);
+    } else {
+      const term = q.replace(/[,()*"']/g, ' ').trim();
+      if (term) query = query.or(`from_email.ilike.%${term}%,from_name.ilike.%${term}%,profile_title.ilike.%${term}%`);
+    }
+  }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
 import {
@@ -669,18 +669,25 @@ function InterestsTab({ toast }: { toast: (m: string) => void }) {
   const [filter, setFilter]   = useState('new');
   const [loading, setLoading] = useState(false);
   const [newCount, setNewCount] = useState(0);
+  const [q, setQ]             = useState('');
+  // Read inside the filter effect without making the search term a dependency,
+  // which would re-fetch on every keystroke.
+  const qRef = useRef('');
 
-  const load = useCallback(async (status: string) => {
+  const load = useCallback(async (status: string, query = '') => {
     setLoading(true);
     try {
-      const res  = await fetch(`/api/admin/interests${status ? `?status=${status}` : ''}`);
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (query)  params.set('q', query);
+      const res  = await fetch(`/api/admin/interests${params.toString() ? `?${params}` : ''}`);
       const data = await res.json();
       setItems(data.interests ?? []);
       setNewCount(data.newCount ?? 0);
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { queueMicrotask(() => load(filter)); }, [load, filter]);
+  useEffect(() => { queueMicrotask(() => load(filter, qRef.current)); }, [load, filter]);
 
   const setStatus = async (id: string, status: Interest['status']) => {
     const res = await fetch('/api/admin/interests', {
@@ -715,6 +722,23 @@ function InterestsTab({ toast }: { toast: (m: string) => void }) {
         Only <strong style={{ color: '#00C87A' }}>Wants to connect</strong> lets the member spend a credit to
         see the number. Sending the interest was free, and a declined lead never costs them anything.
       </p>
+
+      <form onSubmit={e => { e.preventDefault(); qRef.current = q; load(filter, q); }} className="flex gap-2 mb-4">
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="Search IR #12, member email, or name…"
+          className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
+          style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+        {q && (
+          <button type="button" onClick={() => { setQ(''); qRef.current = ''; load(filter, ''); }}
+            className="rounded-xl px-4 py-2.5 text-sm font-bold"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            Clear
+          </button>
+        )}
+        <button type="submit" className="rounded-xl px-5 py-2.5 text-sm font-bold" style={{ background: GREEN, color: '#fff' }}>
+          Search
+        </button>
+      </form>
 
       <div className="flex flex-wrap gap-2 mb-5">
         {INTEREST_FILTERS.map(f => (
@@ -808,6 +832,9 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
   const [users, setUsers]     = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ]             = useState('');
+  // Set when an IR # search matched a profile nobody has shown interest in —
+  // so we can say that, rather than the misleading "no users found".
+  const [noLeadsForIr, setNoLeadsForIr] = useState<number | null>(null);
 
   const load = useCallback(async (query = '') => {
     setLoading(true);
@@ -815,6 +842,7 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
       const res  = await fetch(`/api/admin/users${query ? `?q=${encodeURIComponent(query)}` : ''}`);
       const data = await res.json();
       setUsers(data.users ?? []);
+      setNoLeadsForIr(typeof data.noLeadsForIr === 'number' ? data.noLeadsForIr : null);
     } finally { setLoading(false); }
   }, []);
 
@@ -846,7 +874,7 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
 
       <form onSubmit={e => { e.preventDefault(); load(q); }} className="flex gap-2 mb-5">
         <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search by user ID, email, or name…"
+          placeholder="Search IR #12, email, name, or account ID…"
           className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
           style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
         {q && (
@@ -865,11 +893,22 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
       ) : users.length === 0 ? (
         <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          <p>No users found.</p>
-          <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Email and name match on any part. A user ID must be the <strong>complete</strong> value —
-            partial IDs can&apos;t be matched. Tap the ID under any user to copy it.
-          </p>
+          {noLeadsForIr !== null ? (
+            <>
+              <p>Nobody has sent an interest on <strong style={{ color: '#fff' }}>IR #{noLeadsForIr}</strong> yet.</p>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                An IR # is a profile, not an account — searching one lists the members interested in it.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>No users found.</p>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                <strong>IR #12</strong> lists members interested in that profile. Email and name match on any
+                part. An account ID must be the <strong>complete</strong> uuid — tap the ID under any user to copy it.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3">

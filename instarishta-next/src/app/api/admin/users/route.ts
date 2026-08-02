@@ -30,6 +30,16 @@ const COLS = 'id, email, full_name, contact_credits, bonus_credits, plan, plan_s
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * The public profile number — what visitors type into the "Profile ID" box on
+ * /profiles and what every card shows as "IR #12". Accepts 12, #12, IR12,
+ * "IR #12". Returns null when the term isn't one.
+ */
+function parseIrNumber(term: string): number | null {
+  const m = term.trim().match(/^(?:ir)?\s*#?\s*(\d{1,6})$/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/**
  * PostgREST's `or=` filter is a comma-separated list wrapped in parens, so a
  * search term containing , ( ) or . would corrupt the expression. Strip them —
  * none are meaningful inside an email, a name, or a uuid.
@@ -43,10 +53,27 @@ export const GET = withAdmin(async (req, { db }) => {
   const q = url.searchParams.get('q')?.trim();
 
   let query = db.from('ir_user_profiles').select(COLS).order('created_at', { ascending: false }).limit(200);
+  const irNumber = q ? parseIrNumber(q) : null;
 
   if (q) {
-    if (UUID_RE.test(q)) {
-      // A full user ID — exact match. Postgres cannot ILIKE a uuid column
+    if (irNumber !== null) {
+      // An IR # is a PROFILE, not an account — so this answers "who is
+      // interested in IR #12?" by resolving the profile to the members who
+      // sent an interest on it. profile_num is the number shown at send time;
+      // profile_id is the upstream feed id, matched too so either works.
+      const { data: leads } = await db
+        .from('ir_interests')
+        .select('from_email')
+        .or(`profile_num.eq.${irNumber},profile_id.eq.${irNumber}`)
+        .limit(500);
+
+      const senders = [...new Set((leads ?? []).map((l: { from_email: string }) => l.from_email))];
+      if (senders.length === 0) {
+        return NextResponse.json({ users: [], catalog: [], noLeadsForIr: irNumber });
+      }
+      query = query.in('email', senders);
+    } else if (UUID_RE.test(q)) {
+      // A full account ID — exact match. Postgres cannot ILIKE a uuid column
       // without a cast, so partial ids are not searchable; paste the whole one.
       query = query.eq('id', q);
     } else {
