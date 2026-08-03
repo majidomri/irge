@@ -226,9 +226,11 @@ export default function PayClient({ order: initial, qrSvg }: { order: Order; qrS
 
         <div className="rounded-2xl px-4 py-3" style={{ background: MINT, border: `1.5px solid ${BRAND}22` }}>
           <p className="text-xs leading-relaxed" style={{ color: DARK }}>
+            {/* {' '} is load-bearing: JSX drops the space after an interpolation that
+                ends a line, which rendered this as "a rounded ₹2,199means". */}
             <b>The .{suffix} matters.</b> Those paise are how we recognise your payment
-            without you sending us a screenshot. Paying a rounded ₹{rupees} means we
-            cannot tell it apart from anyone else&apos;s.
+            without you sending us a screenshot. Paying a rounded ₹{rupees}{' '}
+            means we cannot tell it apart from anyone else&apos;s.
           </p>
         </div>
 
