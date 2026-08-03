@@ -14,6 +14,52 @@ const DESKTOP_LINKS = [
   { label: 'Post Profile', href: '/biodata' },
 ];
 
+/**
+ * A same-origin path, or nothing.
+ *
+ * `next` arrives from the query string and both branches of the effect below
+ * navigate to it, so an unvalidated value is an open redirect:
+ * `/?signin=1&next=https://evil.tld` would carry the user off-site from a link
+ * that looks like ours. `//host` is rejected too — it is an absolute URL
+ * wearing the costume of a path.
+ */
+function safeNext(raw: string | null): string | undefined {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return undefined;
+  return raw;
+}
+
+/**
+ * Follow a given `next` at most once in a short window.
+ *
+ * Sending a signed-in user onward is only safe if the destination agrees that
+ * they are signed in. If it doesn't — a protected page whose own session check
+ * fails where ours succeeds — then honouring `next` unconditionally ping-pongs
+ * the browser between the two forever. Remembering the last target and refusing
+ * to chase it twice turns that infinite loop into a single failed attempt.
+ *
+ * A real second visit within ten seconds is indistinguishable from a loop, and
+ * staying put is by far the better of the two ways to be wrong.
+ */
+const NEXT_GUARD_KEY = 'ir:last-auth-next';
+const NEXT_GUARD_MS  = 10_000;
+
+function shouldFollow(next: string): boolean {
+  try {
+    const raw = sessionStorage.getItem(NEXT_GUARD_KEY);
+    if (raw) {
+      const sep = raw.lastIndexOf('|');
+      const target = raw.slice(0, sep);
+      const at     = Number(raw.slice(sep + 1));
+      if (target === next && Date.now() - at < NEXT_GUARD_MS) return false;
+    }
+    sessionStorage.setItem(NEXT_GUARD_KEY, `${next}|${Date.now()}`);
+  } catch {
+    // Storage blocked (private mode, embedded webview). Proceed unguarded —
+    // the worst case is the pre-existing behaviour.
+  }
+  return true;
+}
+
 const LogoNode = () => (
   <Link href="/" className="text-[1.25rem] font-extrabold tracking-[-0.02em] no-underline select-none" style={{ lineHeight: 1 }}>
     <ShinyText text="InstaRishta" color="#00A86B" shineColor="#ffffff" speed={3} spread={100} />
@@ -23,7 +69,7 @@ const LogoNode = () => (
 export default function Navbar() {
   const path = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const user = session?.user;
   const [showAuth, setShowAuth] = useState(false);
   const [authNext, setAuthNext] = useState<string | undefined>(undefined);
@@ -31,18 +77,43 @@ export default function Navbar() {
   const isHome = path === '/';
   const [scrolled, setScrolled] = useState(!isHome);
 
-  // Open the sign-in modal automatically when an auth-gated redirect lands here
-  // with ?signin=1 (set by middleware, /nizam, and the OAuth errorCallbackURL).
-  // `next` carries where to return after sign-in; `error` is an OAuth-failure
-  // code to surface. Read from window (not useSearchParams) so static pages
-  // don't bail out of prerendering. Strip the params afterwards so a refresh is
-  // clean. Deferred via queueMicrotask to avoid a synchronous setState cascade.
+  // Handle an auth-gated redirect landing here with ?signin=1 (set by
+  // middleware, /nizam, /pay/[id], and the OAuth errorCallbackURL). `next`
+  // carries where to return to; `error` is an OAuth-failure code to surface.
+  // Read from window (not useSearchParams) so static pages don't bail out of
+  // prerendering. Params are stripped afterwards so a refresh is clean.
+  //
+  // Two things this has to get right, both of which it previously got wrong:
+  //
+  //   • Waiting for the session. Bailing on `user` alone meant deciding during
+  //     the pending window, when `user` is still undefined for someone who IS
+  //     signed in — so they got the sign-in modal flashed at them, and the
+  //     effect's early return on the next render left it open.
+  //
+  //   • Honouring `next` when already signed in. The old `if (user) return`
+  //     dropped it silently: a signed-in member bounced here from a protected
+  //     page was stranded on whatever page this navbar happened to be on, with
+  //     ?signin=1 still in the URL. Nothing was broken enough to show an error,
+  //     it just quietly failed to take them where they were going.
   useEffect(() => {
-    if (user) return;
+    if (isPending) return;                    // session unknown — deciding now guesses wrong
     const params = new URLSearchParams(window.location.search);
     if (params.get('signin') !== '1') return;
+
+    const next = safeNext(params.get('next'));
+
+    // Already signed in: whatever redirected us here has nothing left to ask.
+    // Send them on to `next` rather than leaving them where they landed.
+    if (user) {
+      // shouldFollow refuses a target we just came from, so a destination that
+      // disagrees about our session costs one hop instead of looping forever.
+      router.replace(next && shouldFollow(next) ? next : path);
+      return;
+    }
+
+    // Deferred via queueMicrotask to avoid a synchronous setState cascade.
     queueMicrotask(() => {
-      setAuthNext(params.get('next') ?? undefined);
+      setAuthNext(next);
       setAuthError(params.get('error') ?? undefined);
       setShowAuth(true);
     });
@@ -52,7 +123,7 @@ export default function Navbar() {
     params.delete('error_description');
     const qs = params.toString();
     router.replace(path + (qs ? `?${qs}` : ''));
-  }, [user, path, router]);
+  }, [user, isPending, path, router]);
 
   useEffect(() => {
     if (!isHome) { setScrolled(true); return; }
