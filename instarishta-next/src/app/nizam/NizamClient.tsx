@@ -20,6 +20,8 @@ export interface Channel {
 interface Post {
   id:          string;
   channel_id:  string;
+  user_id:     string | null;
+  owner_email: string | null;
   title:       string | null;
   caption:     string | null;
   image:       string | null;
@@ -374,6 +376,7 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
   const [caption, setCaption] = useState('');
   const [image, setImage] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -394,7 +397,7 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
     const res = await fetch('/api/admin/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channel_id: channelId, title, caption, image, audio_url: audioUrl }),
+      body: JSON.stringify({ channel_id: channelId, title, caption, image, audio_url: audioUrl, owner_email: ownerEmail }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -403,7 +406,7 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
     }
     const { post } = await res.json();
     setPosts(prev => [post, ...prev]);
-    setTitle(''); setCaption(''); setImage(''); setAudioUrl('');
+    setTitle(''); setCaption(''); setImage(''); setAudioUrl(''); setOwnerEmail('');
     toast('Post published ✓');
   };
 
@@ -429,6 +432,10 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
         <Textarea value={caption} setValue={setCaption} placeholder="Caption / body (optional)" />
         <Input value={image} setValue={setImage} placeholder="Image URL (optional)" />
         <Input value={audioUrl} setValue={setAudioUrl} placeholder="Audio URL (optional)" />
+        <Input value={ownerEmail} setValue={setOwnerEmail} placeholder="Owner's email (optional)" />
+        <p className="text-[11px] -mt-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          Attributes the post to a member so they get notified when someone comments. Leave blank for house content.
+        </p>
         <SubmitBtn busy={busy} label="Publish" />
       </form>
 
@@ -452,6 +459,9 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
                 {p.title && <p className="font-semibold text-sm">{p.title}</p>}
                 {p.caption && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{p.caption.slice(0, 100)}</p>}
                 {p.audio_url && <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>🎙 Audio</p>}
+                <p className="text-[10px] mt-1" style={{ color: p.owner_email ? GREEN : 'rgba(255,255,255,0.3)' }}>
+                  {p.owner_email ? `👤 ${p.owner_email}` : '🏠 House content — no owner'}
+                </p>
               </div>
               <button onClick={() => remove(p.id)}
                 className="text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0"
