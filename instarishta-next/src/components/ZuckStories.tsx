@@ -134,7 +134,9 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
 
   const activeStory = stories?.find(s => s.id === openStoryId) ?? null;
   const activeItem  = activeStory?.items.find(i => i.id === activeItemId) ?? null;
-  const displayLikes = (activeItem?.likes ?? 0) + (activeItemId && liked.has(activeItemId) ? 1 : 0) + (activeItemId ? (likeBump[activeItemId] ?? 0) : 0);
+  const displayLikes = Number(activeItem?.likes ?? 0)
+    + (activeItemId && liked.has(activeItemId) ? 1 : 0)
+    + Number(activeItemId ? likeBump[activeItemId] ?? 0 : 0);
 
   const doLike = () => {
     if (!activeItemId || liked.has(activeItemId)) return;
