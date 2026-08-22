@@ -1,12 +1,14 @@
 import Link from 'next/link';
 
 const FOOTER_LINKS = [
-  { href: '/privacy',    label: 'Privacy'    },
-  { href: '/toc',        label: 'Terms'      },
-  { href: '/disclaimer', label: 'Disclaimer' },
-  { href: '/security',   label: 'Security'   },
-  { href: '/biodata',    label: 'Bio Data'   },
-  { href: '/channels',   label: 'Channels'   },
+  { href: '/privacy',       label: 'Privacy'       },
+  { href: '/toc',           label: 'Terms'         },
+  { href: '/disclaimer',    label: 'Disclaimer'    },
+  { href: '/security',      label: 'Security'      },
+  { href: '/child-safety',  label: 'Child Safety'  },
+  { href: '/report',        label: 'Report Abuse'  },
+  { href: '/biodata',       label: 'Bio Data'      },
+  { href: '/channels',      label: 'Channels'      },
 ];
 
 export default function Footer() {

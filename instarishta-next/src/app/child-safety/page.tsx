@@ -148,11 +148,18 @@ export default function ChildSafetyPage() {
         <div className="mt-6 rounded-[12px] p-7 text-center" style={{ background: '#1E3932' }}>
           <p className="text-white font-bold text-base mb-2">Seen something unsafe?</p>
           <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.65)' }}>Report it immediately. We investigate all reports within 2 hours.</p>
-          <a href="mailto:safety@instarishta.me"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm"
-            style={{ background: '#EA4335', color: '#fff' }}>
-            🚨 Report Now — safety@instarishta.me
-          </a>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href="/report"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm no-underline"
+              style={{ background: '#EA4335', color: '#fff' }}>
+              🚨 Report Now
+            </Link>
+            <a href="mailto:safety@instarishta.me"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm"
+              style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}>
+              ✉️ safety@instarishta.me
+            </a>
+          </div>
         </div>
       </div>
     </div>

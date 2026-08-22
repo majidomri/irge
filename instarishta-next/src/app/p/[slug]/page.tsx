@@ -3,6 +3,7 @@ import { notFound }      from 'next/navigation';
 import Image             from 'next/image';
 import ShareButton       from '@/components/ShareButton';
 import ViewTracker       from '@/components/ViewTracker';
+import ReportMemberButton from '@/components/ReportMemberButton';
 import type { Metadata } from 'next';
 
 // UUID is resolved server-side — never exposed in the URL or response
@@ -80,7 +81,10 @@ export default async function ProfileSlugPage({ params }: { params: Promise<{ sl
             <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 13, color: 'rgba(255,255,255,0.4)', letterSpacing: 2 }}>
               instarishta.me/p/{slug}
             </p>
-            <ShareButton slug={slug} entityType="profile" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <ReportMemberButton slug={slug} />
+              <ShareButton slug={slug} entityType="profile" />
+            </div>
           </div>
         </div>
       </div>

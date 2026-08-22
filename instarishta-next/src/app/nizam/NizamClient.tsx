@@ -63,7 +63,7 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests';
+type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
@@ -71,6 +71,8 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'stories',  label: 'Stories',  icon: '⭕' },
   { key: 'featured', label: 'Featured', icon: '⭐' },
   { key: 'interests', label: 'Interests', icon: '💚' },
+  { key: 'comments', label: 'Comments', icon: '💬' },
+  { key: 'reports',  label: 'Reports',  icon: '🚩' },
   { key: 'users',    label: 'Users',    icon: '👤' },
 ];
 
@@ -92,6 +94,36 @@ interface Entitlements {
 }
 
 interface InterestUsage { month: number; total: number; accepted: number; connected: number }
+
+interface Report {
+  id: string;
+  reporter_user_id: string | null;
+  reporter_email: string | null;
+  reporter_contact: string | null;
+  entity_type: 'profile' | 'member' | 'post' | 'story' | 'channel' | 'other';
+  entity_id: string | null;
+  profile_num: number | null;
+  category: string;
+  description: string | null;
+  severity: 'normal' | 'urgent';
+  status: 'open' | 'reviewing' | 'actioned' | 'dismissed';
+  admin_notes: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+interface ChannelComment {
+  id: string;
+  entity_type: 'post' | 'story';
+  entity_id: string;
+  user_id: string;
+  author_name: string;
+  chip_key: string;
+  hidden: boolean;
+  created_at: string;
+}
 
 /** A profile resolved from an IR # against the live feed. */
 interface IrProfile {
@@ -227,6 +259,12 @@ export default function NizamClient({
         )}
         {tab === 'interests' && (
           <InterestsTab toast={showToast} />
+        )}
+        {tab === 'reports' && (
+          <ReportsTab toast={showToast} />
+        )}
+        {tab === 'comments' && (
+          <CommentsTab toast={showToast} />
         )}
       </main>
 
@@ -839,6 +877,294 @@ function fmtIn(iso: string | null | undefined): string {
   if (days < 0)  return 'overdue';
   if (days === 0) return 'today';
   return `in ${days} day${days === 1 ? '' : 's'}`;
+}
+
+const REPORT_FILTERS = [
+  { key: 'open',      label: 'Open' },
+  { key: 'reviewing', label: 'Reviewing' },
+  { key: 'actioned',  label: 'Actioned' },
+  { key: 'dismissed', label: 'Dismissed' },
+  { key: '',          label: 'All' },
+];
+
+const REPORT_CATEGORY_LABEL: Record<string, string> = {
+  fake_profile: 'Fake profile', underage: 'Suspected minor', harassment: 'Harassment',
+  scam_fraud: 'Scam / fraud', inappropriate_content: 'Inappropriate content',
+  impersonation: 'Impersonation', spam: 'Spam', other: 'Other',
+};
+
+const REPORT_STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
+  open:      { bg: 'rgba(234,67,53,0.15)',  fg: '#EA4335' },
+  reviewing: { bg: 'rgba(240,192,64,0.15)', fg: '#F0C040' },
+  actioned:  { bg: GREEN_BG,                fg: GREEN     },
+  dismissed: { bg: 'rgba(255,255,255,0.08)', fg: 'rgba(255,255,255,0.5)' },
+};
+
+/**
+ * Misuse/abuse queue backing /child-safety's "reviewed within 2 hours"
+ * promise. entity_id for 'member' reports is a /p/ slug — click through to
+ * see what was flagged before acting, since the underlying account is
+ * deliberately not exposed here (see /api/admin/reports).
+ */
+function ReportsTab({ toast }: { toast: (m: string) => void }) {
+  const [items, setItems]         = useState<Report[]>([]);
+  const [filter, setFilter]       = useState('open');
+  const [loading, setLoading]     = useState(false);
+  const [openCount, setOpenCount] = useState(0);
+  const [urgentCount, setUrgentCount] = useState(0);
+  const [q, setQ]                 = useState('');
+  const qRef = useRef('');
+  const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
+
+  const load = useCallback(async (status: string, query = '') => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (query)  params.set('q', query);
+      const res  = await fetch(`/api/admin/reports${params.toString() ? `?${params}` : ''}`);
+      const data = await res.json();
+      setItems(data.reports ?? []);
+      setOpenCount(data.openCount ?? 0);
+      setUrgentCount(data.urgentOpenCount ?? 0);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { queueMicrotask(() => load(filter, qRef.current)); }, [load, filter]);
+
+  const setStatus = async (id: string, status: Report['status']) => {
+    const res = await fetch('/api/admin/reports', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok) {
+      setItems(list => (filter && status !== filter ? list.filter(r => r.id !== id)
+                                                     : list.map(r => (r.id === id ? { ...r, status } : r))));
+      if (filter === 'open' || filter === '') setOpenCount(c => Math.max(0, c - 1));
+      toast(`Marked ${status}`);
+    } else {
+      toast('Update failed');
+    }
+  };
+
+  const saveNotes = async (id: string) => {
+    const admin_notes = notesDraft[id] ?? '';
+    const res = await fetch('/api/admin/reports', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, admin_notes }),
+    });
+    toast(res.ok ? 'Notes saved' : 'Save failed');
+  };
+
+  return (
+    <div>
+      <h1 className="text-xl font-extrabold mb-1">
+        Reports
+        {openCount > 0   && <span style={{ color: '#EA4335' }}> · {openCount} open</span>}
+        {urgentCount > 0 && <span style={{ color: '#EA4335' }}> · {urgentCount} urgent</span>}
+      </h1>
+      <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        Misuse and abuse reports from members and visitors. Urgent categories (suspected minors) also
+        page the team on Telegram/email the moment they&apos;re submitted — see /child-safety.
+      </p>
+
+      <form onSubmit={e => { e.preventDefault(); qRef.current = q; load(filter, q); }} className="flex gap-2 mb-4">
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="Search IR #, reporter email, or details…"
+          className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
+          style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+        {q && (
+          <button type="button" onClick={() => { setQ(''); qRef.current = ''; load(filter, ''); }}
+            className="rounded-xl px-4 py-2.5 text-sm font-bold"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            Clear
+          </button>
+        )}
+        <button type="submit" className="rounded-xl px-5 py-2.5 text-sm font-bold" style={{ background: GREEN, color: '#fff' }}>
+          Search
+        </button>
+      </form>
+
+      <div className="flex flex-wrap gap-2 mb-5">
+        {REPORT_FILTERS.map(f => (
+          <button key={f.key} onClick={() => setFilter(f.key)}
+            className="rounded-full px-4 py-1.5 text-xs font-bold"
+            style={filter === f.key
+              ? { background: GREEN, color: '#fff' }
+              : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Nothing here.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {items.map(r => {
+            const s = REPORT_STATUS_STYLE[r.status] ?? REPORT_STATUS_STYLE.open;
+            return (
+              <div key={r.id} className="rounded-2xl p-4"
+                style={{ background: PANEL, border: r.severity === 'urgent' ? '1px solid #EA4335' : `1px solid ${BORDER}` }}>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {REPORT_CATEGORY_LABEL[r.category] ?? r.category}
+                      {r.severity === 'urgent' && (
+                        <span className="ml-2 text-[10px] font-bold uppercase rounded-full px-2 py-0.5"
+                          style={{ background: '#EA4335', color: '#fff' }}>Urgent</span>
+                      )}
+                    </p>
+                    <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      {r.entity_type}{r.profile_num ? ` · IR #${r.profile_num}` : ''}
+                      {r.entity_id && r.entity_type === 'member' ? (
+                        <> · <a href={`/p/${r.entity_id}`} target="_blank" rel="noopener noreferrer"
+                          style={{ color: GREEN }}>/p/{r.entity_id}</a></>
+                      ) : r.entity_id ? ` · ${r.entity_id}` : ''}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold rounded-full px-2.5 py-1 shrink-0 uppercase"
+                    style={{ background: s.bg, color: s.fg }}>
+                    {r.status}
+                  </span>
+                </div>
+
+                <p className="text-[11px] mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  From {r.reporter_email || r.reporter_contact || 'anonymous'} · {fmtDate(r.created_at)}
+                  {r.ip_address ? ` · ${r.ip_address}` : ''}
+                </p>
+
+                {r.description && (
+                  <p className="text-[12px] rounded-xl px-3 py-2 mb-3" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.75)' }}>
+                    {r.description}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(['reviewing', 'actioned', 'dismissed'] as const)
+                    .filter(k => k !== r.status)
+                    .map(k => (
+                      <button key={k} onClick={() => setStatus(r.id, k)}
+                        className="rounded-xl px-3 py-1.5 text-[11px] font-bold"
+                        style={{ background: REPORT_STATUS_STYLE[k].bg, color: REPORT_STATUS_STYLE[k].fg }}>
+                        Mark {k}
+                      </button>
+                    ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <input value={notesDraft[r.id] ?? r.admin_notes ?? ''}
+                    onChange={e => setNotesDraft(d => ({ ...d, [r.id]: e.target.value }))}
+                    placeholder="Internal notes…"
+                    className="flex-1 rounded-xl px-3 py-1.5 text-[11px] outline-none"
+                    style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+                  <button onClick={() => saveNotes(r.id)} className="rounded-xl px-3 py-1.5 text-[11px] font-bold"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+                    Save
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const COMMENT_CHIP_LABEL: Record<string, string> = {
+  interested: '🙋 I am interested', view_profile: '👀 Look at my Profile',
+  is_done: '❓ Is this Rishta Done?', answer_asap: '⏰ Please Answer ASAP',
+};
+
+/**
+ * Moderation feed for public channel comments (see migration
+ * 010_channel_comments.sql). Unlike interests/reports, these are visible to
+ * every visitor, so "Hide" is the one action that matters here — it's a soft
+ * delete, the row survives for audit.
+ */
+function CommentsTab({ toast }: { toast: (m: string) => void }) {
+  const [items, setItems]     = useState<ChannelComment[]>([]);
+  const [filter, setFilter]   = useState<'visible' | 'hidden'>('visible');
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async (f: 'visible' | 'hidden') => {
+    setLoading(true);
+    try {
+      const params = f === 'hidden' ? '?hidden=1' : '';
+      const res  = await fetch(`/api/admin/comments${params}`);
+      const data = await res.json();
+      const all  = (data.comments ?? []) as ChannelComment[];
+      setItems(f === 'hidden' ? all : all.filter(c => !c.hidden));
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { queueMicrotask(() => load(filter)); }, [load, filter]);
+
+  const setHidden = async (id: string, hidden: boolean) => {
+    const res = await fetch('/api/admin/comments', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, hidden }),
+    });
+    if (res.ok) {
+      setItems(list => list.filter(c => c.id !== id));
+      toast(hidden ? 'Comment hidden' : 'Comment restored');
+    } else {
+      toast('Update failed');
+    }
+  };
+
+  return (
+    <div>
+      <h1 className="text-xl font-extrabold mb-1">Comments</h1>
+      <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        Public comments on channel posts. Hiding is a soft delete — the row is kept, just no longer shown.
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-5">
+        {(['visible', 'hidden'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className="rounded-full px-4 py-1.5 text-xs font-bold capitalize"
+            style={filter === f
+              ? { background: GREEN, color: '#fff' }
+              : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Nothing here.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {items.map(c => (
+            <div key={c.id} className="rounded-2xl p-4 flex items-center justify-between gap-3"
+              style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">
+                  {c.author_name} <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>· {COMMENT_CHIP_LABEL[c.chip_key] ?? c.chip_key}</span>
+                </p>
+                <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {c.entity_type} {c.entity_id} · {fmtDate(c.created_at)}
+                </p>
+              </div>
+              <button onClick={() => setHidden(c.id, !c.hidden)}
+                className="rounded-xl px-3 py-1.5 text-[11px] font-bold shrink-0"
+                style={c.hidden
+                  ? { background: GREEN_BG, color: GREEN }
+                  : { background: 'rgba(234,67,53,0.15)', color: '#EA4335' }}>
+                {c.hidden ? 'Restore' : 'Hide'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function UsersTab({ toast }: { toast: (m: string) => void }) {

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { type DeckProfile, textDir, URDU_FONT, isUrgent } from '../_shared';
+import ReportModal from './ReportModal';
 
 interface BioRow     { label: string; value: string }
 interface BioSection { heading: string; rows: BioRow[] }
@@ -99,6 +100,7 @@ export default function BiodataModal({ profile, onClose }: { profile: DeckProfil
   const isFemale = profile.gender === 'female';
   const [igOpen,    setIgOpen]    = useState(false);
   const [bioView,   setBioView]   = useState<'raw' | 'structured'>('raw');
+  const [reporting, setReporting] = useState(false);
   const schema = parseBiodata(profile.title, profile.body);
 
   return (
@@ -193,8 +195,24 @@ export default function BiodataModal({ profile, onClose }: { profile: DeckProfil
             <p className="text-xs" style={{ color: '#A0A0A0' }}>instarishta.me</p>
             <p className="text-xs font-semibold" style={{ color: '#006241' }}>IR #{profile._num}</p>
           </div>
+
+          <button onClick={() => setReporting(true)}
+            className="mt-3 text-xs font-semibold flex items-center gap-1.5"
+            style={{ color: '#CF4500' }}>
+            🚩 Report this profile
+          </button>
         </div>
       </section>
+
+      {reporting && (
+        <ReportModal
+          entityType="profile"
+          entityId={profile.id != null ? String(profile.id) : String(profile._num)}
+          profileNum={profile._num}
+          label={`IR #${profile._num}`}
+          onClose={() => setReporting(false)}
+        />
+      )}
     </div>
   );
 }

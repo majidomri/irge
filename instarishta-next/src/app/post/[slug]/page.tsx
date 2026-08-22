@@ -3,6 +3,7 @@ import { notFound }      from 'next/navigation';
 import Image             from 'next/image';
 import ShareButton       from '@/components/ShareButton';
 import ViewTracker       from '@/components/ViewTracker';
+import CommentSection    from '@/components/CommentSection';
 import type { Metadata } from 'next';
 
 async function resolvePost(slug: string) {
@@ -29,6 +30,15 @@ async function resolvePost(slug: string) {
 
   if (!post) return null;
 
+  const { data: comments, count: commentCount } = await db
+    .from('ir_comments')
+    .select('id, author_name, chip_key, created_at', { count: 'exact' })
+    .eq('entity_type', 'post')
+    .eq('entity_id', post.id)
+    .eq('hidden', false)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
   // Get profile slug for the user who owns this post
   let profileSlug: string | null = null;
   if (post.user_id) {
@@ -45,6 +55,8 @@ async function resolvePost(slug: string) {
     post,
     stats:       { views: nano.views, shares: nano.shares },
     profileSlug,
+    comments:     comments ?? [],
+    commentCount: commentCount ?? 0,
   };
 }
 
@@ -61,7 +73,7 @@ export default async function PostSlugPage({ params }: { params: Promise<{ slug:
   const data = await resolvePost(slug);
   if (!data) return notFound();
 
-  const { post, stats, profileSlug } = data;
+  const { post, stats, profileSlug, comments, commentCount } = data;
   const images: string[] = (post.images as string[] | null) ?? [post.image as string];
 
   return (
@@ -150,6 +162,13 @@ export default async function PostSlugPage({ params }: { params: Promise<{ slug:
           </div>
         </div>
       )}
+
+      {/* Comments */}
+      <div style={{ maxWidth: 520, margin: '8px auto 24px', padding: '20px 16px 0' }}>
+        <div style={{ borderRadius: 20, border: '1px solid #F0ECE8', background: '#fff', padding: 20 }}>
+          <CommentSection entityType="post" entityId={post.id as string} initialComments={comments} initialCount={commentCount} />
+        </div>
+      </div>
 
       <div style={{ textAlign: 'center', padding: '32px 24px', color: '#B0A8A0', fontSize: 12 }}>
         <a href="https://instarishta.me" style={{ color: '#006241', textDecoration: 'none', fontWeight: 700 }}>

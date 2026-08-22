@@ -15,6 +15,7 @@ import ClickSpark from '@/components/ui/ClickSpark';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
+const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
 
 const POST_CATS = [
   { id: 'all',      label: 'All',       icon: '✦' },
@@ -339,6 +340,7 @@ function PostModal({
   const hasImg  = imgs.length > 0;
 
   const [carIdx,  setCarIdx]  = useState(0);
+  const [commenting, setCommenting] = useState(false);
   const scrollRef   = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const swipeRef    = useRef({ x: 0, y: 0, inCar: false });
@@ -505,10 +507,17 @@ function PostModal({
             <span className="text-xl">{liked.has(post.id) ? '❤️' : '🤍'}</span>
             <span className="text-sm font-semibold text-white">{(post.likes ?? 0) + (liked.has(post.id) ? 1 : 0)}</span>
           </button>
+          <button onClick={() => setCommenting(true)}
+            className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
+            <span className="text-xl">💬</span>
+            <span className="text-sm font-semibold text-white">Comment</span>
+          </button>
           <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>👁 {(post.views ?? 0) + 1}</span>
           <span className="text-xs ml-auto" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
         </div>
       </div>
+
+      {commenting && <CommentDrawer entityId={post.id} onClose={() => setCommenting(false)} />}
 
       {/* Prev / next post arrows */}
       {postIdx > 0 && (

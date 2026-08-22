@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import ShinyText from '@/components/ui/ShinyText';
 import { useSession } from '@/lib/auth-client';
 import AuthModal from '@/components/AuthModal';
+import NotificationBell from '@/components/NotificationBell';
 
 const DESKTOP_LINKS = [
   { label: 'How It Works', href: '/#how-it-works' },
@@ -175,13 +176,16 @@ export default function Navbar() {
           <div className="flex items-center gap-3 w-[176px] justify-end flex-shrink-0">
             <div className="w-px h-[18px] bg-white/15 flex-shrink-0" />
             {user ? (
-              <Link
-                href="/account"
-                className="text-white/65 text-[0.875rem] font-medium hover:text-white transition-colors duration-200 px-2 no-underline"
-                title={user.email ?? 'Account'}
-              >
-                Account
-              </Link>
+              <>
+                <NotificationBell />
+                <Link
+                  href="/account"
+                  className="text-white/65 text-[0.875rem] font-medium hover:text-white transition-colors duration-200 px-2 no-underline"
+                  title={user.email ?? 'Account'}
+                >
+                  Account
+                </Link>
+              </>
             ) : (
               <button
                 onClick={() => setShowAuth(true)}
@@ -218,17 +222,20 @@ export default function Navbar() {
         <div className="flex items-center justify-between px-5 h-14">
           <LogoNode />
           {user ? (
-            <Link
-              href="/account"
-              aria-label="Account"
-              className="w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-full no-underline overflow-hidden"
-              style={{ background: 'rgba(255,255,255,0.10)', color: '#fff' }}
-            >
-              {user.image
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={user.image} alt="" className="w-full h-full object-cover" />
-                : (user.name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? '?')}
-            </Link>
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <Link
+                href="/account"
+                aria-label="Account"
+                className="w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-full no-underline overflow-hidden"
+                style={{ background: 'rgba(255,255,255,0.10)', color: '#fff' }}
+              >
+                {user.image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={user.image} alt="" className="w-full h-full object-cover" />
+                  : (user.name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? '?')}
+              </Link>
+            </div>
           ) : (
             <button
               onClick={() => setShowAuth(true)}
