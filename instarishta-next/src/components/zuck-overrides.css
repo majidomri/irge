@@ -33,17 +33,17 @@ body .story-viewer .slides-pointers .progress span {
 }
 
 /*
- * Constrain the full-screen story viewer to a phone-width column, same as
- * PostModal — otherwise a real (portrait) story photo stretches to fill an
- * ultra-wide desktop viewport instead of just being letterboxed. The
- * box-shadow is the actual backdrop: a 9999px-spread shadow the same color
- * as the viewer paints solid over the rest of the viewport, which works
- * regardless of exactly how zuck.js positions this element internally.
+ * NOTE: an earlier version of this file forced .story-viewer to a fixed
+ * max-width via `transform: translateX(-50%)`. Reverted — zuck.js reads its
+ * own viewer's offsetWidth internally (to size/position slides) at open
+ * time, so shrinking the box with CSS *after* that measurement left the
+ * image content positioned for the old (full-viewport) width instead of the
+ * new one: it rendered off-screen inside the now-narrower, overflow-hidden
+ * container (looked like a solid black viewer) and the transform's new
+ * containing block seems to have also confused zuck.js's own fixed-position
+ * children, which is the likely cause of the tab hanging on interaction.
+ * If phone-width letterboxing for stories is wanted later, it needs to be
+ * done by constraining the layout zuck.js measures from BEFORE it opens
+ * (e.g. mounting the tray inside an already-narrow wrapper), not by
+ * overriding .story-viewer's box after the fact.
  */
-body .story-viewer {
-  max-width: 480px !important;
-  left: 50% !important;
-  right: auto !important;
-  transform: translateX(-50%);
-  box-shadow: 0 0 0 9999px #000;
-}

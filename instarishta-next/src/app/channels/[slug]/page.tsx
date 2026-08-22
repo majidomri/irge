@@ -42,6 +42,15 @@ function fmt(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// Compact "57d" / "5h" style badge — matches the grid card design being copied.
+function timeAgoShort(iso: string): string {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'now';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
+
 // ── Audio player (shared) ─────────────────────────────────────────────────────
 
 function fmtTime(s: number) {
@@ -536,7 +545,7 @@ export default function ChannelFeedPage() {
   );
 
   return (
-    <div style={{ background: '#F8F7F6', minHeight: '100vh' }}>
+    <div style={{ background: '#0B0B0A', minHeight: '100vh' }}>
 
       {/* ── Channel hero ── */}
       <div style={{ background: '#1E3932', color: '#fff' }} className="relative px-4 pb-6 pt-5">
@@ -573,16 +582,16 @@ export default function ChannelFeedPage() {
 
       {/* ── Category filter chips ── */}
       {posts.length > 0 && (
-        <div className="sticky top-0 z-30 px-4 py-3 flex gap-2 overflow-x-auto" style={{ background: '#fff', boxShadow: '0 1px 0 #F0ECE8', scrollbarWidth: 'none' }}>
+        <div className="sticky top-0 z-30 px-4 py-3 flex gap-2 overflow-x-auto" style={{ background: '#0B0B0A', boxShadow: '0 1px 0 rgba(255,255,255,0.08)', scrollbarWidth: 'none' }}>
           {POST_CATS.filter(c => c.id === 'all' || usedCats.has(c.id)).map(c => (
             <button
               key={c.id}
               onClick={() => setCatFilter(c.id)}
               className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-all"
               style={{
-                background:  catFilter === c.id ? '#141413' : '#fff',
-                color:       catFilter === c.id ? '#fff'    : '#696969',
-                borderColor: catFilter === c.id ? '#141413' : '#E8E4E0',
+                background:  catFilter === c.id ? '#00A86B' : 'rgba(255,255,255,0.08)',
+                color:       catFilter === c.id ? '#0B0B0A' : 'rgba(255,255,255,0.7)',
+                borderColor: catFilter === c.id ? '#00A86B' : 'rgba(255,255,255,0.12)',
               }}
             >
               <span>{c.icon}</span>
@@ -603,78 +612,103 @@ export default function ChannelFeedPage() {
       )}
 
       {/* ── Post grid ── */}
-      <div className="p-1">
+      <div className="px-3 pt-3">
         {!loading && !visiblePosts.length && (
           <div className="text-center py-20 px-6">
             <span className="text-5xl block mb-4">💍</span>
-            <p className="text-base font-medium" style={{ color: '#696969' }}>
+            <p className="text-base font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>
               {catFilter === 'all' ? 'No posts yet.' : 'No posts in this category.'}
             </p>
             {catFilter !== 'all' && (
-              <button onClick={() => setCatFilter('all')} className="mt-3 text-sm font-semibold" style={{ color: '#006241' }}>Show all</button>
+              <button onClick={() => setCatFilter('all')} className="mt-3 text-sm font-semibold" style={{ color: '#00E08C' }}>Show all</button>
             )}
           </div>
         )}
 
+        <style>{`
+          @media (min-width: 640px)  { .ir-post-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+          @media (min-width: 900px)  { .ir-post-grid { grid-template-columns: repeat(4, 1fr) !important; } }
+          @media (min-width: 1200px) { .ir-post-grid { grid-template-columns: repeat(5, 1fr) !important; } }
+        `}</style>
         <ClickSpark sparkColor="#00A86B" sparkRadius={22} sparkCount={8} duration={450}>
-        <div className="grid gap-0.5" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="ir-post-grid grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
           {visiblePosts.map(post => {
             const cover = post.thumb ?? post.image ?? null;
             const hasImage = !!cover;
             const hasAudio = !!post.audio_url;
+            const extra = Array.isArray(post.images) ? post.images.length : 0;
             return (
               <button
                 key={post.id}
                 onClick={() => openPost(post)}
-                className="relative overflow-hidden border-0 p-0 cursor-pointer block"
-                style={{ aspectRatio: '1', background: hasImage ? '#F3F0EE' : hasAudio ? '#0d1e18' : '#1E3932' }}
+                className="relative overflow-hidden border-0 p-0 cursor-pointer block text-left rounded-2xl"
+                style={{ background: '#171715' }}
               >
-                {cover ? (
-                  <img
-                    src={cover}
-                    alt={post.title ?? ''}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    loading="lazy"
-                  />
-                ) : (
-                  /* Text / audio tile */
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 p-2">
-                    {hasAudio ? (
-                      <>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,168,107,0.25)' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="#00A86B"><path d="M8 6.5v11l9-5.5z"/></svg>
-                        </div>
-                        <p className="text-[9px] font-semibold text-center leading-snug line-clamp-2 px-1" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                          {post.title || 'Voice Post'}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Post</p>
-                        <p className="text-[10px] font-semibold text-center leading-snug line-clamp-3 px-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                          {post.title || post.caption || ''}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
-                {/* Badges */}
-                {Array.isArray(post.images) && post.images.length > 0 && (
-                  <span className="absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md"
-                    style={{ background: 'rgba(0,0,0,0.55)', color: '#fff' }}>⬛{1 + post.images.length}</span>
-                )}
-                {hasAudio && hasImage && (
-                  <span className="absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center"
-                    style={{ background: 'rgba(0,0,0,0.55)' }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#00A86B"><path d="M8 6.5v11l9-5.5z"/></svg>
+                <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: hasImage ? '#0d0d0c' : hasAudio ? '#0d1e18' : '#1E3932' }}>
+                  {cover ? (
+                    <img
+                      src={cover}
+                      alt={post.title ?? ''}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    /* Text / audio tile */
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 p-2">
+                      {hasAudio ? (
+                        <>
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,168,107,0.25)' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#00A86B"><path d="M8 6.5v11l9-5.5z"/></svg>
+                          </div>
+                          <p className="text-[9px] font-semibold text-center leading-snug line-clamp-2 px-1" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                            {post.title || 'Voice Post'}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Post</p>
+                          <p className="text-[10px] font-semibold text-center leading-snug line-clamp-3 px-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                            {post.title || post.caption || ''}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Time-ago badge */}
+                  <span className="absolute top-2 right-2 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full"
+                    style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                    {timeAgoShort(post.created_at)}
                   </span>
-                )}
-                {(post.likes ?? 0) > 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                    style={{ background: 'rgba(0,0,0,0.3)' }}>
-                    <span className="text-white font-bold text-sm">❤ {post.likes}</span>
-                  </div>
-                )}
+                  {/* Extra-photos badge */}
+                  {extra > 0 && (
+                    <span className="absolute top-9 right-2 text-[10px] font-extrabold px-2 py-0.5 rounded-full"
+                      style={{ background: '#FFB020', color: '#141413' }}>+{extra}</span>
+                  )}
+                  {hasAudio && hasImage && (
+                    <span className="absolute top-2 left-2 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(0,0,0,0.6)' }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="#00A86B"><path d="M8 6.5v11l9-5.5z"/></svg>
+                    </span>
+                  )}
+                  {(post.likes ?? 0) > 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                      style={{ background: 'rgba(0,0,0,0.3)' }}>
+                      <span className="text-white font-bold text-sm">❤ {post.likes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Caption block */}
+                <div className="px-2.5 py-2">
+                  <p className="text-xs font-bold text-white leading-snug line-clamp-2">
+                    {post.title || post.caption || 'Untitled post'}
+                  </p>
+                  <p className="text-[11px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    {channel?.name} · {timeAgoShort(post.created_at)}
+                  </p>
+                </div>
               </button>
             );
           })}
@@ -682,9 +716,12 @@ export default function ChannelFeedPage() {
         </ClickSpark>
 
         {loading && (
-          <div className="grid gap-0.5 mt-0.5" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="animate-pulse" style={{ aspectRatio: '1', background: '#F3F0EE' }} />
+          <div className="ir-post-grid grid gap-3 mt-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl overflow-hidden" style={{ background: '#171715' }}>
+                <div style={{ aspectRatio: '3/4', background: '#1f1f1c' }} />
+                <div className="h-8" />
+              </div>
             ))}
           </div>
         )}
@@ -693,7 +730,7 @@ export default function ChannelFeedPage() {
 
       {/* Load more / done */}
       {done && posts.length > 0 && (
-        <p className="text-center text-xs py-6 pb-20" style={{ color: '#A0A0A0' }}>
+        <p className="text-center text-xs py-6 pb-20" style={{ color: 'rgba(255,255,255,0.35)' }}>
           All {posts.length} posts loaded
         </p>
       )}
