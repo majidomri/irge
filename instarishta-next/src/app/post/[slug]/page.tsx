@@ -181,9 +181,7 @@ export default async function PostSlugPage({ params }: { params: Promise<{ slug:
 
       {/* Comments */}
       <div style={{ maxWidth: 520, margin: '8px auto 24px', padding: '20px 16px 0' }}>
-        <div style={{ borderRadius: 20, border: '1px solid #F0ECE8', background: '#fff', padding: 20 }}>
-          <CommentSection entityType="post" entityId={post.id as string} initialComments={comments} initialCount={commentCount} />
-        </div>
+        <CommentSection entityType="post" entityId={post.id as string} initialComments={comments} initialCount={commentCount} />
       </div>
 
       <div style={{ textAlign: 'center', padding: '32px 24px', color: '#B0A8A0', fontSize: 12 }}>

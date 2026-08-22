@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import {
+  supabase,
   getChannelBySlug, getPosts,
   incrementViews, incrementLikes,
   subscribeChannel, unsubscribeChannel,
@@ -17,6 +18,7 @@ import ZuckStories from '@/components/ZuckStories';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
+const ShareSheet = dynamic(() => import('@/components/ShareSheet'), { ssr: false });
 
 const POST_CATS = [
   { id: 'all',      label: 'All',       icon: '✦' },
@@ -200,6 +202,8 @@ function PostModal({
 
   const [carIdx,  setCarIdx]  = useState(0);
   const [commenting, setCommenting] = useState(false);
+  const [shareSlug, setShareSlug] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
   const scrollRef   = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const swipeRef    = useRef({ x: 0, y: 0, inCar: false });
@@ -226,6 +230,18 @@ function PostModal({
 
   // Reset carousel position when post changes
   useEffect(() => { setCarIdx(0); scrollRef.current?.scrollTo({ left: 0 }); }, [post.id]);
+
+  // Nano-id slugs are get-or-create — resolved on demand rather than
+  // fetched for every post in the feed just in case someone shares it.
+  const openShare = async () => {
+    setShareLoading(true);
+    try {
+      const { data } = await supabase.rpc('ir_create_nano_id', { p_entity_type: 'post', p_entity_id: post.id });
+      if (data) setShareSlug(data as string);
+    } finally {
+      setShareLoading(false);
+    }
+  };
 
   const onSwipeStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -371,12 +387,21 @@ function PostModal({
             <span className="text-xl">💬</span>
             <span className="text-sm font-semibold text-white">Comment</span>
           </button>
+          <button onClick={openShare} disabled={shareLoading}
+            className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer disabled:opacity-50">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
           <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>👁 {(post.views ?? 0) + 1}</span>
           <span className="text-xs ml-auto" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
         </div>
       </div>
 
       {commenting && <CommentDrawer entityId={post.id} onClose={() => setCommenting(false)} />}
+      {shareSlug && (
+        <ShareSheet slug={shareSlug} entityType="post" title={post.title || 'InstaRishta post'} onClose={() => setShareSlug(null)} />
+      )}
 
       {/* Prev / next post arrows */}
       {postIdx > 0 && (
