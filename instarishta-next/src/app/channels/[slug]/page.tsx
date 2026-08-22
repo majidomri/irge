@@ -334,7 +334,7 @@ function PostModal({
   onLike: (id: string) => void; onNavigate: (p: IPost) => void;
   onPlayAttempt?: () => Promise<boolean>;
 }) {
-  const imgs    = [post.image, ...(Array.isArray(post.images) ? post.images.filter(Boolean) : [])].filter(Boolean);
+  const imgs    = [post.image, ...(Array.isArray(post.images) ? post.images : [])].filter((v): v is string => Boolean(v));
   const isAudio = !!post.audio_url;
   const isText  = !post.image && !isAudio;
   const hasImg  = imgs.length > 0;
@@ -763,7 +763,8 @@ export default function ChannelFeedPage() {
         <ClickSpark sparkColor="#00A86B" sparkRadius={22} sparkCount={8} duration={450}>
         <div className="grid gap-0.5" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           {visiblePosts.map(post => {
-            const hasImage = !!post.image;
+            const cover = post.thumb ?? post.image ?? null;
+            const hasImage = !!cover;
             const hasAudio = !!post.audio_url;
             return (
               <button
@@ -772,9 +773,9 @@ export default function ChannelFeedPage() {
                 className="relative overflow-hidden border-0 p-0 cursor-pointer block"
                 style={{ aspectRatio: '1', background: hasImage ? '#F3F0EE' : hasAudio ? '#0d1e18' : '#1E3932' }}
               >
-                {hasImage ? (
+                {cover ? (
                   <img
-                    src={post.thumb ?? post.image}
+                    src={cover}
                     alt={post.title ?? ''}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     loading="lazy"

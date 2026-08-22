@@ -74,7 +74,8 @@ export default async function PostSlugPage({ params }: { params: Promise<{ slug:
   if (!data) return notFound();
 
   const { post, stats, profileSlug, comments, commentCount } = data;
-  const images: string[] = (post.images as string[] | null) ?? [post.image as string];
+  const cover: string | null = (post.thumb as string | null) ?? (post.image as string | null) ?? null;
+  const images: string[] = ((post.images as string[] | null) ?? (post.image ? [post.image as string] : [])).filter(Boolean);
 
   return (
     <main style={{ minHeight: '100vh', background: '#FAFAF9' }}>
@@ -92,28 +93,43 @@ export default async function PostSlugPage({ params }: { params: Promise<{ slug:
 
       <div style={{ maxWidth: 520, margin: '24px auto', padding: '0 16px' }}>
 
-        {/* Main image */}
-        <div style={{ borderRadius: 20, overflow: 'hidden', border: '1px solid #F0ECE8', background: '#fff' }}>
-          <div style={{ position: 'relative', aspectRatio: '3/4' }}>
-            <Image
-              src={(post.thumb ?? post.image) as string}
-              alt={(post.title ?? 'Profile post') as string}
-              fill
-              style={{ objectFit: 'cover' }}
-              sizes="(max-width: 520px) 95vw, 520px"
-              priority
-            />
+        {/* Main image, or a text card when the post has no image (caption/audio-only) */}
+        {cover ? (
+          <div style={{ borderRadius: 20, overflow: 'hidden', border: '1px solid #F0ECE8', background: '#fff' }}>
+            <div style={{ position: 'relative', aspectRatio: '3/4' }}>
+              <Image
+                src={cover}
+                alt={(post.title ?? 'Profile post') as string}
+                fill
+                style={{ objectFit: 'cover' }}
+                sizes="(max-width: 520px) 95vw, 520px"
+                priority
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ borderRadius: 20, border: '1px solid #F0ECE8', background: '#1E3932', padding: 28 }}>
+            {post.title && (
+              <h1 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>
+                {post.title as string}
+              </h1>
+            )}
+            {post.caption && (
+              <p style={{ margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
+                {post.caption as string}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Post info */}
         <div style={{ marginTop: 16, padding: '0 4px' }}>
-          {post.title && (
+          {cover && post.title && (
             <h1 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 800, color: '#141413', lineHeight: 1.2 }}>
               {post.title as string}
             </h1>
           )}
-          {post.caption && (
+          {cover && post.caption && (
             <p style={{ margin: 0, fontSize: 15, color: '#696969', lineHeight: 1.7 }}>
               {post.caption as string}
             </p>

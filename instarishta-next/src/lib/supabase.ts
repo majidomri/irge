@@ -186,7 +186,7 @@ export interface IPost {
   id: string;
   channel_id: string;
   user_id?: string;
-  image: string;
+  image?: string | null; // absent for text/audio-only posts
   thumb?: string;
   images?: string[];
   title?: string;

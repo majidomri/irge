@@ -112,18 +112,28 @@ export default async function ProfileSlugPage({ params }: { params: Promise<{ sl
           </p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-            {posts.map(post => (
+            {posts.map(post => {
+              const cover = (post.thumb as string | null) ?? (post.image as string | null) ?? null;
+              return (
               <div key={post.id as string} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', border: '1px solid #F0ECE8' }}>
-                <div style={{ position: 'relative', aspectRatio: '3/4' }}>
-                  <Image
-                    src={(post.thumb ?? post.image) as string}
-                    alt={(post.title ?? 'Profile post') as string}
-                    fill
-                    style={{ objectFit: 'cover' }}
-                    sizes="(max-width: 680px) 45vw, 220px"
-                  />
-                </div>
-                {post.title && (
+                {cover ? (
+                  <div style={{ position: 'relative', aspectRatio: '3/4' }}>
+                    <Image
+                      src={cover}
+                      alt={(post.title ?? 'Profile post') as string}
+                      fill
+                      style={{ objectFit: 'cover' }}
+                      sizes="(max-width: 680px) 45vw, 220px"
+                    />
+                  </div>
+                ) : (
+                  <div style={{ aspectRatio: '3/4', background: '#1E3932', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#fff', textAlign: 'center', lineHeight: 1.4 }}>
+                      {(post.title as string) || (post.caption as string) || 'Post'}
+                    </p>
+                  </div>
+                )}
+                {cover && post.title && (
                   <div style={{ padding: '10px 12px 12px' }}>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#141413', lineHeight: 1.4 }}>
                       {post.title as string}
@@ -141,8 +151,14 @@ export default async function ProfileSlugPage({ params }: { params: Promise<{ sl
                     )}
                   </div>
                 )}
+                {!cover && post.shareSlug && (
+                  <div style={{ padding: '10px 12px 12px' }}>
+                    <ShareButton slug={post.shareSlug} entityType="post" size="sm" label="Share post" />
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
