@@ -1,17 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import * as ZuckModule from 'zuck.js';
+import { Zuck } from 'zuck.js';
 import 'zuck.js/css';
 import './zuck-overrides.css';
-
-// zuck.js is published as a plain CommonJS `module.exports = Zuck` — its own
-// .d.ts claims a default export, but under Next's bundler that shape doesn't
-// always land on `.default` (it can come through as the module object
-// itself, or with the function hiding under `.default` depending on how the
-// chunk gets interop-wrapped). Caught live: `import Zuck from 'zuck.js'`
-// built and typechecked fine but threw "is not a function" at runtime.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Zuck = ((ZuckModule as any).default ?? ZuckModule) as (el: HTMLElement, options: Record<string, unknown>) => unknown;
 
 interface TimelineItem {
   id: string;
