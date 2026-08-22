@@ -35,7 +35,7 @@ export async function POST(
   const { id } = await params;
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   const { data: notif } = await db
     .from('ir_notifications')
     .select('id, type, entity_type, entity_id, comment_id, actor_user_id, actor_name, chip_key, responded_at')

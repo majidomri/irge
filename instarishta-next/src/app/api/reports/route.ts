@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   // auth.users.id. Only called when signed in, so filing a report while
   // signed out never creates a profile row.
   const reporterId = reporterEmail
-    ? (await ensureProfile(db, reporterEmail, session?.user?.name ?? null)).id
+    ? (await ensureProfile(db, reporterEmail, session?.user?.name || null)).id // || not ?? — better-auth defaults name to '', not null
     : null;
 
   if (await isRateLimited({ userId: reporterId, email: reporterEmail ?? contactRaw, ip })) {
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ reports: [] });
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   const { data } = await db
     .from('ir_reports')
     .select('id, entity_type, profile_num, category, status, created_at')

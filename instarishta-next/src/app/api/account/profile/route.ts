@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     db,
     session.user.id,
     session.user.email,
-    session.user.name ?? null,
+    session.user.name || null, // || not ?? — better-auth defaults name to '', not null
   );
 
   // Infinity isn't valid JSON — send null to mean "unlimited" on every axis.

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   const { monthly, daily } = interestAllowance(profile.plan);
   const [usage, interests] = await Promise.all([
     interestUsage(db, session.user.id),
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   if (profile.is_banned) {
     return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
   }
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   const result = await sendInterest(db, {
     email:     session.user.email,
     userId:    session.user.id,
-    name:      profile.full_name ?? session.user.name ?? null,
+    name:      profile.full_name || session.user.name || null, // || not ?? — see note above
     profileId,
     num:       typeof body.num === 'number' ? body.num : null,
     title:     typeof body.title === 'string' ? body.title : '',
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     profileId,
     chip,
     from:   session.user.email,
-    name:   profile.full_name ?? session.user.name ?? null,
+    name:   profile.full_name || session.user.name || null, // || not ?? — see note above
     used:   result.usedMonth,
     monthly,
   }).catch(() => {});

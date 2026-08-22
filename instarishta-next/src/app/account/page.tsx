@@ -109,7 +109,9 @@ export default function AccountPage() {
 
   const planName    = planLabel(summary?.plan);
   const subscribed  = !!summary && summary.monthly_credits > 0;
-  const displayName = summary?.full_name ?? user.name ?? user.email;
+  // || not ?? — better-auth defaults name to '' (not null), which ??
+  // would let win over the next fallback, producing a blank display name.
+  const displayName = summary?.full_name || user.name || user.email;
 
   return (
     <div className="min-h-screen px-5 py-8" style={{ background: '#0a1a14' }}>

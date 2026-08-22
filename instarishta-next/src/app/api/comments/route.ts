@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   if (profile.is_banned) {
     return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
   }

@@ -35,7 +35,13 @@ export async function POST(req: NextRequest) {
   const ip     = clientIp(req);
   const ipHash = createHash('sha256').update(ip + slug).digest('hex').slice(0, 16);
   const referer = req.headers.get('referer') ?? null;
-  const finalSource = source ?? (referer ? new URL(referer).hostname : null);
+  // Referer is client-controlled and unvalidated — a malformed value must
+  // not 500 this public, unauthenticated endpoint.
+  let refererHost: string | null = null;
+  if (referer) {
+    try { refererHost = new URL(referer).hostname; } catch { /* malformed referer, ignore */ }
+  }
+  const finalSource = source ?? refererHost;
 
   await adminClient().rpc('ir_record_event', {
     p_slug:       slug,

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   }
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   if (!profile.id) {
     return NextResponse.json({ error: 'No profile' }, { status: 500 });
   }

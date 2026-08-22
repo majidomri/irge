@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ notifications: [], unreadCount: 0 });
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   const { data } = await db
     .from('ir_notifications')
     .select(COLS)
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const db = serviceClient();
-  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const now = new Date().toISOString();
 
