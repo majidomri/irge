@@ -59,22 +59,25 @@ export async function GET(req: NextRequest) {
     groups.get(key)!.push(s);
   }
 
+  // zuck.js's `time` fields want epoch milliseconds (a number), not an ISO
+  // string — passing the ISO string rendered every story as "1/1/1970" in
+  // the live viewer (silently coerced to 0). Caught live.
   const timeline = [...groups.entries()].map(([key, items]) => {
     const latest = items[items.length - 1];
     return {
       id: key,
       name: key === 'house' ? (channel?.name ?? 'InstaRishta') : (nameById[key] ?? 'Member'),
       photo: latest.image,
-      lastUpdated: latest.created_at,
+      lastUpdated: new Date(latest.created_at).getTime(),
       items: items.map(s => ({
         id: s.id,
         type: 'photo',
         length: 5,
         src: s.image,
-        time: s.created_at,
+        time: new Date(s.created_at).getTime(),
       })),
     };
-  }).sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
+  }).sort((a, b) => b.lastUpdated - a.lastUpdated);
 
   return NextResponse.json({ stories: timeline });
 }

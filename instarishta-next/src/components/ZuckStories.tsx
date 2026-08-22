@@ -8,8 +8,8 @@ interface TimelineItem {
   id: string;
   name: string;
   photo: string;
-  lastUpdated: string;
-  items: { id: string; type: string; length: number; src: string; time: string }[];
+  lastUpdated: number;
+  items: { id: string; type: string; length: number; src: string; time: number }[];
 }
 
 /**
