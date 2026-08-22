@@ -16,8 +16,8 @@ export default function CommentDrawer({
   return (
     <div className="fixed inset-0 z-[300] flex items-end justify-center">
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.65)' }} onClick={onClose} />
-      <section className="relative w-full sm:max-w-md rounded-t-3xl overflow-hidden"
-        style={{ background: '#141413', zIndex: 1, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+      <section className="relative w-full rounded-t-3xl overflow-hidden"
+        style={{ background: '#141413', zIndex: 1, maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
 
         <div className="px-5 pt-4 pb-3 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <h2 className="text-sm font-extrabold text-white">Comments</h2>

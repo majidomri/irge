@@ -76,8 +76,8 @@ export default function ShareSheet({
   return (
     <div className="fixed inset-0 z-[300] flex items-end justify-center">
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.65)' }} onClick={onClose} />
-      <section className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden p-5"
-        style={{ background: '#141413', color: '#fff', zIndex: 1 }}>
+      <section className="relative w-full rounded-t-3xl sm:rounded-3xl overflow-hidden p-5"
+        style={{ background: '#141413', color: '#fff', zIndex: 1, maxWidth: 480 }}>
 
         <div className="flex items-start justify-between mb-4">
           <div>

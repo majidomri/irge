@@ -263,8 +263,12 @@ function PostModal({
   const coverForBg = imgs[carIdx] || imgs[0];
 
   return (
-    <div className="fixed inset-0 z-200 flex flex-col overflow-hidden"
-      style={{ background: '#0d1117', height: '100dvh' }}
+    // Full-viewport black backdrop — kept separate from the phone-width
+    // column below so a real (portrait) photo never stretches to fill an
+    // ultra-wide desktop viewport; the leftover sides just stay solid black.
+    <div className="fixed inset-0 z-200" style={{ background: '#000' }}>
+    <div className="relative mx-auto flex flex-col overflow-hidden h-full"
+      style={{ background: '#0d1117', maxWidth: 480 }}
       onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
 
       {/* Ambient blur */}
@@ -420,6 +424,7 @@ function PostModal({
         .ir-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
         .ir-no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
       `}</style>
+    </div>
     </div>
   );
 }

@@ -31,3 +31,19 @@
 body .story-viewer .slides-pointers .progress span {
   background: #00a86b;
 }
+
+/*
+ * Constrain the full-screen story viewer to a phone-width column, same as
+ * PostModal — otherwise a real (portrait) story photo stretches to fill an
+ * ultra-wide desktop viewport instead of just being letterboxed. The
+ * box-shadow is the actual backdrop: a 9999px-spread shadow the same color
+ * as the viewer paints solid over the rest of the viewport, which works
+ * regardless of exactly how zuck.js positions this element internally.
+ */
+body .story-viewer {
+  max-width: 480px !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 9999px #000;
+}
