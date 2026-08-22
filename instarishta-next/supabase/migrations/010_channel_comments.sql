@@ -20,7 +20,10 @@ CREATE TABLE IF NOT EXISTS public.ir_comments (
   entity_type   TEXT NOT NULL DEFAULT 'post' CHECK (entity_type IN ('post', 'story')),
   entity_id     UUID NOT NULL,
 
-  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- No FK to auth.users(id): ir_user_profiles.id (what this actually stores,
+  -- via ensureProfile()) has no such FK either in this app's schema — a
+  -- member signed up via magic-link has no auth.users row at all.
+  user_id       UUID NOT NULL,
   author_name   TEXT NOT NULL, -- snapshot at post time — a later name change must not rewrite history
 
   chip_key      TEXT NOT NULL CHECK (chip_key IN ('interested', 'view_profile', 'is_done', 'answer_asap')),

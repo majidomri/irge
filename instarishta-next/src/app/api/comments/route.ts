@@ -78,7 +78,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
   }
 
-  const authorName = profile.full_name ?? session.user.name ?? session.user.email.split('@')[0];
+  // ?? would let better-auth's '' (not null) default name win over a real
+  // fallback — caught live when a magic-link signup with no name produced a
+  // blank author_name. || correctly treats '' as "keep looking".
+  const authorName = profile.full_name || session.user.name || session.user.email.split('@')[0];
 
   const { data, error } = await db
     .from('ir_comments')

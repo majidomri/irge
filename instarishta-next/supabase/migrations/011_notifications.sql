@@ -20,14 +20,18 @@
 CREATE TABLE IF NOT EXISTS public.ir_notifications (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  user_id        UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE, -- inbox owner / recipient
+  -- No FK to auth.users(id) on user_id/actor_user_id: ir_user_profiles.id
+  -- (what these actually store, via ensureProfile()) has no such FK either
+  -- in this app's schema — a member signed up via magic-link has no
+  -- auth.users row at all.
+  user_id        UUID NOT NULL, -- inbox owner / recipient
   type           TEXT NOT NULL CHECK (type IN ('comment_received', 'comment_acknowledged')),
 
   entity_type    TEXT NOT NULL CHECK (entity_type IN ('post', 'story')),
   entity_id      UUID NOT NULL,
   comment_id     UUID REFERENCES public.ir_comments(id) ON DELETE CASCADE,
 
-  actor_user_id  UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- who caused this notification
+  actor_user_id  UUID, -- who caused this notification
   actor_name     TEXT NOT NULL,                                     -- snapshot, same reasoning as ir_comments.author_name
   chip_key       TEXT,
 

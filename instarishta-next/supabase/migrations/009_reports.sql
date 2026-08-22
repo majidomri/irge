@@ -19,7 +19,10 @@
 CREATE TABLE IF NOT EXISTS public.ir_reports (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  reporter_user_id  UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  -- No FK to auth.users(id): ir_user_profiles.id (what this actually stores,
+  -- via ensureProfile()) has no such FK either in this app's schema — a
+  -- member signed up via magic-link has no auth.users row at all.
+  reporter_user_id  UUID,
   reporter_email    TEXT,   -- from the session when signed in
   reporter_contact  TEXT,   -- optional email typed by an anonymous reporter
 

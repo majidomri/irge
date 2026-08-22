@@ -56,7 +56,9 @@ export async function POST(
   const now = new Date().toISOString();
   await db.from('ir_notifications').update({ responded_at: now }).eq('id', id);
 
-  const responderName = profile.full_name ?? session.user.name ?? session.user.email.split('@')[0];
+  // See comments/route.ts's authorName for why this is || not ?? — better-auth
+  // defaults name to '' (not null), which ?? would let win over the fallback.
+  const responderName = profile.full_name || session.user.name || session.user.email.split('@')[0];
   await db.from('ir_notifications').insert({
     user_id:       notif.actor_user_id,
     type:          'comment_acknowledged',
