@@ -13,11 +13,14 @@
  * responded_at already set and 404s) rather than double-notifying the
  * original commenter.
  *
+ * Uses ensureProfile(session).id, not session.user.id, to match user_id/
+ * actor_user_id — see the note in ../route.ts for why.
+ *
  * Node runtime.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { serviceClient } from '@/lib/credits';
+import { serviceClient, ensureProfile } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 
@@ -26,17 +29,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user?.id) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const { id } = await params;
 
   const db = serviceClient();
+  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
   const { data: notif } = await db
     .from('ir_notifications')
     .select('id, type, entity_type, entity_id, comment_id, actor_user_id, actor_name, chip_key, responded_at')
     .eq('id', id)
-    .eq('user_id', session.user.id)
+    .eq('user_id', profile.id)
     .eq('type', 'comment_received')
     .maybeSingle();
 
@@ -52,14 +56,14 @@ export async function POST(
   const now = new Date().toISOString();
   await db.from('ir_notifications').update({ responded_at: now }).eq('id', id);
 
-  const responderName = session.user.name ?? session.user.email?.split('@')[0] ?? 'Someone';
+  const responderName = profile.full_name ?? session.user.name ?? session.user.email.split('@')[0];
   await db.from('ir_notifications').insert({
     user_id:       notif.actor_user_id,
     type:          'comment_acknowledged',
     entity_type:   notif.entity_type,
     entity_id:     notif.entity_id,
     comment_id:    notif.comment_id,
-    actor_user_id: session.user.id,
+    actor_user_id: profile.id,
     actor_name:    responderName,
     chip_key:      notif.chip_key,
   });

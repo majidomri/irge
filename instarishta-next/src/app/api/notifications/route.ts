@@ -7,14 +7,19 @@
  *
  * Bell-icon inbox for the comment_received / comment_acknowledged events
  * (see lib/notifications.ts). ir_notifications has RLS enabled with no
- * write policies, so this route is the only path — every query is scoped to
- * the caller's own session.user.id, never a client-supplied id.
+ * write policies, so this route is the only path.
+ *
+ * Every query is scoped to ensureProfile(session).id — NOT session.user.id.
+ * better-auth's session id (e.g. "FfanPw2y...") lives in a different id space
+ * than auth.users.id, which is what user_id's foreign key actually points to
+ * (see /api/auth/supabase-token); ir_notifications rows are written with the
+ * latter, via lib/notifications.ts.
  *
  * Node runtime.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { serviceClient } from '@/lib/credits';
+import { serviceClient, ensureProfile } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 
@@ -22,13 +27,14 @@ const COLS = 'id, type, entity_type, entity_id, comment_id, actor_user_id, actor
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user?.id) return NextResponse.json({ notifications: [], unreadCount: 0 });
+  if (!session?.user?.email) return NextResponse.json({ notifications: [], unreadCount: 0 });
 
   const db = serviceClient();
+  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
   const { data } = await db
     .from('ir_notifications')
     .select(COLS)
-    .eq('user_id', session.user.id)
+    .eq('user_id', profile.id)
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -50,7 +56,7 @@ export async function GET(req: NextRequest) {
   const { count: unreadCount } = await db
     .from('ir_notifications')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', session.user.id)
+    .eq('user_id', profile.id)
     .is('read_at', null);
 
   return NextResponse.json({
@@ -61,15 +67,16 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const db = serviceClient();
+  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const now = new Date().toISOString();
 
   if (body.all === true) {
     await db.from('ir_notifications').update({ read_at: now })
-      .eq('user_id', session.user.id).is('read_at', null);
+      .eq('user_id', profile.id).is('read_at', null);
     return NextResponse.json({ ok: true });
   }
 
@@ -77,7 +84,7 @@ export async function PATCH(req: NextRequest) {
   if (!ids.length) return NextResponse.json({ error: 'Missing ids' }, { status: 400 });
 
   await db.from('ir_notifications').update({ read_at: now })
-    .eq('user_id', session.user.id).in('id', ids);
+    .eq('user_id', profile.id).in('id', ids);
 
   return NextResponse.json({ ok: true });
 }

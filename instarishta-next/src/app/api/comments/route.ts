@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     .from('ir_comments')
     .insert({
       entity_type: entityType, entity_id: entityId,
-      user_id: session.user.id, author_name: authorName, chip_key: chipKey,
+      user_id: profile.id, author_name: authorName, chip_key: chipKey,
     })
     .select('id, author_name, chip_key, created_at')
     .single();
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
   void notifyCommentReceived(db, {
     entityType: entityType, entityId, commentId: data.id,
-    actorUserId: session.user.id, actorName: authorName, chipKey: chipKey,
+    actorUserId: profile.id, actorName: authorName, chipKey: chipKey,
   });
 
   return NextResponse.json({ ok: true, comment: data }, { status: 201 });

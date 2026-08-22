@@ -19,7 +19,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { serviceClient } from '@/lib/credits';
+import { serviceClient, ensureProfile } from '@/lib/credits';
 import {
   isEntityType, isReportCategory, severityFor, isRateLimited, notifyReport,
 } from '@/lib/reports';
@@ -49,8 +49,18 @@ export async function POST(req: NextRequest) {
 
   const reporterEmail = session?.user?.email ?? null;
   const ip = clientIp(req);
+  const db = serviceClient();
 
-  if (await isRateLimited({ userId: session?.user?.id ?? null, email: reporterEmail ?? contactRaw, ip })) {
+  // session.user.id is better-auth's own id — NOT the auth.users uuid that
+  // reporter_user_id's foreign key points to (see /api/auth/supabase-token).
+  // ensureProfile resolves the real bridge: ir_user_profiles.id, which IS
+  // auth.users.id. Only called when signed in, so filing a report while
+  // signed out never creates a profile row.
+  const reporterId = reporterEmail
+    ? (await ensureProfile(db, reporterEmail, session?.user?.name ?? null)).id
+    : null;
+
+  if (await isRateLimited({ userId: reporterId, email: reporterEmail ?? contactRaw, ip })) {
     return NextResponse.json(
       { error: 'You have submitted several reports recently. Our team is reviewing them — please wait before sending more.' },
       { status: 429 },
@@ -58,11 +68,10 @@ export async function POST(req: NextRequest) {
   }
 
   const severity = severityFor(category);
-  const db = serviceClient();
   const { data, error } = await db
     .from('ir_reports')
     .insert({
-      reporter_user_id: session?.user?.id ?? null,
+      reporter_user_id: reporterId,
       reporter_email:   reporterEmail,
       reporter_contact: contactRaw,
       entity_type: entityType,
@@ -92,13 +101,14 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user?.id) return NextResponse.json({ reports: [] });
+  if (!session?.user?.email) return NextResponse.json({ reports: [] });
 
   const db = serviceClient();
+  const profile = await ensureProfile(db, session.user.email, session.user.name ?? null);
   const { data } = await db
     .from('ir_reports')
     .select('id, entity_type, profile_num, category, status, created_at')
-    .eq('reporter_user_id', session.user.id)
+    .eq('reporter_user_id', profile.id)
     .order('created_at', { ascending: false })
     .limit(50);
 
