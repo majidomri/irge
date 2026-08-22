@@ -3,16 +3,17 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import {
-  getChannelBySlug, getPosts, getStories,
+  getChannelBySlug, getPosts,
   incrementViews, incrementLikes,
   subscribeChannel, unsubscribeChannel,
   POST_PAGE_SIZE,
-  type IChannel, type IPost, type IStory,
+  type IChannel, type IPost,
 } from '@/lib/supabase';
 import GradientText from '@/components/ui/GradientText';
 import TextType from '@/components/ui/TextType';
 import ClickSpark from '@/components/ui/ClickSpark';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
+import ZuckStories from '@/components/ZuckStories';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
@@ -37,148 +38,6 @@ function catOf(p: IPost) {
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-const STORY_DURATION = 5000;
-
-// ── Story viewer ──────────────────────────────────────────────────────────────
-
-function StoryViewer({
-  stories,
-  initialIdx,
-  onClose,
-}: { stories: IStory[]; initialIdx: number; onClose: () => void }) {
-  const [idx, setIdx]         = useState(initialIdx);
-  const [paused, setPaused]   = useState(false);
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startRef  = useRef(0);
-  const elapsedRef = useRef(0);
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-    };
-  }, []);
-
-  const clearTimer = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
-
-  const advance = useCallback((dir: number) => {
-    const next = idx + dir;
-    if (next < 0 || next >= stories.length) { onClose(); return; }
-    elapsedRef.current = 0;
-    setIdx(next);
-  }, [idx, stories.length, onClose]);
-
-  const startFrom = useCallback((elapsed: number) => {
-    clearTimer();
-    startRef.current = Date.now();
-    elapsedRef.current = elapsed;
-    const remaining = STORY_DURATION - elapsed;
-    timerRef.current = setTimeout(() => advance(1), remaining);
-  }, [advance]);
-
-  // Start/restart timer whenever idx changes or paused toggles
-  useEffect(() => {
-    if (paused) {
-      // Record how much time elapsed before pause
-      elapsedRef.current = elapsedRef.current + (Date.now() - startRef.current);
-      clearTimer();
-    } else {
-      startFrom(elapsedRef.current);
-    }
-    return clearTimer;
-  }, [idx, paused, startFrom]);
-
-  // Reset elapsed when idx changes
-  useEffect(() => { elapsedRef.current = 0; }, [idx]);
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    setPaused(true);
-  };
-  const handlePointerUp = () => setPaused(false);
-
-  const handleTap = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    advance(e.clientX < window.innerWidth * 0.4 ? -1 : 1);
-  };
-
-  const story = stories[idx];
-
-  return (
-    <div
-      className="fixed inset-0 z-300 bg-black flex flex-col select-none"
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
-      onClick={handleTap}
-    >
-      {/* Progress bars */}
-      <div className="absolute top-3 left-3 right-3 flex gap-1 z-20">
-        {stories.map((_, i) => (
-          <div key={i} className="flex-1 h-0.75 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.3)' }}>
-            {i < idx ? (
-              <div className="h-full w-full bg-white" />
-            ) : i === idx ? (
-              <div
-                key={`${idx}-${paused}`}
-                className="h-full bg-white"
-                style={{
-                  animation: `storyTick ${STORY_DURATION - elapsedRef.current}ms linear forwards`,
-                  animationPlayState: paused ? 'paused' : 'running',
-                  width: '0%',
-                }}
-              />
-            ) : (
-              <div className="h-full w-0 bg-white" />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Close */}
-      <button
-        onClick={e => { e.stopPropagation(); onClose(); }}
-        className="absolute top-10 right-3.5 z-20 w-9 h-9 rounded-full flex items-center justify-center text-lg border-0"
-        style={{ background: 'rgba(0,0,0,0.45)', color: '#fff' }}
-      >✕</button>
-
-      {/* Counter */}
-      <div className="absolute top-10 left-3.5 z-20 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.65)' }}>
-        {idx + 1} / {stories.length}
-      </div>
-
-      {/* Pause indicator */}
-      {paused && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
-            <span className="text-2xl text-white">⏸</span>
-          </div>
-        </div>
-      )}
-
-      {/* Image */}
-      <img
-        src={story.image}
-        alt="Story"
-        className="absolute inset-0 w-full h-full object-contain"
-        style={{ pointerEvents: 'none', userSelect: 'none' }}
-        draggable={false}
-      />
-
-      {/* Tap zone hints */}
-      <div className="absolute inset-y-0 left-0 w-2/5 z-10 pointer-events-none flex items-center pl-3">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}>‹</div>
-      </div>
-
-      <style>{`
-        @keyframes storyTick { from { width: 0%; } to { width: 100%; } }
-      `}</style>
-    </div>
-  );
 }
 
 // ── Audio player (shared) ─────────────────────────────────────────────────────
@@ -547,16 +406,12 @@ export default function ChannelFeedPage() {
 
   const [channel,  setChannel]  = useState<IChannel | null>(null);
   const [posts,    setPosts]     = useState<IPost[]>([]);
-  const [stories,  setStories]   = useState<IStory[]>([]);
   const [loading,  setLoading]   = useState(true);
   const [error,    setError]     = useState('');
   const [page,     setPage]      = useState(0);
   const [done,     setDone]      = useState(false);
   const [catFilter, setCatFilter] = useState('all');
   const [newBadge, setNewBadge]  = useState(false);
-
-  const [storyOpen,  setStoryOpen]  = useState(false);
-  const [storyStart, setStoryStart] = useState(0);
 
   const [modalPost,  setModalPost]  = useState<IPost | null>(null);
   const [liked,      setLiked]      = useState<Set<string>>(new Set());
@@ -568,10 +423,6 @@ export default function ChannelFeedPage() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const realtimeRef = useRef<any>(null);
-
-  const seenKey  = 'ir_seen_stories';
-  const getSeen  = () => { try { return JSON.parse(localStorage.getItem(seenKey) ?? '[]') as string[]; } catch { return []; } };
-  const markSeen = (id: string) => { const s = getSeen(); if (!s.includes(id)) localStorage.setItem(seenKey, JSON.stringify([...s, id])); };
 
   const loadPosts = useCallback(async (ch: IChannel, pg: number) => {
     setLoading(true);
@@ -591,9 +442,7 @@ export default function ChannelFeedPage() {
         const ch = await getChannelBySlug(slug);
         if (!ch) { setError('Channel not found.'); setLoading(false); return; }
         setChannel(ch);
-        const [, storyData] = await Promise.all([loadPosts(ch, 0), getStories(ch.id)]);
-        // latest stories first
-        setStories([...storyData].sort((a, b) => b.created_at.localeCompare(a.created_at)));
+        await loadPosts(ch, 0);
 
         realtimeRef.current = subscribeChannel(ch.id, (post) => {
           setPosts(prev => [post, ...prev]);
@@ -685,31 +534,8 @@ export default function ChannelFeedPage() {
           <span className="text-xs font-semibold shrink-0" style={{ color: 'rgba(255,255,255,0.55)' }}>{posts.length} posts</span>
         </div>
 
-        {/* Stories strip */}
-        {stories.length > 0 && (
-          <div className="flex gap-3.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-            {stories.map((s, i) => {
-              const seen = getSeen().includes(s.id);
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => { markSeen(s.id); setStoryStart(i); setStoryOpen(true); }}
-                  className="shrink-0 flex flex-col items-center gap-1.5 border-0 bg-transparent p-0 cursor-pointer"
-                >
-                  <div className="w-15 h-15 rounded-full p-[2.5px]"
-                    style={{ background: seen ? 'rgba(255,255,255,0.25)' : 'linear-gradient(135deg,#00754A,#004f33)' }}>
-                    <div className="w-full h-full rounded-full overflow-hidden" style={{ border: '2px solid #1E3932' }}>
-                      <img src={s.image} alt="" className="w-full h-full object-cover" loading="lazy" />
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.65)', maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    Story {i + 1}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* Stories tray + viewer (zuck.js) */}
+        {channel && <ZuckStories channelId={channel.id} />}
       </div>
 
       {/* ── Featured profiles spotlight ── */}
@@ -840,15 +666,6 @@ export default function ChannelFeedPage() {
         <p className="text-center text-xs py-6 pb-20" style={{ color: '#A0A0A0' }}>
           All {posts.length} posts loaded
         </p>
-      )}
-
-      {/* ── Story viewer ── */}
-      {storyOpen && stories.length > 0 && (
-        <StoryViewer
-          stories={stories}
-          initialIdx={storyStart}
-          onClose={() => setStoryOpen(false)}
-        />
       )}
 
       {/* ── Post modal ── */}

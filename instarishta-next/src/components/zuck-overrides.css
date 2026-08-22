@@ -1,0 +1,33 @@
+/**
+ * Brand overrides for zuck.js (base styles come from 'zuck.js/css').
+ * Scoped to .ir-zuck-stories so nothing here leaks into the rest of the app.
+ * Targets zuck.js's own class names — adjust here, not in the library, if a
+ * future zuck.js upgrade renames one of these.
+ */
+.ir-zuck-stories {
+  padding: 0 4px;
+}
+
+.ir-zuck-stories .story .name {
+  font-family: inherit;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ir-zuck-stories .story .time {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Unseen ring — brand green gradient instead of the library default */
+.ir-zuck-stories .story:not(.seen) .item-link {
+  background: linear-gradient(135deg, #00754a, #004f33);
+}
+
+.ir-zuck-stories .story.seen .item-link {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Full-screen viewer progress bar */
+.ir-zuck-stories ~ .story-viewer .slides-pointers .progress span,
+body .story-viewer .slides-pointers .progress span {
+  background: #00a86b;
+}
