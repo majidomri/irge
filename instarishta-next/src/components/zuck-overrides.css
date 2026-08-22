@@ -8,6 +8,25 @@
   padding: 0 4px;
 }
 
+/*
+ * The empty scrollbar under the story tray: zuck.js's own base CSS
+ * (.stories.carousel) scrolls this row HORIZONTALLY (white-space:nowrap +
+ * overflow:auto), but its ::-webkit-scrollbar rule only zeroes `width` —
+ * that hides a *vertical* scrollbar's thickness. A horizontal scrollbar's
+ * thickness is controlled by `height`, which the library never zeroes, so
+ * Chrome/Edge on desktop render a bare, contentless scrollbar track under
+ * the avatars. Confirmed by reading node_modules/zuck.js/src/styles/timeline.css.
+ */
+.ir-zuck-stories.stories::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+.ir-zuck-stories.stories {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 .ir-zuck-stories .story .name {
   font-family: inherit;
   color: rgba(255, 255, 255, 0.85);

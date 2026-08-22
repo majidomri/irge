@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   const { data: rows, error } = await db
     .from('ir_stories')
-    .select('id, user_id, image, created_at')
+    .select('id, user_id, image, created_at, likes')
     .eq('channel_id', channelId)
     .gte('created_at', cutoff)
     .order('created_at', { ascending: true });
@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
         length: 5,
         src: s.image,
         time: toUnixSeconds(s.created_at),
+        likes: s.likes ?? 0,
       })),
     };
   }).sort((a, b) => b.lastUpdated - a.lastUpdated);

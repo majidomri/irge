@@ -8,9 +8,10 @@ import CommentSection from './CommentSection';
  * same "stack a modal on a modal" approach as ReportModal over BiodataModal.
  */
 export default function CommentDrawer({
-  entityId, onClose,
+  entityId, entityType = 'post', onClose,
 }: {
   entityId: string;
+  entityType?: 'post' | 'story';
   onClose: () => void;
 }) {
   return (
@@ -26,7 +27,7 @@ export default function CommentDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <CommentSection entityType="post" entityId={entityId} />
+          <CommentSection entityType={entityType} entityId={entityId} />
         </div>
       </section>
     </div>

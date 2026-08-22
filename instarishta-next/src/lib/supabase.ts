@@ -116,6 +116,10 @@ export async function incrementLikes(postId: string) {
   await supabase.rpc('ir_increment_likes', { post_id: postId });
 }
 
+export async function incrementStoryLikes(storyId: string) {
+  await supabase.rpc('ir_increment_story_likes', { story_id: storyId });
+}
+
 export async function incrementViews(postId: string) {
   await supabase.rpc('ir_increment_views', { post_id: postId });
 }
@@ -202,5 +206,6 @@ export interface IStory {
   channel_id: string;
   user_id?: string;
   image: string;
+  likes?: number;
   created_at: string;
 }
