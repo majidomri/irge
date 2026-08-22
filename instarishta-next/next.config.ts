@@ -44,6 +44,15 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  // /nizam's post/story "Image URL" fields are free text — any host is a
+  // valid value there — but next/image rejects an external domain that
+  // isn't allowlisted here. Without this, any admin-pasted image renders
+  // fine via the plain <img> tags in the channel feed / PostModal, but
+  // breaks specifically on /post/[slug] and /p/[slug], which use next/image.
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+  },
+
   turbopack: {
     root: path.resolve(__dirname),
   },
