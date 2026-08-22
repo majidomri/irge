@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Zuck } from 'zuck.js';
 import 'zuck.js/css';
+import 'zuck.js/skins/facesnap';
 import './zuck-overrides.css';
 
 interface TimelineItem {
@@ -48,6 +49,7 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
 
     Zuck(el, {
       avatars: true,
+      skin: 'facesnap',
       backButton: true,
       backNative: false,
       previousTap: true,

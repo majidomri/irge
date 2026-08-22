@@ -17,12 +17,19 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Unseen ring — brand green gradient instead of the library default */
-.ir-zuck-stories .story:not(.seen) .item-link {
+/*
+ * Unseen ring — brand green gradient instead of facesnap's default blue.
+ * Targets .item-preview (the circular avatar mask the facesnap skin gives
+ * border-radius:50%+padding to), NOT .item-link — .item-link wraps the
+ * avatar AND the name/time text below it, so painting a background there
+ * colored the whole card as a solid square instead of ringing just the
+ * avatar circle. That was the "square tray" bug.
+ */
+.ir-zuck-stories .story:not(.seen) .item-link > .item-preview {
   background: linear-gradient(135deg, #00754a, #004f33);
 }
 
-.ir-zuck-stories .story.seen .item-link {
+.ir-zuck-stories .story.seen .item-link > .item-preview {
   background: rgba(255, 255, 255, 0.25);
 }
 

@@ -13,3 +13,4 @@ declare module 'zuck.js' {
 }
 
 declare module 'zuck.js/css';
+declare module 'zuck.js/skins/facesnap';
