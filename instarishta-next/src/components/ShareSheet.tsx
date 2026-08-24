@@ -17,7 +17,9 @@ export default function ShareSheet({
   onClose: () => void;
 }) {
   const url = shareUrl(entityType, slug);
+  const cardUrl = `/api/share-card/${slug}`;
   const [copied, setCopied] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
 
   const track = (dest: string) => {
     fetch('/api/share', {
@@ -33,6 +35,39 @@ export default function ShareSheet({
       setTimeout(() => setCopied(false), 2000);
       track('copy');
     } catch { /* clipboard unavailable — user can still select the text field */ }
+  };
+
+  /**
+   * Share the rishta card as an image file.
+   *
+   * This is how rishtas actually travel here — a picture forwarded into a
+   * family WhatsApp group, not a link. Web Share with `files` hands WhatsApp
+   * the PNG directly; where that is unsupported (desktop Safari, most
+   * in-app browsers) we open the card so it can be saved or long-pressed,
+   * which is still the same outcome by hand.
+   */
+  const shareCard = async () => {
+    if (cardBusy) return;
+    setCardBusy(true);
+    try {
+      const res  = await fetch(cardUrl);
+      if (!res.ok) throw new Error('card unavailable');
+      const blob = await res.blob();
+      const file = new File([blob], `instarishta-${slug}.png`, { type: 'image/png' });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title, text: url });
+        track('card_share');
+        return;
+      }
+      window.open(cardUrl, '_blank', 'noopener,noreferrer');
+      track('card_open');
+    } catch {
+      // Anything at all went wrong — still give them the card.
+      window.open(cardUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setCardBusy(false);
+    }
   };
 
   const openSystemShare = async () => {
@@ -117,6 +152,19 @@ export default function ShareSheet({
             {copied ? 'COPIED' : 'COPY'}
           </button>
         </div>
+
+        {/*
+          * The rishta card. Kept above the system-share fallback because for
+          * this audience it is the primary action, not an extra.
+          */}
+        <button onClick={shareCard} disabled={cardBusy}
+          className="w-full rounded-xl py-3 mb-3 text-sm font-bold border-0 cursor-pointer disabled:opacity-50"
+          style={{ background: '#00A86B', color: '#fff' }}>
+          {cardBusy ? 'Preparing card…' : 'Share rishta card 🖼️'}
+        </button>
+        <p className="text-[10px] mb-3 text-center" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          A picture card with the verified badge — made for family WhatsApp groups.
+        </p>
 
         {typeof navigator !== 'undefined' && !!navigator.share && (
           <button onClick={openSystemShare}

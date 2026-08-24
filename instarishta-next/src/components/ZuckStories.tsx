@@ -9,13 +9,21 @@ import { supabase, incrementStoryLikes } from '@/lib/supabase';
 
 const CommentDrawer = dynamic(() => import('./CommentDrawer'), { ssr: false });
 const ShareSheet    = dynamic(() => import('./ShareSheet'), { ssr: false });
+const StoryViewersSheet = dynamic(() => import('./StoryViewersSheet'), { ssr: false });
 
 interface TimelineItem {
   id: string;
   name: string;
   photo: string;
   lastUpdated: number;
-  items: { id: string; type: string; length: number; src: string; time: number; likes?: number }[];
+  /** Server-computed: every item in this group already watched by this viewer. */
+  seen: boolean;
+  /** This group is the signed-in viewer's own stories. */
+  isSelf: boolean;
+  items: {
+    id: string; type: string; length: number; src: string; time: number;
+    likes?: number; seen?: boolean; viewCount?: number;
+  }[];
 }
 
 function currentItemId(): string | null {
@@ -62,6 +70,7 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
   const [drawer, setDrawer] = useState<null | 'comment' | 'share'>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
+  const [viewersOpen, setViewersOpen] = useState(false);
 
   useEffect(() => {
     const s = new Set<string>();
@@ -99,7 +108,11 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
       backNative: false,
       previousTap: true,
       autoFullScreen: false,
-      localStorage: true, // lets zuck.js track "seen" rings itself, per-browser
+      // zuck.js can track seen-rings in localStorage, but that is per-browser
+      // and invisible to us. /api/stories now returns a real `seen` per group
+      // from ir_story_views, so the server is the source of truth — a member
+      // who watched on their phone sees a grey ring on their laptop too.
+      localStorage: false,
       stories,
       callbacks: {
         onOpen: (storyId: string, cb: () => void) => {
@@ -132,6 +145,16 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
     return () => { el.innerHTML = ''; };
   }, [stories]);
 
+  // Record the watch. Fires once per item per mount; the route is idempotent
+  // on (story_id, viewer_id) so a re-watch never double-counts, and a failure
+  // is deliberately silent — a lost view must not interrupt the story.
+  const recordedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!activeItemId || recordedRef.current.has(activeItemId)) return;
+    recordedRef.current.add(activeItemId);
+    fetch(`/api/stories/${activeItemId}/view`, { method: 'POST' }).catch(() => {});
+  }, [activeItemId]);
+
   const activeStory = stories?.find(s => s.id === openStoryId) ?? null;
   const activeItem  = activeStory?.items.find(i => i.id === activeItemId) ?? null;
   const displayLikes = Number(activeItem?.likes ?? 0)
@@ -163,6 +186,17 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
     }
   };
 
+  const openViewers = () => {
+    if (!activeItemId) return;
+    setViewerPaused(true);
+    setViewersOpen(true);
+  };
+
+  const closeViewers = () => {
+    setViewersOpen(false);
+    setViewerPaused(false);
+  };
+
   const closeDrawer = () => {
     setDrawer(null);
     setShareSlug(null);
@@ -190,6 +224,15 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
             <span className="text-xl">💬</span>
             <span className="text-sm font-semibold text-white">Comment</span>
           </button>
+          {activeStory?.isSelf && (
+            <button onClick={openViewers}
+              className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
+              <span className="text-xl">👁️</span>
+              <span className="text-sm font-semibold text-white">
+                {activeItem?.viewCount ?? 0}
+              </span>
+            </button>
+          )}
           <button onClick={openShare} disabled={shareLoading}
             className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer disabled:opacity-50">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -202,6 +245,11 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
       {drawer === 'comment' && activeItemId && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100060 }}>
           <CommentDrawer entityId={activeItemId} entityType="story" onClose={closeDrawer} />
+        </div>
+      )}
+      {viewersOpen && activeItemId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100060 }}>
+          <StoryViewersSheet storyId={activeItemId} onClose={closeViewers} />
         </div>
       )}
       {drawer === 'share' && shareSlug && (

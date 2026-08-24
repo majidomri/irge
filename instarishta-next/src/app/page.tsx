@@ -76,6 +76,9 @@ export default function HomePage() {
       const { data } = await client
         .from('ir_channels')
         .select('slug, name, description, cover_image')
+        // Cohorts share this table but are member circles, not content
+        // feeds — see getCohorts() in lib/supabase.ts.
+        .eq('is_cohort', false)
         .order('created_at', { ascending: false })
         .limit(8);
       setChannels(data ?? []);

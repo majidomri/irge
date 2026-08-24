@@ -3,19 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from '@/lib/auth-client';
 import { commentChipIcon, commentChipLabel } from '@/lib/comment-chips';
+import { actorSummary, type NotificationBundle } from '@/lib/notifications';
 
-interface NotificationItem {
-  id: string;
-  type: 'comment_received' | 'comment_acknowledged';
-  entity_type: 'post' | 'story';
-  entity_id: string;
-  chip_key: string | null;
-  actor_name: string;
-  responded_at: string | null;
-  read_at: string | null;
-  created_at: string;
-  slug: string | null;
-}
+// The route returns bundled lines, not raw rows — see bundleNotifications().
+type NotificationItem = NotificationBundle;
 
 function timeAgo(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -79,12 +70,15 @@ export default function NotificationBell() {
     }
   };
 
-  const acknowledge = async (id: string) => {
-    setAcking(id);
+  // Acknowledging a bundle acknowledges its newest comment — that is the one
+  // the member is looking at, and the acknowledged event is addressed to a
+  // specific commenter, so it cannot be fanned out across the whole bundle.
+  const acknowledge = async (bundle: NotificationItem) => {
+    setAcking(bundle.key);
     try {
-      const res = await fetch(`/api/notifications/${id}/acknowledge`, { method: 'POST' });
+      const res = await fetch(`/api/notifications/${bundle.latestId}/acknowledge`, { method: 'POST' });
       if (res.ok) {
-        setItems(list => list.map(n => (n.id === id ? { ...n, responded_at: new Date().toISOString() } : n)));
+        setItems(list => list.map(n => (n.key === bundle.key ? { ...n, responded_at: new Date().toISOString() } : n)));
       }
     } finally {
       setAcking(null);
@@ -124,9 +118,17 @@ export default function NotificationBell() {
               items.map(n => {
                 const icon  = commentChipIcon(n.chip_key);
                 const label = commentChipLabel(n.chip_key);
+                const who   = actorSummary(n.actors);
+                const place = n.entity_type === 'story' ? 'story' : 'post';
+
+                // One line stands in for the whole bundle. The count is kept
+                // visible rather than folded away — "and 4 others" without a
+                // number reads as vaguer than what actually happened.
                 const body = n.type === 'comment_received'
-                  ? <><strong>{n.actor_name}</strong> commented <strong>{label}</strong> on your post</>
-                  : <><strong>{n.actor_name}</strong> acknowledged your comment</>;
+                  ? (n.count > 1
+                      ? <><strong>{who}</strong> left {n.count} comments on your {place}</>
+                      : <><strong>{who}</strong> commented <strong>{label}</strong> on your {place}</>)
+                  : <><strong>{who}</strong> acknowledged your comment</>;
 
                 const row = (
                   <div className="flex items-start gap-2.5 px-4 py-3" style={{ borderBottom: '1px solid #F7F5F3' }}>
@@ -135,10 +137,12 @@ export default function NotificationBell() {
                       <p className="text-sm leading-snug" style={{ color: '#141413' }}>{body}</p>
                       <p className="text-[11px] mt-0.5" style={{ color: '#A0A0A0' }}>{timeAgo(n.created_at)}</p>
                       {n.type === 'comment_received' && !n.responded_at && (
-                        <button onClick={() => acknowledge(n.id)} disabled={acking === n.id}
+                        <button
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); acknowledge(n); }}
+                          disabled={acking === n.key}
                           className="mt-2 rounded-full px-3 py-1 text-[11px] font-bold disabled:opacity-50"
                           style={{ background: '#EEF6F0', color: '#006241' }}>
-                          {acking === n.id ? 'Acknowledging…' : 'Acknowledge'}
+                          {acking === n.key ? 'Acknowledging…' : 'Acknowledge'}
                         </button>
                       )}
                       {n.type === 'comment_received' && n.responded_at && (
@@ -149,11 +153,11 @@ export default function NotificationBell() {
                 );
 
                 return n.slug ? (
-                  <Link key={n.id} href={`/post/${n.slug}`} className="block no-underline" style={{ color: 'inherit' }}>
+                  <Link key={n.key} href={`/post/${n.slug}`} className="block no-underline" style={{ color: 'inherit' }}>
                     {row}
                   </Link>
                 ) : (
-                  <div key={n.id}>{row}</div>
+                  <div key={n.key}>{row}</div>
                 );
               })
             )}

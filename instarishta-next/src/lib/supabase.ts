@@ -7,11 +7,32 @@ export const POST_PAGE_SIZE = 9;
 
 // ── Channels ─────────────────────────────────────────────────────────────────
 
+/**
+ * Content channels only. Cohort rows (Doctors, CAs, …) live in the same
+ * table since migration 015 but are a different concept — a member circle,
+ * not a content feed — so every generic "list the channels" surface has to
+ * exclude them or they crowd out the real channels by recency.
+ */
 export async function getChannels() {
   const { data, error } = await supabase
     .from('ir_channels')
     .select('*')
+    .eq('is_cohort', false)
     .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * The profession cohorts, with their published member counts — "412 verified
+ * doctors". Ordered by size so the strongest circle leads.
+ */
+export async function getCohorts() {
+  const { data, error } = await supabase
+    .from('ir_channels')
+    .select('slug, name, description, cover_image, profession_key, member_count')
+    .eq('is_cohort', true)
+    .order('member_count', { ascending: false });
   if (error) throw error;
   return data ?? [];
 }

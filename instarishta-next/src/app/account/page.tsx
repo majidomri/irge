@@ -8,6 +8,7 @@ import { useRealtimeProfile } from '@/lib/hooks/useRealtimeProfile';
 import GradientText from '@/components/ui/GradientText';
 import { planLabel, FREE_CREDITS } from '@/lib/plans';
 import MyInterests from './_components/MyInterests';
+import ProfessionVerification from './_components/ProfessionVerification';
 
 interface UsageSummary {
   email: string;
@@ -194,6 +195,11 @@ export default function AccountPage() {
           ) : (
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Could not load usage.</p>
           )}
+        </div>
+
+        {/* Profession verification — the badge, or the way to earn it */}
+        <div className="mb-4">
+          <ProfessionVerification />
         </div>
 
         {/* Interests / leads */}

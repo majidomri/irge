@@ -15,10 +15,20 @@
  * for story UIs with no separate profile-photo field.
  *
  * Public, read-only, no session required — stories are public content, same
- * as the rest of the channel feed. Node runtime.
+ * as the rest of the channel feed.
+ *
+ * A session, when there is one, only *enriches* the response: each group gets
+ * a `seen` flag (every item already in ir_story_views for this viewer), and
+ * the viewer's own groups carry a `viewCount`. `seen` is what makes the ring
+ * decay — unwatched rings render as the gradient, watched ones grey out, and
+ * unwatched groups sort to the front of the tray. Anonymous visitors get
+ * seen:false throughout, which is the correct "nothing watched yet" state.
+ *
+ * Node runtime.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceClient } from '@/lib/credits';
+import { auth } from '@/lib/auth';
+import { serviceClient, ensureProfile } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 
@@ -41,6 +51,43 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const stories = rows ?? [];
+  const storyIds = stories.map(s => s.id);
+
+  // Resolve the current viewer, if any. Never fatal: a broken/expired session
+  // must degrade to the anonymous view, not 500 a public page.
+  let viewerId: string | null = null;
+  try {
+    const session = await auth.api.getSession({ headers: req.headers });
+    if (session?.user?.email) {
+      const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
+      viewerId = profile.id;
+    }
+  } catch {
+    viewerId = null;
+  }
+
+  // Which of these stories has this viewer already watched? One query for the
+  // whole tray rather than one per story.
+  const seenIds = new Set<string>();
+  if (viewerId && storyIds.length) {
+    const { data: seen } = await db
+      .from('ir_story_views')
+      .select('story_id')
+      .eq('viewer_id', viewerId)
+      .in('story_id', storyIds);
+    for (const v of seen ?? []) seenIds.add(v.story_id);
+  }
+
+  // View counts, but only for the viewer's own stories — a member may see how
+  // many watched *their* story, never anyone else's.
+  const viewCounts = new Map<string, number>();
+  const ownStoryIds = viewerId ? stories.filter(s => s.user_id === viewerId).map(s => s.id) : [];
+  if (ownStoryIds.length) {
+    const { data: counts } = await db
+      .from('ir_story_views').select('story_id').in('story_id', ownStoryIds);
+    for (const c of counts ?? []) viewCounts.set(c.story_id, (viewCounts.get(c.story_id) ?? 0) + 1);
+  }
+
   const ownerIds = [...new Set(stories.map(s => s.user_id).filter(Boolean))] as string[];
   let nameById: Record<string, string> = {};
   if (ownerIds.length) {
@@ -72,6 +119,11 @@ export async function GET(req: NextRequest) {
       name: key === 'house' ? (channel?.name ?? 'InstaRishta') : (nameById[key] ?? 'Member'),
       photo: latest.image,
       lastUpdated: toUnixSeconds(latest.created_at),
+      // A group counts as seen only when every item in it has been watched —
+      // one new story re-lights the whole ring, which is the behaviour people
+      // expect from every story tray they've used.
+      seen: viewerId ? items.every(s => seenIds.has(s.id)) : false,
+      isSelf: !!viewerId && key === viewerId,
       items: items.map(s => ({
         id: s.id,
         type: 'photo',
@@ -79,9 +131,16 @@ export async function GET(req: NextRequest) {
         src: s.image,
         time: toUnixSeconds(s.created_at),
         likes: s.likes ?? 0,
+        seen: seenIds.has(s.id),
+        viewCount: viewCounts.get(s.id) ?? 0,
       })),
     };
-  }).sort((a, b) => b.lastUpdated - a.lastUpdated);
+  }).sort((a, b) =>
+    // Unwatched first, then most recent. This is the decay: as a member works
+    // through the tray, watched rings fall to the back and the tray visibly
+    // empties out — which is what makes an unwatched ring worth tapping.
+    (Number(a.seen) - Number(b.seen)) || (b.lastUpdated - a.lastUpdated),
+  );
 
   return NextResponse.json({ stories: timeline });
 }

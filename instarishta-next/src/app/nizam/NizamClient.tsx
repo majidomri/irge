@@ -7,6 +7,7 @@ import {
   entitlementsFor, fmtAllowance, FREE_ENTITLEMENTS as FREE_ENT,
 } from '@/lib/plans';
 import { chipLabel } from '@/lib/interest-chips';
+import { professionIcon, professionLabel } from '@/lib/professions';
 
 export interface Channel {
   id:           string;
@@ -65,7 +66,7 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments';
+type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
@@ -74,6 +75,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'featured', label: 'Featured', icon: '⭐' },
   { key: 'interests', label: 'Interests', icon: '💚' },
   { key: 'comments', label: 'Comments', icon: '💬' },
+  { key: 'verification', label: 'Verify', icon: '✅' },
   { key: 'reports',  label: 'Reports',  icon: '🚩' },
   { key: 'users',    label: 'Users',    icon: '👤' },
 ];
@@ -267,6 +269,9 @@ export default function NizamClient({
         )}
         {tab === 'comments' && (
           <CommentsTab toast={showToast} />
+        )}
+        {tab === 'verification' && (
+          <VerificationTab toast={showToast} />
         )}
       </main>
 
@@ -1518,6 +1523,180 @@ function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, pat
           style={{ background: GREEN, color: '#fff' }}>
           {busy ? 'Saving…' : 'Save'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Verification ────────────────────────────────────────────────────────
+
+interface VerificationRow {
+  id: string;
+  user_id: string;
+  profession_key: string;
+  doc_type: string;
+  doc_reference: string | null;
+  doc_url: string | null;
+  note: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reject_reason: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  applicant: { name: string | null; email: string | null } | null;
+}
+
+/**
+ * The human gate. Approving here is the ONLY path in the app that grants a
+ * profession badge, and rejecting is a first-class outcome that the applicant
+ * sees with its reason — so the reject action deliberately demands one rather
+ * than letting an admin dismiss someone silently.
+ *
+ * The queue sorts oldest-first (see /api/admin/verification) so nobody sits
+ * unreviewed indefinitely.
+ */
+function VerificationTab({ toast }: { toast: (m: string) => void }) {
+  const [items, setItems]     = useState<VerificationRow[]>([]);
+  const [filter, setFilter]   = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId]   = useState<string | null>(null);
+
+  const load = useCallback(async (f: string) => {
+    setLoading(true);
+    try {
+      const res  = await fetch(`/api/admin/verification?status=${f}`);
+      const data = await res.json();
+      setItems((data.requests ?? []) as VerificationRow[]);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { queueMicrotask(() => load(filter)); }, [load, filter]);
+
+  const review = async (id: string, action: 'approve' | 'reject') => {
+    let reason = '';
+    if (action === 'reject') {
+      // The applicant is shown this verbatim, so it has to say something
+      // actionable — "not approved" alone reads as a broken app.
+      reason = (window.prompt('Why is this being rejected? The applicant will see this.') ?? '').trim();
+      if (!reason) return;
+    }
+
+    setBusyId(id);
+    try {
+      const res  = await fetch('/api/admin/verification', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action, reason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { toast(data.error ?? 'Update failed'); return; }
+
+      // Drop the row from the pending queue; other filters just reload.
+      if (filter === 'pending') setItems(list => list.filter(r => r.id !== id));
+      else load(filter);
+      toast(action === 'approve' ? 'Verified — badge is live' : 'Rejected');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div>
+      <h1 className="text-xl font-extrabold mb-1">Verification</h1>
+      <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        Profession claims awaiting review. Approving grants the badge and adds the member
+        to their cohort; rejecting is shown to the applicant with your reason.
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-5">
+        {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className="rounded-full px-4 py-1.5 text-xs font-bold capitalize"
+            style={filter === f
+              ? { background: GREEN, color: '#fff' }
+              : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {loading && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>}
+
+      {!loading && items.length === 0 && (
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          {filter === 'pending' ? 'Nothing waiting for review.' : 'Nothing here.'}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-3">
+        {items.map(r => (
+          <div key={r.id} className="rounded-2xl p-4"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="text-sm font-bold">
+                {professionIcon(r.profession_key)} {professionLabel(r.profession_key)}
+              </span>
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                style={{
+                  background: r.status === 'approved' ? GREEN_BG
+                            : r.status === 'rejected' ? 'rgba(255,107,107,0.15)'
+                            : 'rgba(255,255,255,0.08)',
+                  color: r.status === 'approved' ? GREEN
+                       : r.status === 'rejected' ? '#FF6B6B'
+                       : 'rgba(255,255,255,0.6)',
+                }}>
+                {r.status}
+              </span>
+            </div>
+
+            <p className="text-sm mb-1">
+              {r.applicant?.name || 'Member'}{' '}
+              <span style={{ color: 'rgba(255,255,255,0.4)' }}>{r.applicant?.email}</span>
+            </p>
+
+            <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              <strong>{r.doc_type.replace(/_/g, ' ')}:</strong>{' '}
+              {r.doc_reference || <em>none given</em>}
+            </p>
+
+            {r.doc_url && (
+              <a href={r.doc_url} target="_blank" rel="noopener noreferrer"
+                className="text-xs underline" style={{ color: GREEN }}>
+                Open submitted document
+              </a>
+            )}
+
+            {r.note && (
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{r.note}</p>
+            )}
+
+            {r.reject_reason && (
+              <p className="text-xs mt-1" style={{ color: '#FF6B6B' }}>
+                Rejected: {r.reject_reason}
+              </p>
+            )}
+
+            <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Applied {new Date(r.created_at).toLocaleString()}
+              {r.reviewed_by && ` · reviewed by ${r.reviewed_by}`}
+            </p>
+
+            {r.status === 'pending' && (
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => review(r.id, 'approve')} disabled={busyId === r.id}
+                  className="rounded-xl px-4 py-2 text-xs font-bold disabled:opacity-40"
+                  style={{ background: GREEN, color: '#fff', border: 'none' }}>
+                  Approve
+                </button>
+                <button onClick={() => review(r.id, 'reject')} disabled={busyId === r.id}
+                  className="rounded-xl px-4 py-2 text-xs font-bold disabled:opacity-40"
+                  style={{ background: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,0.35)' }}>
+                  Reject
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

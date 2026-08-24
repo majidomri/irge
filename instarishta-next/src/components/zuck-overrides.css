@@ -37,7 +37,12 @@
 }
 
 /*
- * Unseen ring — brand green gradient instead of facesnap's default blue.
+ * Ring decay. `.seen` is set from the `seen` flag zuck.js reads off each
+ * timeline group, which /api/stories now computes server-side from
+ * ir_story_views (migration 015) rather than from zuck's per-browser
+ * localStorage — so a story watched on a phone also reads as watched on a
+ * laptop. Unwatched groups additionally sort to the front of the tray.
+ *
  * Targets .item-preview (the circular avatar mask the facesnap skin gives
  * border-radius:50%+padding to), NOT .item-link — .item-link wraps the
  * avatar AND the name/time text below it, so painting a background there
@@ -48,8 +53,27 @@
   background: linear-gradient(135deg, #00754a, #004f33);
 }
 
+/*
+ * Watched: the ring loses its gradient and the avatar itself dims. The
+ * contrast between the two states is the whole point — a tray where
+ * everything looks the same gives no reason to open anything.
+ */
 .ir-zuck-stories .story.seen .item-link > .item-preview {
   background: rgba(255, 255, 255, 0.25);
+}
+
+.ir-zuck-stories .story.seen .item-link > .item-preview img {
+  opacity: 0.55;
+}
+
+.ir-zuck-stories .story.seen .name {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Ring state changes when a story is watched mid-session, so animate it. */
+.ir-zuck-stories .story .item-link > .item-preview,
+.ir-zuck-stories .story .item-link > .item-preview img {
+  transition: background 240ms ease, opacity 240ms ease;
 }
 
 /* Full-screen viewer progress bar */

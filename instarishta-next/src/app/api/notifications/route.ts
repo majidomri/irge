@@ -9,6 +9,13 @@
  * (see lib/notifications.ts). ir_notifications has RLS enabled with no
  * write policies, so this route is the only path.
  *
+ * Rows are returned BUNDLED, not raw: ten chips on one post arrive as a
+ * single line ("Aisha and 4 others"), and a comment_received younger than
+ * BUNDLE_DELAY_MS is withheld so a burst settles into one item instead of
+ * pinging the bell at every tap. unreadCount counts bundles for the same
+ * reason — a badge reading "12" for one person's visit is noise, not signal.
+ * See bundleNotifications() for the grouping rules.
+ *
  * Every query is scoped to ensureProfile(session).id — NOT session.user.id.
  * better-auth's session id (e.g. "FfanPw2y...") lives in a different id space
  * than auth.users.id, which is what user_id's foreign key actually points to
@@ -20,6 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { serviceClient, ensureProfile } from '@/lib/credits';
+import { bundleNotifications, unreadBundleCount, type NotificationRow } from '@/lib/notifications';
 
 export const runtime = 'nodejs';
 
@@ -36,9 +44,11 @@ export async function GET(req: NextRequest) {
     .select(COLS)
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false })
-    .limit(50);
+    // Fetch wider than we display: bundling collapses many rows into few
+    // lines, so 50 raw rows could be only a handful of inbox items.
+    .limit(300);
 
-  const notifications = data ?? [];
+  const notifications = (data ?? []) as unknown as NotificationRow[];
 
   // Deep-link posts to their public slug. Best-effort — a missing slug just
   // means the bell item renders without a link.
@@ -53,15 +63,15 @@ export async function GET(req: NextRequest) {
     slugByEntity = Object.fromEntries((nanos ?? []).map(n => [n.entity_id as string, n.slug as string]));
   }
 
-  const { count: unreadCount } = await db
-    .from('ir_notifications')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', profile.id)
-    .is('read_at', null);
+  const withSlugs = notifications.map(n => ({ ...n, slug: slugByEntity[n.entity_id] ?? null }));
+  const bundles   = bundleNotifications(withSlugs).slice(0, 50);
 
   return NextResponse.json({
-    notifications: notifications.map(n => ({ ...n, slug: slugByEntity[n.entity_id as string] ?? null })),
-    unreadCount: unreadCount ?? 0,
+    notifications: bundles,
+    // Counts unread *lines*, not rows — and excludes anything still inside
+    // the settle window, so the badge never counts a ping the member cannot
+    // yet see in the list.
+    unreadCount: unreadBundleCount(bundles),
   });
 }
 
