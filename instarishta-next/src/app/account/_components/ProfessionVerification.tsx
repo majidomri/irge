@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { PROFESSIONS, getProfession, type DocType } from '@/lib/professions';
+import { getProfession, DOC_LABELS, type DocType } from '@/lib/professions';
+import { useProfessions } from '@/lib/hooks/useProfessions';
 import VerifiedBadge from '@/components/VerifiedBadge';
 
 interface VerificationRequest {
@@ -12,15 +13,6 @@ interface VerificationRequest {
   created_at: string;
   reviewed_at: string | null;
 }
-
-const DOC_LABELS: Record<DocType, string> = {
-  registration_no:    'Council registration number',
-  membership_no:      'Membership number',
-  degree_certificate: 'Degree certificate',
-  employment_letter:  'Employment / posting letter',
-  corporate_email:    'Company or alumni email',
-  other:              'Other proof',
-};
 
 /**
  * Apply for a verified profession, and see where that application stands.
@@ -46,6 +38,7 @@ export default function ProfessionVerification() {
   const [note, setNote]                   = useState('');
   const [submitting, setSubmitting]       = useState(false);
   const [error, setError]                 = useState<string | null>(null);
+  const { professions }                   = useProfessions();
 
   const load = useCallback(async () => {
     try {
@@ -62,7 +55,7 @@ export default function ProfessionVerification() {
 
   useEffect(() => { load(); }, [load]);
 
-  const profession = getProfession(professionKey);
+  const profession = getProfession(professions, professionKey);
 
   // Reset the proof type whenever the profession changes — the accepted
   // types differ per profession, and a stale selection would fail server-side
@@ -124,7 +117,7 @@ export default function ProfessionVerification() {
         <span className="text-sm font-semibold text-white">Profession</span>
         <p className="mt-2 text-sm text-white/70">
           Your application to verify as{' '}
-          <strong className="text-white">{getProfession(request.profession_key)?.label}</strong>{' '}
+          <strong className="text-white">{getProfession(professions, request.profession_key)?.label}</strong>{' '}
           is under review.
         </p>
         <p className="mt-1 text-xs text-white/40">
@@ -160,7 +153,7 @@ export default function ProfessionVerification() {
 
       {/* Profession */}
       <div className="mt-3 flex flex-wrap gap-2">
-        {PROFESSIONS.map(p => (
+        {professions.filter(p => p.active).map(p => (
           <button
             key={p.key}
             type="button"
@@ -179,7 +172,7 @@ export default function ProfessionVerification() {
 
       {profession && (
         <>
-          <p className="mt-3 text-xs text-white/60">{profession.proofHint}</p>
+          <p className="mt-3 text-xs text-white/60">{profession.proof_hint}</p>
 
           {/* Proof type — only what this profession accepts */}
           <div className="mt-2 flex flex-wrap gap-2">

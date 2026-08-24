@@ -27,7 +27,7 @@
  */
 import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
-import { getProfession } from '@/lib/professions';
+import { getProfession, loadProfessions } from '@/lib/professions';
 
 export const runtime = 'nodejs';
 
@@ -107,7 +107,7 @@ export async function GET(
       .maybeSingle();
     professionKey = owner?.profession_key ?? null;
   }
-  const profession = getProfession(professionKey);
+  const profession = getProfession(await loadProfessions(db), professionKey);
 
   const photo   = await toDataUri(post.image);
   const heading = (post.title || post.caption || 'A rishta on InstaRishta').slice(0, 110);

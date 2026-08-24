@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getProfession } from '@/lib/professions';
+import { getProfession, loadProfessions } from '@/lib/professions';
 
 export const metadata: Metadata = {
   title: 'The Circles — InstaRishta',
@@ -48,6 +48,7 @@ async function loadCohorts() {
   return {
     cohorts: (data ?? []) as Cohort[],
     admittedThisMonth: admitted ?? 0,
+    professions: await loadProfessions(db),
   };
 }
 
@@ -61,7 +62,7 @@ async function loadCohorts() {
  * what is on screen is what is in the database. No rounding, no "+".
  */
 export default async function CohortsPage() {
-  const { cohorts, admittedThisMonth } = await loadCohorts();
+  const { cohorts, admittedThisMonth, professions } = await loadCohorts();
   const total = cohorts.reduce((sum, c) => sum + (c.member_count ?? 0), 0);
 
   return (
@@ -89,7 +90,7 @@ export default async function CohortsPage() {
 
       <div className="mt-8 flex flex-col gap-3">
         {cohorts.map(c => {
-          const profession = getProfession(c.profession_key);
+          const profession = getProfession(professions, c.profession_key);
           return (
             <Link
               key={c.slug}
@@ -118,7 +119,9 @@ export default async function CohortsPage() {
       </div>
 
       <p className="mt-8 text-xs text-white/40">
-        Are you a doctor, CA, civil servant, IIT/IIM alumnus or founder?{' '}
+        {/* Listed from the live vocabulary — hardcoding it here would go stale
+            the moment an admin adds a profession in /nizam. */}
+        {`Are you ${professions.filter(p => p.active).map(p => p.label).join(', ')}?`}{' '}
         <Link href="/account" className="underline" style={{ color: '#00A86B' }}>
           Apply to be verified
         </Link>

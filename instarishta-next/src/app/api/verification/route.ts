@@ -25,7 +25,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { serviceClient, ensureProfile } from '@/lib/credits';
-import { isProfessionKey, isDocType, acceptsDoc, getProfession } from '@/lib/professions';
+import { isProfessionKey, isDocType, acceptsDoc, getProfession, loadProfessions } from '@/lib/professions';
 
 export const runtime = 'nodejs';
 
@@ -75,7 +75,12 @@ export async function POST(req: NextRequest) {
   const professionKey = body.professionKey;
   const docType       = body.docType;
 
-  if (!isProfessionKey(professionKey)) {
+  const db = serviceClient();
+  // Only ACTIVE professions may be applied for — a retired one stays valid
+  // for members who already hold it, but is not open to new applicants.
+  const professions = await loadProfessions(db, { activeOnly: true });
+
+  if (!isProfessionKey(professions, professionKey)) {
     return NextResponse.json({ error: 'Please choose one of the listed professions' }, { status: 400 });
   }
   if (!isDocType(docType)) {
@@ -84,10 +89,10 @@ export async function POST(req: NextRequest) {
   // Reject mismatched proof here rather than letting it reach the review
   // queue — an admin cannot action a "corporate email" for a doctor, and a
   // request that can only ever be rejected wastes the applicant's time.
-  if (!acceptsDoc(professionKey, docType)) {
-    const p = getProfession(professionKey)!;
+  if (!acceptsDoc(professions, professionKey, docType)) {
+    const p = getProfession(professions, professionKey)!;
     return NextResponse.json(
-      { error: `${p.label} verification needs: ${p.proofHint}` },
+      { error: `${p.label} verification needs: ${p.proof_hint ?? 'a verifiable credential'}` },
       { status: 400 },
     );
   }
@@ -105,7 +110,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const db = serviceClient();
   const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   if (profile.is_banned) {
     return NextResponse.json({ error: 'Account suspended' }, { status: 403 });

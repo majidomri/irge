@@ -1,5 +1,6 @@
 'use client';
 import { getProfession } from '@/lib/professions';
+import { useProfessions } from '@/lib/hooks/useProfessions';
 
 /**
  * The verified-profession badge.
@@ -13,6 +14,11 @@ import { getProfession } from '@/lib/professions';
  *
  * `size="sm"` is the inline form for lists and comment rows; `md` is for
  * profile headers.
+ *
+ * The vocabulary comes from the cached useProfessions() hook (migration 017
+ * moved it into the database), so the badge renders nothing for a beat on
+ * first paint. That is the same as its unverified state, which is the right
+ * thing to show while we do not yet know.
  */
 export default function VerifiedBadge({
   professionKey,
@@ -23,7 +29,8 @@ export default function VerifiedBadge({
   size?: 'sm' | 'md';
   showLabel?: boolean;
 }) {
-  const profession = getProfession(professionKey);
+  const { professions } = useProfessions();
+  const profession = getProfession(professions, professionKey);
   if (!profession) return null;
 
   const sm = size === 'sm';

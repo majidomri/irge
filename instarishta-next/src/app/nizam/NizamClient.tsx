@@ -7,7 +7,11 @@ import {
   entitlementsFor, fmtAllowance, FREE_ENTITLEMENTS as FREE_ENT,
 } from '@/lib/plans';
 import { chipLabel } from '@/lib/interest-chips';
-import { professionIcon, professionLabel } from '@/lib/professions';
+import {
+  professionIcon, professionLabel, DOC_TYPES, DOC_LABELS,
+  type Profession, type DocType,
+} from '@/lib/professions';
+import { useProfessions, invalidateProfessions } from '@/lib/hooks/useProfessions';
 
 export interface Channel {
   id:           string;
@@ -66,7 +70,7 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification';
+type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
@@ -76,6 +80,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'interests', label: 'Interests', icon: '💚' },
   { key: 'comments', label: 'Comments', icon: '💬' },
   { key: 'verification', label: 'Verify', icon: '✅' },
+  { key: 'professions', label: 'Professions', icon: '🎓' },
   { key: 'reports',  label: 'Reports',  icon: '🚩' },
   { key: 'users',    label: 'Users',    icon: '👤' },
 ];
@@ -272,6 +277,9 @@ export default function NizamClient({
         )}
         {tab === 'verification' && (
           <VerificationTab toast={showToast} />
+        )}
+        {tab === 'professions' && (
+          <ProfessionsTab toast={showToast} />
         )}
       </main>
 
@@ -1556,6 +1564,7 @@ interface VerificationRow {
  * unreviewed indefinitely.
  */
 function VerificationTab({ toast }: { toast: (m: string) => void }) {
+  const { professions }       = useProfessions();
   const [items, setItems]     = useState<VerificationRow[]>([]);
   const [filter, setFilter]   = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [loading, setLoading] = useState(false);
@@ -1634,7 +1643,7 @@ function VerificationTab({ toast }: { toast: (m: string) => void }) {
 
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="text-sm font-bold">
-                {professionIcon(r.profession_key)} {professionLabel(r.profession_key)}
+                {professionIcon(professions, r.profession_key)} {professionLabel(professions, r.profession_key)}
               </span>
               <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                 style={{
@@ -1695,6 +1704,265 @@ function VerificationTab({ toast }: { toast: (m: string) => void }) {
                 </button>
               </div>
             )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Professions ─────────────────────────────────────────────────────────
+
+const BLANK_FORM = {
+  key: '', label: '', labelUr: '', icon: '', slug: '',
+  accepts: [] as DocType[], proofHint: '', sortOrder: 100, active: true,
+};
+
+/**
+ * Edit the profession vocabulary — the closed list that decides who can even
+ * apply for a badge.
+ *
+ * Two constraints are deliberately enforced in the UI as well as the route:
+ *   • The key is fixed once created. It is stored on every verified member's
+ *     profile, so renaming it would silently un-badge them.
+ *   • There is no delete, only Retire. A retired profession disappears from
+ *     the apply form while existing members keep their badge.
+ *
+ * Adding a profession also creates its cohort circle (ir_upsert_profession),
+ * so there is no second step to forget.
+ */
+function ProfessionsTab({ toast }: { toast: (m: string) => void }) {
+  const [items, setItems]     = useState<Profession[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm]       = useState({ ...BLANK_FORM });
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res  = await fetch('/api/admin/professions');
+      const data = await res.json();
+      setItems((data.professions ?? []) as Profession[]);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { queueMicrotask(load); }, [load]);
+
+  const reset = () => { setForm({ ...BLANK_FORM }); setEditingKey(null); setError(null); };
+
+  const edit = (p: Profession) => {
+    setEditingKey(p.key);
+    setError(null);
+    setForm({
+      key: p.key, label: p.label, labelUr: p.label_ur ?? '', icon: p.icon,
+      slug: p.slug, accepts: p.accepts, proofHint: p.proof_hint ?? '',
+      sortOrder: p.sort_order, active: p.active,
+    });
+  };
+
+  const toggleDoc = (d: DocType) => setForm(f => ({
+    ...f,
+    accepts: f.accepts.includes(d) ? f.accepts.filter(x => x !== d) : [...f.accepts, d],
+  }));
+
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res  = await fetch('/api/admin/professions', {
+        method: editingKey ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error ?? 'Save failed'); return; }
+
+      // The public vocabulary just changed; drop the client cache so badges
+      // and the apply form pick it up without a reload.
+      invalidateProfessions();
+      toast(editingKey ? 'Profession updated' : 'Profession added — circle created');
+      reset();
+      load();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setActive = async (p: Profession, active: boolean) => {
+    const res = await fetch('/api/admin/professions', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        key: p.key, label: p.label, labelUr: p.label_ur, icon: p.icon, slug: p.slug,
+        accepts: p.accepts, proofHint: p.proof_hint, sortOrder: p.sort_order, active,
+      }),
+    });
+    if (res.ok) {
+      invalidateProfessions();
+      toast(active ? 'Profession restored' : 'Profession retired');
+      load();
+    } else {
+      toast('Update failed');
+    }
+  };
+
+  const field = {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.12)',
+  } as const;
+
+  return (
+    <div>
+      <h1 className="text-xl font-extrabold mb-1">Professions</h1>
+      <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        The list members can apply to be verified under. Adding one also creates its
+        circle. Only add professions with a credential you can actually check — an
+        unverifiable badge teaches members the gate means nothing.
+      </p>
+
+      {/* ── Add / edit form ── */}
+      <div className="rounded-2xl p-4 mb-6"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <p className="text-sm font-bold mb-3">
+          {editingKey ? `Edit "${editingKey}"` : 'Add a profession'}
+        </p>
+
+        <div className="flex flex-wrap gap-2 mb-2">
+          <input
+            value={form.key}
+            onChange={e => setForm(f => ({ ...f, key: e.target.value }))}
+            disabled={!!editingKey}
+            placeholder="key (e.g. lawyer)"
+            className="rounded-xl px-3 py-2 text-sm text-white outline-none disabled:opacity-40"
+            style={{ ...field, width: 170 }}
+          />
+          <input
+            value={form.label}
+            onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+            placeholder="Label (e.g. Lawyer)"
+            className="flex-1 rounded-xl px-3 py-2 text-sm text-white outline-none"
+            style={{ ...field, minWidth: 170 }}
+          />
+          <input
+            value={form.icon}
+            onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
+            placeholder="⚖️"
+            className="rounded-xl px-3 py-2 text-sm text-white outline-none text-center"
+            style={{ ...field, width: 66 }}
+          />
+        </div>
+
+        {editingKey && (
+          <p className="text-[11px] mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            The key cannot change — verified members are stored against it.
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2 mb-2">
+          <input
+            value={form.slug}
+            onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
+            placeholder="circle slug (auto from label)"
+            className="flex-1 rounded-xl px-3 py-2 text-sm text-white outline-none"
+            style={{ ...field, minWidth: 170 }}
+          />
+          <input
+            value={form.labelUr}
+            onChange={e => setForm(f => ({ ...f, labelUr: e.target.value }))}
+            placeholder="اردو label"
+            className="flex-1 rounded-xl px-3 py-2 text-sm text-white outline-none"
+            style={{ ...field, minWidth: 140 }}
+          />
+          <input
+            type="number"
+            value={form.sortOrder}
+            onChange={e => setForm(f => ({ ...f, sortOrder: Number(e.target.value) }))}
+            placeholder="order"
+            className="rounded-xl px-3 py-2 text-sm text-white outline-none"
+            style={{ ...field, width: 90 }}
+          />
+        </div>
+
+        <p className="text-[11px] mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          Accepted proof (at least one):
+        </p>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {DOC_TYPES.map(d => (
+            <button key={d} type="button" onClick={() => toggleDoc(d)}
+              className="rounded-lg px-2.5 py-1 text-[11px] font-medium"
+              style={form.accepts.includes(d)
+                ? { background: GREEN_BG, color: GREEN, border: `1px solid ${GREEN}` }
+                : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {DOC_LABELS[d]}
+            </button>
+          ))}
+        </div>
+
+        <textarea
+          value={form.proofHint}
+          onChange={e => setForm(f => ({ ...f, proofHint: e.target.value }))}
+          rows={2}
+          placeholder="What to ask the applicant for — shown on the apply form."
+          className="w-full resize-none rounded-xl px-3 py-2 text-sm text-white outline-none mb-2"
+          style={field}
+        />
+
+        {error && <p className="text-xs mb-2" style={{ color: '#FF6B6B' }}>{error}</p>}
+
+        <div className="flex gap-2">
+          <button onClick={save} disabled={saving}
+            className="rounded-xl px-4 py-2 text-xs font-bold disabled:opacity-40"
+            style={{ background: GREEN, color: '#fff', border: 'none' }}>
+            {saving ? 'Saving…' : editingKey ? 'Save changes' : 'Add profession'}
+          </button>
+          {editingKey && (
+            <button onClick={reset}
+              className="rounded-xl px-4 py-2 text-xs font-bold"
+              style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', border: 'none' }}>
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Existing ── */}
+      {loading && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading…</p>}
+
+      <div className="flex flex-col gap-2">
+        {items.map(p => (
+          <div key={p.key} className="flex items-center gap-3 rounded-2xl px-4 py-3"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              opacity: p.active ? 1 : 0.5,
+            }}>
+            <span className="text-xl" aria-hidden>{p.icon}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate">
+                {p.label}
+                {!p.active && (
+                  <span className="ml-2 text-[10px] font-bold uppercase"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}>retired</span>
+                )}
+              </p>
+              <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                {p.key} · /{p.slug} · {p.accepts.length} proof type{p.accepts.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            <button onClick={() => edit(p)}
+              className="rounded-lg px-3 py-1.5 text-[11px] font-bold shrink-0"
+              style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none' }}>
+              Edit
+            </button>
+            <button onClick={() => setActive(p, !p.active)}
+              className="rounded-lg px-3 py-1.5 text-[11px] font-bold shrink-0"
+              style={p.active
+                ? { background: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: 'none' }
+                : { background: GREEN_BG, color: GREEN, border: 'none' }}>
+              {p.active ? 'Retire' : 'Restore'}
+            </button>
           </div>
         ))}
       </div>

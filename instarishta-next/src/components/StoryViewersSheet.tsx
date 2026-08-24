@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { professionIcon, professionLabel } from '@/lib/professions';
+import { useProfessions } from '@/lib/hooks/useProfessions';
 
 interface Viewer {
   id: string;
@@ -32,6 +33,7 @@ export default function StoryViewersSheet({ storyId, onClose }: { storyId: strin
   const [viewers, setViewers] = useState<Viewer[] | null>(null);
   const [count, setCount]     = useState(0);
   const [error, setError]     = useState<string | null>(null);
+  const { professions }       = useProfessions();
 
   useEffect(() => {
     let cancelled = false;
@@ -81,12 +83,12 @@ export default function StoryViewersSheet({ storyId, onClose }: { storyId: strin
         <ul className="list-none m-0 p-0">
           {(viewers ?? []).map(v => (
             <li key={v.id} className="flex items-center gap-3 px-5 py-3 border-b border-neutral-50">
-              <span className="text-xl" aria-hidden>{professionIcon(v.professionKey)}</span>
+              <span className="text-xl" aria-hidden>{professionIcon(professions, v.professionKey)}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-neutral-900">{v.name}</span>
                 {v.professionKey && (
                   <span className="block text-xs text-neutral-500">
-                    {professionLabel(v.professionKey)} · Verified
+                    {professionLabel(professions, v.professionKey)} · Verified
                   </span>
                 )}
               </span>
