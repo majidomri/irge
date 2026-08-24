@@ -154,7 +154,12 @@ function parseBiodata(title: string, body: string): ParsedBiodata {
 export default function BiodataModal({ profile, onClose }: { profile: DeckProfile; onClose: () => void }) {
   const isFemale = profile.gender === 'female';
   const [igOpen,    setIgOpen]    = useState(false);
-  const [bioView,   setBioView]   = useState<'raw' | 'structured'>('raw');
+  // Open on the structured sheet: the card carries the full ad text in its
+  // About section, so it is a superset of the raw view — and the gesture that
+  // opens this modal is labelled "hold for biodata", not "hold for the ad".
+  // When there is nothing structured to show, the render guard below falls
+  // back to raw on its own and the toggle stays hidden.
+  const [bioView,   setBioView]   = useState<'raw' | 'structured'>('structured');
   const [reporting, setReporting] = useState(false);
   // Parsing now includes regex extraction over the full ad text, so keep it off
   // the render path — re-running it on every toggle click would be wasteful.
@@ -175,17 +180,21 @@ export default function BiodataModal({ profile, onClose }: { profile: DeckProfil
             <p className="text-sm font-bold">Profile IR #{profile._num}</p>
           </div>
           <div className="flex items-center gap-2">
+            {/* "Raw"/"Card" named the rendering, not the content. The choice is
+                really between the tidied biodata and the advertiser's original
+                wording, so the labels say that. Biodata sits first because it
+                is the default. */}
             {schema.hasStructured && (
               <div className="flex rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
-                <button onClick={() => setBioView('raw')}
-                  className="px-3 py-1 text-[10px] font-bold transition-colors"
-                  style={{ background: bioView === 'raw' ? 'rgba(255,255,255,0.25)' : 'transparent', color: '#fff' }}>
-                  Raw
-                </button>
                 <button onClick={() => setBioView('structured')}
                   className="px-3 py-1 text-[10px] font-bold transition-colors"
                   style={{ background: bioView === 'structured' ? 'rgba(255,255,255,0.25)' : 'transparent', color: '#fff' }}>
-                  Card
+                  Biodata
+                </button>
+                <button onClick={() => setBioView('raw')}
+                  className="px-3 py-1 text-[10px] font-bold transition-colors"
+                  style={{ background: bioView === 'raw' ? 'rgba(255,255,255,0.25)' : 'transparent', color: '#fff' }}>
+                  Original
                 </button>
               </div>
             )}
