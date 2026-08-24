@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { type DeckProfile, textDir, URDU_FONT, isUrgent } from '../_shared';
+import { type DeckProfile, isUrgent } from '../_shared';
 import { extractBioFields } from '@/lib/bio-extract';
 import { type BioSection, normalizeSections } from '@/lib/biodata-schema';
 import BiodataSheet from './BiodataSheet';
@@ -56,8 +56,6 @@ function parseFamily(row: BioRow) {
 
 export interface ParsedBiodata {
   sections: BioSection[];
-  /** False when the Card view would show no more than Raw — hides the toggle. */
-  hasStructured: boolean;
 }
 
 /**
@@ -140,26 +138,19 @@ function parseBiodata(title: string, body: string): ParsedBiodata {
     { heading: 'Other Details',        type: 'fields',   items: other },
   ]);
 
-  // Summary is just the ad headline, so it doesn't count as structure: a sheet
-  // of Summary + About shows nothing Raw doesn't already.
-  const hasStructured = sections.some(s => s.heading !== 'Summary');
-
+  // About carries the advertiser's original wording verbatim. It is always
+  // appended, which is what lets the sheet be the only view — an ad that
+  // yields no fields still shows its full text here.
   const withAbout = about
     ? [...sections, ...normalizeSections([{ heading: 'About', type: 'text', text: about }])]
     : sections;
 
-  return { sections: withAbout, hasStructured };
+  return { sections: withAbout };
 }
 
 export default function BiodataModal({ profile, onClose }: { profile: DeckProfile; onClose: () => void }) {
   const isFemale = profile.gender === 'female';
   const [igOpen,    setIgOpen]    = useState(false);
-  // Open on the structured sheet: the card carries the full ad text in its
-  // About section, so it is a superset of the raw view — and the gesture that
-  // opens this modal is labelled "hold for biodata", not "hold for the ad".
-  // When there is nothing structured to show, the render guard below falls
-  // back to raw on its own and the toggle stays hidden.
-  const [bioView,   setBioView]   = useState<'raw' | 'structured'>('structured');
   const [reporting, setReporting] = useState(false);
   // Parsing now includes regex extraction over the full ad text, so keep it off
   // the render path — re-running it on every toggle click would be wasteful.
@@ -180,24 +171,6 @@ export default function BiodataModal({ profile, onClose }: { profile: DeckProfil
             <p className="text-sm font-bold">Profile IR #{profile._num}</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* "Raw"/"Card" named the rendering, not the content. The choice is
-                really between the tidied biodata and the advertiser's original
-                wording, so the labels say that. Biodata sits first because it
-                is the default. */}
-            {schema.hasStructured && (
-              <div className="flex rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
-                <button onClick={() => setBioView('structured')}
-                  className="px-3 py-1 text-[10px] font-bold transition-colors"
-                  style={{ background: bioView === 'structured' ? 'rgba(255,255,255,0.25)' : 'transparent', color: '#fff' }}>
-                  Biodata
-                </button>
-                <button onClick={() => setBioView('raw')}
-                  className="px-3 py-1 text-[10px] font-bold transition-colors"
-                  style={{ background: bioView === 'raw' ? 'rgba(255,255,255,0.25)' : 'transparent', color: '#fff' }}>
-                  Original
-                </button>
-              </div>
-            )}
             {profile.instagram_post_id && (
               <button onClick={() => setIgOpen(v => !v)}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -242,25 +215,11 @@ export default function BiodataModal({ profile, onClose }: { profile: DeckProfil
             </div>
           </div>
 
-          {bioView === 'structured' && schema.hasStructured ? (
-            <BiodataSheet sections={schema.sections} isFemale={isFemale} />
-          ) : (
-            <div className="rounded-2xl p-4"
-              style={{ background: '#FAFAF9', border: '1.5px solid #F0ECE8' }}>
-              <p className="text-base font-bold mb-3"
-                dir={textDir(profile.title)}
-                lang={textDir(profile.title) === 'rtl' ? 'ur' : undefined}
-                style={{ color: '#141413', lineHeight: 1.7, fontFamily: textDir(profile.title) === 'rtl' ? URDU_FONT : 'inherit' }}>
-                {profile.title}
-              </p>
-              <p className="text-sm"
-                dir={textDir(profile.body)}
-                lang={textDir(profile.body) === 'rtl' ? 'ur' : undefined}
-                style={{ color: '#3A3A3A', lineHeight: textDir(profile.body) === 'rtl' ? 2.2 : 1.7, textAlign: 'justify', fontFamily: textDir(profile.body) === 'rtl' ? URDU_FONT : 'inherit' }}>
-                {profile.body}
-              </p>
-            </div>
-          )}
+          {/* One view only. There is no raw fallback because there is nothing
+              for it to add: an ad that yields no structured fields still
+              produces Summary + About sections carrying the title and the
+              complete original text. */}
+          <BiodataSheet sections={schema.sections} isFemale={isFemale} />
 
           <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: '1px solid #F0ECE8' }}>
             <p className="text-xs" style={{ color: '#A0A0A0' }}>instarishta.me</p>
