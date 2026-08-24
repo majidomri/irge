@@ -520,6 +520,9 @@ interface ProfilesClientProps {
   stats:           { total: number; male: number; female: number; urgent: number };
   filters:         FilterParams;         // current filter values (from URL)
   initialFeatured?: { id: string; title: string; description: string | null; image_url: string | null; link_url: string | null }[];
+  /** Hand-authored biodata sections keyed by feed profile id. Most profiles
+   *  have no entry — BiodataModal falls back to parsing the ad text. */
+  authoredBiodata?: Record<string, unknown>;
 }
 
 export default function ProfilesClient({
@@ -527,6 +530,7 @@ export default function ProfilesClient({
   stats,
   filters,
   initialFeatured,
+  authoredBiodata,
 }: ProfilesClientProps) {
   const totalCount = profiles.length;
   const router   = useRouter();
@@ -999,7 +1003,13 @@ export default function ProfilesClient({
         />
       )}
 
-      {biodata && <BiodataModal profile={biodata} onClose={() => setBiodata(null)} />}
+      {biodata && (
+        <BiodataModal
+          profile={biodata}
+          authored={authoredBiodata?.[String(biodata.id ?? '')]}
+          onClose={() => setBiodata(null)}
+        />
+      )}
 
       {authGate && (
         <AuthModal

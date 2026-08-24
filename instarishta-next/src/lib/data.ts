@@ -100,3 +100,29 @@ export const getFeatured = unstable_cache(
   ['ir-featured'],
   { revalidate: 1800, tags: ['featured'] },
 );
+
+// ── Authored biodata ──────────────────────────────────────────────────────────
+// Rich biodata written in /nizam, keyed by feed profile id. Only a minority of
+// profiles have one — the rest fall back to regex extraction over the ad text
+// in BiodataModal, so a miss here is normal, not an error.
+//
+// Returned as a plain object rather than a Map: this crosses the server/client
+// boundary as a prop, and a Map does not survive serialisation.
+export const getBiodata = unstable_cache(
+  async () => devCached('biodata', 120_000, async () => {
+    try {
+      const sb = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
+      const { data } = await sb.from('ir_biodata').select('profile_id, sections');
+      const out: Record<string, unknown> = {};
+      for (const row of data ?? []) out[String(row.profile_id)] = row.sections;
+      return out;
+    } catch {
+      return {} as Record<string, unknown>;
+    }
+  }),
+  ['ir-biodata'],
+  { revalidate: 1800, tags: ['biodata'] },
+);

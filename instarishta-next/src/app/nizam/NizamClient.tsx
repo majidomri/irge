@@ -1,4 +1,5 @@
 'use client';
+import BiodataTab from './BiodataTab';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
@@ -70,7 +71,7 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions';
+type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
@@ -81,6 +82,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'comments', label: 'Comments', icon: '💬' },
   { key: 'verification', label: 'Verify', icon: '✅' },
   { key: 'professions', label: 'Professions', icon: '🎓' },
+  { key: 'biodata', label: 'Biodata', icon: '📋' },
   { key: 'reports',  label: 'Reports',  icon: '🚩' },
   { key: 'users',    label: 'Users',    icon: '👤' },
 ];
@@ -302,6 +304,9 @@ export default function NizamClient({
         )}
         {tab === 'stories' && (
           <StoriesTab channels={channels} toast={showToast} />
+        )}
+        {tab === 'biodata' && (
+          <BiodataTab toast={showToast} />
         )}
         {tab === 'featured' && (
           <FeaturedTab toast={showToast} />

@@ -101,3 +101,25 @@ returns int language sql security definer as $$
   )
   select count(*)::int from deleted;
 $$;
+
+-- ── Rich biodata, authored in /nizam ─────────────────────────────────────────
+-- Keyed by the feed profile id (jsdata.json `id`), which lives outside Postgres,
+-- so this is a plain bigint rather than a foreign key. `sections` holds the
+-- section model from src/lib/biodata-schema.ts — headings, order and layout are
+-- data, so a new section type needs no migration.
+create table if not exists ir_biodata (
+  profile_id bigint      primary key,
+  sections   jsonb       not null default '[]'::jsonb,
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+
+alter table ir_biodata enable row level security;
+
+-- Read is public (the sheet renders for anonymous visitors). Writes are
+-- deliberately given NO policy: /api/admin/biodata uses the service-role key,
+-- which bypasses RLS, so authoring stays admin-only rather than open to any
+-- authenticated user the way the older tables allow.
+create policy "ir_biodata_public_read" on ir_biodata for select using (true);
+
+create index if not exists ir_biodata_updated_idx on ir_biodata (updated_at desc);

@@ -1,5 +1,5 @@
 import ProfilesClient from './ProfilesClient';
-import { getProfiles, getFeatured } from '@/lib/data';
+import { getProfiles, getFeatured, getBiodata } from '@/lib/data';
 import { applyFilters, parseFilterParams, isUrgent, type Profile } from './_shared';
 
 export const metadata = {
@@ -16,10 +16,11 @@ export default async function ProfilesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [params, allProfiles, featured] = await Promise.all([
+  const [params, allProfiles, featured, biodata] = await Promise.all([
     searchParams,
     getProfiles() as Promise<Profile[]>,
     getFeatured('profiles'),
+    getBiodata(),
   ]);
 
   const filters  = parseFilterParams(params);
@@ -38,6 +39,7 @@ export default async function ProfilesPage({
       stats={stats}
       filters={filters}
       initialFeatured={featured}
+      authoredBiodata={biodata}
     />
   );
 }

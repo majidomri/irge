@@ -148,16 +148,23 @@ function parseBiodata(title: string, body: string): ParsedBiodata {
   return { sections: withAbout };
 }
 
-export default function BiodataModal({ profile, onClose }: { profile: DeckProfile; onClose: () => void }) {
+export default function BiodataModal({ profile, authored, onClose }: {
+  profile: DeckProfile;
+  /** Hand-authored sections from /nizam, if this profile has any. */
+  authored?: unknown;
+  onClose: () => void;
+}) {
   const isFemale = profile.gender === 'female';
   const [igOpen,    setIgOpen]    = useState(false);
   const [reporting, setReporting] = useState(false);
-  // Parsing now includes regex extraction over the full ad text, so keep it off
-  // the render path — re-running it on every toggle click would be wasteful.
-  const schema = useMemo(
-    () => parseBiodata(profile.title, profile.body),
-    [profile.title, profile.body],
-  );
+
+  // Authored biodata wins outright: someone read the ad and wrote this down, so
+  // it beats anything the regex extractor infers. Parsing is the fallback, and
+  // is memoised because it runs the extractor over the whole ad.
+  const sections = useMemo(() => {
+    const written = normalizeSections(authored);
+    return written.length ? written : parseBiodata(profile.title, profile.body).sections;
+  }, [authored, profile.title, profile.body]);
 
   return (
     <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center">
@@ -219,7 +226,7 @@ export default function BiodataModal({ profile, onClose }: { profile: DeckProfil
               for it to add: an ad that yields no structured fields still
               produces Summary + About sections carrying the title and the
               complete original text. */}
-          <BiodataSheet sections={schema.sections} isFemale={isFemale} />
+          <BiodataSheet sections={sections} isFemale={isFemale} />
 
           <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: '1px solid #F0ECE8' }}>
             <p className="text-xs" style={{ color: '#A0A0A0' }}>instarishta.me</p>
