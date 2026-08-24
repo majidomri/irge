@@ -22,7 +22,8 @@
     "verify:protected:local": "node -e \"process.env.PROTECTED_OUT_DIR='dist-protected-local'; import('./ci/verify-protected.mjs')\"",
     "validate:data": "node ci/validate-json.mjs",
     "test:smoke": "node ci/smoke-test.mjs",
-    "test": "npm run validate:data && npm run test:smoke"
+    "test": "npm run validate:data && npm run test:smoke && npm run test:worker",
+    "test:worker": "node ci/worker-refresh.test.mjs"
   },
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.82",

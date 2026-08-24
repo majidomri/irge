@@ -10,7 +10,15 @@
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 
-const WORKER_URL = 'https://instarishta-profile-relay.instarishtalead.workers.dev/api/profiles';
+/**
+ * The Cloudflare relay in front of jsdata.json. Exported so the admin
+ * force-refresh route (/api/admin/profiles/refresh) can reach the worker's
+ * own cache — purging Next's tag alone is not enough, the worker holds a
+ * separate 5-minute KV cache behind it.
+ */
+export const PROFILE_WORKER_BASE = 'https://instarishta-profile-relay.instarishtalead.workers.dev';
+
+const WORKER_URL = `${PROFILE_WORKER_BASE}/api/profiles`;
 
 // In next dev, unstable_cache doesn't persist between requests.
 // This module-level Map fills that gap so dev reloads are instant after first fetch.
@@ -20,6 +28,15 @@ function devCached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise
   const hit = _dev.get(key);
   if (hit && hit.exp > Date.now()) return Promise.resolve(hit.v as T);
   return fn().then(v => { _dev.set(key, { v, exp: Date.now() + ttlMs }); return v; });
+}
+
+/**
+ * Drop the dev-only profiles cache. revalidateTag() has no effect on the Map
+ * above, so without this a force-refresh appears to do nothing in `next dev`
+ * for up to two minutes — which reads as a broken button.
+ */
+export function clearProfilesDevCache(): void {
+  _dev.delete('profiles');
 }
 
 export interface FeaturedItem {

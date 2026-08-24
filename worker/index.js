@@ -456,6 +456,83 @@ async function writeCachedProfiles(store, payload, source) {
   });
 }
 
+/**
+ * Constant-time string comparison.
+ *
+ * The purge secret is compared on every call to an endpoint an attacker can
+ * hit freely, so a plain === would leak its length and prefix through timing.
+ * Workers has no crypto.timingSafeEqual, so this does the usual XOR-accumulate.
+ */
+function secretsMatch(a, b) {
+  const x = String(a || "");
+  const y = String(b || "");
+  if (x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i += 1) {
+    diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * Force-refresh the cached profiles payload from source.
+ *
+ * Deleting the KV cache key alone is not enough: the source is a
+ * raw.githubusercontent.com URL sitting behind its own CDN, which serves a
+ * stale copy for minutes after a push. So the refetch carries a cache-busting
+ * query param — raw.githubusercontent treats a different query string as a
+ * different URL and goes back to origin.
+ *
+ * Deliberately does NOT touch PROFILE_RAW_KEY. That key is a manual override
+ * an operator set on purpose; wiping it during a routine refresh would throw
+ * away a deliberate decision.
+ */
+async function refreshProfilesFromSource(env, store) {
+  const source = getProfilesSource(env);
+  if (!source) {
+    const error = new Error("Profiles source is not configured.");
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const bust = `${source}${source.includes("?") ? "&" : "?"}cb=${Date.now()}`;
+  const response = await fetch(bust, {
+    method: "GET",
+    cf: { cacheTtl: 0, cacheEverything: false },
+    headers: {
+      Accept: "application/json; charset=utf-8",
+      "Cache-Control": "no-cache",
+    },
+  });
+
+  if (!response.ok) {
+    const error = new Error(`Profiles source HTTP ${response.status}`);
+    error.statusCode = response.status || 502;
+    throw error;
+  }
+
+  const payload = await response.text();
+
+  // Validate before caching. Writing an error page or truncated body into KV
+  // would take the profiles page down until the TTL expired.
+  let parsed;
+  try {
+    parsed = JSON.parse(payload);
+  } catch {
+    const error = new Error("Profiles source returned invalid JSON");
+    error.statusCode = 502;
+    throw error;
+  }
+  if (!Array.isArray(parsed)) {
+    const error = new Error("Profiles source did not return an array");
+    error.statusCode = 502;
+    throw error;
+  }
+
+  await writeCachedProfiles(store, payload, source);
+  return parsed.length;
+}
+
 async function fetchProfilesPayload(env, store) {
   const source = getProfilesSource(env);
   const rawOverride = await readProfilesRaw(store);
@@ -648,6 +725,53 @@ export default {
         origin,
         env,
       );
+    }
+
+    /*
+     * POST /api/profiles/refresh — force the cache to re-read jsdata.json.
+     *
+     * Server-to-server ONLY. Called by /api/admin/profiles/refresh in the
+     * Next app, which holds the secret; the browser never sees it.
+     *
+     * Deliberately hostile to discovery:
+     *   • No CORS headers, and no OPTIONS handling — a browser cannot read the
+     *     response even if it manages to send the request.
+     *   • Every failed or unauthenticated attempt returns the SAME bare 404
+     *     the worker gives any unknown path, so probing cannot confirm the
+     *     endpoint exists, that the secret is wrong, or that it is merely
+     *     unset. There is nothing here to catch.
+     *   • Fails closed: with PROFILES_PURGE_SECRET unset, the route is dead.
+     */
+    if (url.pathname === "/api/profiles/refresh") {
+      const secret = String(env.PROFILES_PURGE_SECRET || "").trim();
+      const provided = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+
+      if (request.method !== "POST" || !secret || !secretsMatch(provided, secret)) {
+        return new Response("Not found", { status: 404 });
+      }
+
+      try {
+        const store = getLeadStore(env);
+        await store?.delete(PROFILE_CACHE_KEY);
+        const count = await refreshProfilesFromSource(env, store);
+        return new Response(JSON.stringify({ ok: true, count, at: new Date().toISOString() }), {
+          status: 200,
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+        });
+      } catch (error) {
+        /*
+         * Never propagate the upstream status verbatim. 404 is this route's
+         * "you are not authorised / I do not exist" answer, so letting a
+         * GitHub 404 (jsdata.json renamed or deleted) through would make the
+         * admin panel report a secret mismatch instead of a missing file.
+         * Everything except a genuine misconfiguration is a 502.
+         */
+        const status = error?.statusCode === 503 ? 503 : 502;
+        return new Response(JSON.stringify({ ok: false, error: error?.message || "Refresh failed" }), {
+          status,
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+        });
+      }
     }
 
     if (url.pathname !== "/api/submit-profile-ad") {

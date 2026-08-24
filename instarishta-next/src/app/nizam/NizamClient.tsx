@@ -192,6 +192,36 @@ export default function NizamClient({
     router.push('/');
   };
 
+  /*
+   * Force /profiles to re-read jsdata.json from GitHub.
+   *
+   * The profile ads deliberately stay in the repo behind the Cloudflare
+   * relay, so an edit normally takes up to ~35 minutes to appear (GitHub's
+   * CDN, then the worker's 5-minute KV cache, then Next's 30-minute tag).
+   * This collapses that to one click. The secret lives server-side in
+   * /api/admin/profiles/refresh — nothing sensitive is in this component.
+   */
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshProfiles = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const res  = await fetch('/api/admin/profiles/refresh', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error ?? 'Refresh failed'); return; }
+      showToast(
+        typeof data.count === 'number'
+          ? `Profiles refreshed — ${data.count} live`
+          : 'Profiles refreshed',
+      );
+    } catch {
+      showToast('Refresh failed');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row" style={{ background: BG, color: '#fff' }}>
 
@@ -219,6 +249,13 @@ export default function NizamClient({
         </nav>
 
         <div className="px-3 pb-4 border-t pt-3" style={{ borderColor: BORDER }}>
+          <button onClick={refreshProfiles} disabled={refreshing}
+            title="Re-read jsdata.json from GitHub now, skipping every cache"
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 mb-2 rounded-xl text-sm font-medium disabled:opacity-50"
+            style={{ background: GREEN_BG, color: GREEN, border: 'none' }}>
+            <span>{refreshing ? '⏳' : '🔄'}</span>
+            <span>{refreshing ? 'Refreshing…' : 'Refresh profiles'}</span>
+          </button>
           <p className="px-4 pb-2 text-[0.7rem]" style={{ color: 'rgba(255,255,255,0.4)' }}>
             {adminName ?? adminEmail}
           </p>
@@ -241,6 +278,12 @@ export default function NizamClient({
             <span className="text-[0.55rem] font-semibold">{t.label}</span>
           </button>
         ))}
+        <button onClick={refreshProfiles} disabled={refreshing}
+          className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 disabled:opacity-50"
+          style={{ color: refreshing ? GREEN : 'rgba(255,255,255,0.4)' }}>
+          <span className="text-[1.1rem] leading-none">{refreshing ? '⏳' : '🔄'}</span>
+          <span className="text-[0.55rem] font-semibold">Refresh</span>
+        </button>
         <button onClick={logout}
           className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5"
           style={{ color: 'rgba(255,255,255,0.3)' }}>
