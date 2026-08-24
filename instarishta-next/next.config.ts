@@ -44,13 +44,35 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
-  // /nizam's post/story "Image URL" fields are free text — any host is a
-  // valid value there — but next/image rejects an external domain that
-  // isn't allowlisted here. Without this, any admin-pasted image renders
-  // fine via the plain <img> tags in the channel feed / PostModal, but
-  // breaks specifically on /post/[slug] and /p/[slug], which use next/image.
+  // /nizam's post/story "Image URL" fields are free text, and next/image
+  // rejects any host not listed here. This used to be hostname:'**', which
+  // meant two things worth avoiding: Vercel bills image optimization per
+  // source image transformed, so an open allowlist makes that spend
+  // unbounded; and it let any URL reaching the feed be fetched by our
+  // optimizer, which is a server-side request on our behalf.
+  //
+  // Listed hosts are the ones actually in use (checked against ir_posts /
+  // ir_stories / ir_channels / ir_highlights / ir_featured) plus our own
+  // Supabase storage. ADDING A HOST IS A ONE-LINE CHANGE — if an admin
+  // pastes an image from somewhere new, it renders fine through the plain
+  // <img> tags in the channel feed and PostModal, and only /p/[slug],
+  // /post/[slug] and /s/[slug] (which use next/image) will show it broken
+  // until its host is added below.
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: 'placehold.co' },
+      { protocol: 'https', hostname: 'cxgxyqxeakjrghfzkuko.supabase.co' },
+    ],
+    // Uploaded images never change behind their URL, so re-optimising them
+    // every 60s (the default TTL) is pure waste — each miss is another
+    // billable transformation. 31 days.
+    minimumCacheTTL: 2678400,
+    // Every distinct width is separately transformed and billed. The default
+    // eight device sizes generate far more variants than this layout asks
+    // for: covers render at container width, thumbnails at 80px.
+    deviceSizes: [640, 828, 1200, 1920],
+    imageSizes: [80, 160, 256],
   },
 
   turbopack: {
