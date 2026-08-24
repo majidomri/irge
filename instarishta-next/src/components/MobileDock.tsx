@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { useChromeAutoHide } from '@/lib/hooks/useChromeAutoHide';
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
@@ -61,6 +62,7 @@ type TabItem = {
 export default function MobileDock() {
   const router = useRouter();
   const path   = usePathname();
+  const chromeHidden = useChromeAutoHide();
 
   // When returning from WhatsApp / external app the browser restores the page
   // from bfcache (e.persisted = true), which freezes the old React state.
@@ -90,6 +92,9 @@ export default function MobileDock() {
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        // Slide past the safe-area inset too, so no sliver is left on notched phones.
+        transform: chromeHidden ? 'translateY(110%)' : 'translateY(0)',
+        transition: 'transform 0.25s ease',
       } as React.CSSProperties}
       role="navigation"
       aria-label="Main navigation"

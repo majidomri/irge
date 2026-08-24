@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useChromeAutoHide } from '@/lib/hooks/useChromeAutoHide';
 import ShinyText from '@/components/ui/ShinyText';
 import { useSession } from '@/lib/auth-client';
 import AuthModal from '@/components/AuthModal';
@@ -77,6 +78,7 @@ export default function Navbar() {
   const [authError, setAuthError] = useState<string | undefined>(undefined);
   const isHome = path === '/';
   const [scrolled, setScrolled] = useState(!isHome);
+  const chromeHidden = useChromeAutoHide();
 
   // Handle an auth-gated redirect landing here with ?signin=1 (set by
   // middleware, /nizam, /pay/[id], and the OAuth errorCallbackURL). `next`
@@ -147,7 +149,10 @@ export default function Navbar() {
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderBottom: `1px solid ${navBorder}`,
-          transition: 'background 0.3s ease, border-color 0.3s ease',
+          // translate rather than display:none — the bar animates out and,
+          // being sticky, leaves no gap behind it.
+          transform: chromeHidden ? 'translateY(-100%)' : 'translateY(0)',
+          transition: 'background 0.3s ease, border-color 0.3s ease, transform 0.25s ease',
         }}
       >
         <div className="max-w-[1280px] mx-auto px-8 flex items-center h-[76px] gap-6">
@@ -216,7 +221,8 @@ export default function Navbar() {
           backdropFilter: scrolled ? 'blur(20px)' : 'none',
           WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
           borderColor: navBorder,
-          transition: 'background 0.3s ease, border-color 0.3s ease',
+          transform: chromeHidden ? 'translateY(-100%)' : 'translateY(0)',
+          transition: 'background 0.3s ease, border-color 0.3s ease, transform 0.25s ease',
         }}
       >
         <div className="flex items-center justify-between px-5 h-14">
