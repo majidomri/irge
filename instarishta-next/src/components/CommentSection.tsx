@@ -120,15 +120,18 @@ export default function CommentSection({
         </div>
       )}
 
-      <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>
-        Suggested
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        Suggested replies
+      </p>
+      <p className="text-[11px] mb-2.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        Tap one to post it as a full, courteous message.
       </p>
       <div className="flex flex-wrap gap-2 mb-4">
         {COMMENT_CHIPS.map(c => {
           const done = posted.has(c.key);
           return (
             <button key={c.key} type="button" disabled={posting !== null || done}
-              onClick={() => submit(c.key)}
+              onClick={() => submit(c.key)} title={c.message}
               className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold border disabled:opacity-60"
               style={{
                 borderColor: done ? '#00A86B' : 'rgba(255,255,255,0.15)',
@@ -156,11 +159,18 @@ export default function CommentSection({
                   style={{ background: 'rgba(0,168,107,0.18)', color: '#00E08C' }}>
                   {initialOf(c.author_name)}
                 </div>
-                <p className="text-sm leading-snug pt-1">
-                  <span className="font-bold text-white">{c.author_name}</span>{' '}
-                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>{chip?.icon} {chip?.label ?? c.chip_key}</span>{' '}
-                  <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>· {timeAgo(c.created_at)}</span>
-                </p>
+                {/* The thread shows the full sentence, not the chip face —
+                    a published comment should read as something a family
+                    wrote, even though the member only tapped a chip. */}
+                <div className="pt-0.5 min-w-0">
+                  <p className="text-sm leading-snug">
+                    <span className="font-bold text-white">{c.author_name}</span>{' '}
+                    <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>· {timeAgo(c.created_at)}</span>
+                  </p>
+                  <p className="text-sm leading-snug mt-0.5" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                    {chip?.icon} {chip?.message ?? c.chip_key}
+                  </p>
+                </div>
               </div>
             );
           })}

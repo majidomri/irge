@@ -15,6 +15,9 @@ import TextType from '@/components/ui/TextType';
 import ClickSpark from '@/components/ui/ClickSpark';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 import ZuckStories from '@/components/ZuckStories';
+import {
+  LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
+} from '@/components/StoryIcons';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
@@ -389,25 +392,36 @@ function PostModal({
       {/* ── Bottom bar ── */}
       <div className="relative z-10 px-5 py-3 shrink-0"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.4)' }}>
-        <div className="flex items-center gap-4">
-          <button onClick={() => onLike(post.id)}
-            className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
-            <span className="text-xl">{liked.has(post.id) ? '❤️' : '🤍'}</span>
-            <span className="text-sm font-semibold text-white">{(post.likes ?? 0) + (liked.has(post.id) ? 1 : 0)}</span>
-          </button>
-          <button onClick={() => setCommenting(true)}
-            className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
-            <span className="text-xl">💬</span>
-            <span className="text-sm font-semibold text-white">Comment</span>
-          </button>
-          <button onClick={openShare} disabled={shareLoading}
-            className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer disabled:opacity-50">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </button>
-          <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>👁 {(post.views ?? 0) + 1}</span>
-          <span className="text-xs ml-auto" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
+        {/* Same shape as the story viewer's bar (see StoryIcons.tsx): meta
+            on the left, icon-only action cluster on the right. */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <span className="font-semibold text-white">
+              {(post.likes ?? 0) + (liked.has(post.id) ? 1 : 0)}
+            </span>
+            <span>·</span>
+            <span className="truncate">{(post.views ?? 0) + 1} views</span>
+            <span>·</span>
+            <span className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
+          </div>
+
+          <div className="flex items-center gap-0.5 shrink-0">
+            <StoryActionButton
+              ariaLabel={liked.has(post.id) ? 'Liked' : 'Like'}
+              onClick={() => onLike(post.id)}
+              tone={liked.has(post.id) ? 'pink' : 'white'}
+            >
+              <LikeIcon size={26} filled={liked.has(post.id)} />
+            </StoryActionButton>
+
+            <StoryActionButton ariaLabel="Comments" onClick={() => setCommenting(true)}>
+              <CommentIcon size={26} />
+            </StoryActionButton>
+
+            <StoryActionButton ariaLabel="Share" onClick={openShare} disabled={shareLoading}>
+              <ShareIcon size={26} />
+            </StoryActionButton>
+          </div>
         </div>
       </div>
 
