@@ -148,6 +148,39 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
     return () => { el.innerHTML = ''; };
   }, [stories]);
 
+  /**
+   * Arrow-key navigation for the open story.
+   *
+   * zuck.js binds its own `onkeyup` on #zuck-modal — Escape closes, Enter and
+   * Space advance — but it has no arrow keys, and because it is bound to the
+   * element rather than the window it only fires while that container happens
+   * to hold focus. Clicking a ring does not reliably give it focus, so in
+   * practice the keyboard did nothing.
+   *
+   * This drives the same public modal API zuck.js exposes on the container, so
+   * timers, transitions and the callbacks above all stay in sync — reaching
+   * for `next()`/`previous()` rather than re-implementing navigation.
+   */
+  useEffect(() => {
+    if (!openStoryId) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+      const modalEl = document.querySelector('#zuck-modal') as (HTMLElement & {
+        modal?: { next?: () => void; previous?: () => void; close?: () => void };
+      }) | null;
+      const modal = modalEl?.modal;
+      if (!modal) return;
+
+      if (e.key === 'ArrowRight') { e.preventDefault(); modal.next?.(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); modal.previous?.(); }
+      if (e.key === 'Escape')     { e.preventDefault(); modal.close?.(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openStoryId]);
+
   // Record the watch. Fires once per item per mount; the route is idempotent
   // on (story_id, viewer_id) so a re-watch never double-counts, and a failure
   // is deliberately silent — a lost view must not interrupt the story.

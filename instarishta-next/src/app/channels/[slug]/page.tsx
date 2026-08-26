@@ -243,6 +243,57 @@ function PostModal({
   // Reset carousel position when post changes
   useEffect(() => { setCarIdx(0); scrollRef.current?.scrollTo({ left: 0 }); }, [post.id]);
 
+  const goPrev = useCallback(() => {
+    if (postIdx > 0) onNavigate(allPosts[postIdx - 1]);
+  }, [postIdx, allPosts, onNavigate]);
+
+  const goNext = useCallback(() => {
+    if (postIdx < allPosts.length - 1) onNavigate(allPosts[postIdx + 1]);
+  }, [postIdx, allPosts, onNavigate]);
+
+  /**
+   * Keyboard navigation. The modal had none — not even Escape — so on desktop
+   * the only way through a channel was clicking the small chevrons.
+   *
+   * ←/→ move between posts, ↑/↓ move within a multi-image post's carousel
+   * (so the two axes never fight), Escape closes.
+   *
+   * Arrows keep working while the comment drawer is open, on purpose: the
+   * drawer is docked beside the post, not on top of it, so navigating with
+   * comments open is the normal way to browse — exactly how YouTube lets you
+   * move between Shorts without closing the comment panel. The drawer stays
+   * mounted and re-targets itself to the new post.
+   *
+   * Escape is the one key the drawer does own, and it handles that itself:
+   * its listener runs later and stops propagation, so the first Escape closes
+   * the drawer and the second closes the post.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (commenting) setCommenting(false); else onClose();
+        return;
+      }
+
+      // Never hijack typing in an input, textarea or contenteditable.
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
+      if (imgs.length > 1 && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const next = e.key === 'ArrowDown'
+          ? Math.min(carIdx + 1, imgs.length - 1)
+          : Math.max(carIdx - 1, 0);
+        scrollRef.current?.scrollTo({ left: next * (scrollRef.current?.clientWidth ?? 0), behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [goPrev, goNext, onClose, commenting, imgs.length, carIdx]);
+
   // Nano-id slugs are get-or-create — resolved on demand rather than
   // fetched for every post in the feed just in case someone shares it.
   const openShare = async () => {
@@ -267,9 +318,26 @@ function PostModal({
     if (swipeRef.current.inCar) return;
     const dx = e.changedTouches[0].clientX - swipeRef.current.x;
     const dy = e.changedTouches[0].clientY - swipeRef.current.y;
+
+    /**
+     * A finger that barely moved is a tap, not a swipe — route it to the tap
+     * zones instead of discarding it. Stories train people to tap the edges of
+     * the frame to move; the post viewer only understood swipes, so those taps
+     * did nothing at all.
+     *
+     * Zones are the outer thirds. The middle third stays inert so tapping the
+     * biodata itself never navigates away from it by accident.
+     */
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      const zone = e.changedTouches[0].clientX / window.innerWidth;
+      if (zone < 0.33) goPrev();
+      else if (zone > 0.67) goNext();
+      return;
+    }
+
     if (Math.abs(dx) < 65 || Math.abs(dy) > Math.abs(dx) * 0.9) return;
-    if (dx < 0 && postIdx < allPosts.length - 1) onNavigate(allPosts[postIdx + 1]);
-    if (dx > 0 && postIdx > 0) onNavigate(allPosts[postIdx - 1]);
+    if (dx < 0) goNext();
+    if (dx > 0) goPrev();
   };
 
   const coverForBg = imgs[carIdx] || imgs[0];
@@ -312,15 +380,29 @@ function PostModal({
       </div>
 
       {/* ── Image carousel — edge-to-edge, full-bleed; sized to fit screen with no scroll ── */}
+      {/* Was a fixed 54dvh with object-cover, which cropped ~44% off a tall
+          biodata while leaving ~360px of empty black below the image. flex-1
+          lets the carousel absorb whatever the meta/action rows don't use, so
+          the image gets the full remaining height. min-h-0 is required or the
+          flex child refuses to shrink below its content size. */}
       {hasImg && (
-        <div ref={carouselRef} className="relative z-10 shrink-0 overflow-hidden" style={{ height: isAudio ? '32dvh' : '54dvh' }}>
+        <div ref={carouselRef}
+          className={`relative z-10 overflow-hidden ${isAudio ? 'shrink-0' : 'flex-1 min-h-0'}`}
+          style={isAudio ? { height: '32dvh' } : { minHeight: '40dvh' }}>
           <div ref={scrollRef}
             className="ir-no-scrollbar absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
             style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
             {imgs.map((url, i) => (
-              <div key={i} className="min-w-full h-full snap-center relative">
+              <div key={i} className="min-w-full h-full snap-center relative overflow-hidden">
+                {/* Blurred backdrop fills the frame; the real image is contained
+                    on top so no part of the biodata is cropped away. */}
+                <img src={url} alt="" aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-35"
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  style={{ pointerEvents: 'none' }}
+                  draggable={false} />
                 <img src={url} alt={`Photo ${i + 1}`}
-                  className="w-full h-full object-cover select-none"
+                  className="relative w-full h-full object-contain select-none"
                   loading={i === 0 ? 'eager' : 'lazy'}
                   style={{ pointerEvents: 'none' }}
                   draggable={false} />
@@ -344,8 +426,16 @@ function PostModal({
         </div>
       )}
 
-      {/* ── Content (fits in viewport, no scroll) ── */}
-      <div className="relative z-10 flex-1 min-h-0 overflow-hidden px-5 pt-3 pb-2">
+      {/* ── Content (fits in viewport, no scroll) ──
+          Imported biodata has no title and no caption, so for those posts this
+          panel renders nothing — but it still claimed flex-1 and split the
+          modal 50/50 with the image, leaving a ~435px empty black band while
+          the biodata above it was squeezed. It only earns flex when it has
+          something to show; otherwise it collapses and the image takes the
+          space. */}
+      <div className={`relative z-10 overflow-hidden px-5 pt-3 pb-2 ${
+        (isAudio || isText || post.title || post.caption) ? 'flex-1 min-h-0' : 'shrink-0'
+      }`}>
         {/* Audio player */}
         {isAudio && (
           <AudioPlayer url={post.audio_url!} title={post.title} caption={post.caption} onPlayAttempt={onPlayAttempt} />
@@ -396,11 +486,21 @@ function PostModal({
             on the left, icon-only action cluster on the right. */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            <span className="font-semibold text-white">
-              {(post.likes ?? 0) + (liked.has(post.id) ? 1 : 0)}
+            {/* Was a bare "0" with no icon or label — unreadable as a like
+                count next to "3 views". */}
+            <span className="font-semibold text-white truncate">
+              {(() => {
+                const n = (post.likes ?? 0) + (liked.has(post.id) ? 1 : 0);
+                return `${n} ${n === 1 ? 'like' : 'likes'}`;
+              })()}
             </span>
             <span>·</span>
-            <span className="truncate">{(post.views ?? 0) + 1} views</span>
+            <span className="truncate">
+              {(() => {
+                const n = (post.views ?? 0) + 1;
+                return `${n} ${n === 1 ? 'view' : 'views'}`;
+              })()}
+            </span>
             <span>·</span>
             <span className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
           </div>
@@ -425,7 +525,11 @@ function PostModal({
         </div>
       </div>
 
-      {commenting && <CommentDrawer entityId={post.id} onClose={() => setCommenting(false)} />}
+      {/* stageWidth matches the modal column's maxWidth below, so the drawer
+          docks against the post's edge rather than the viewport's. */}
+      {commenting && (
+        <CommentDrawer entityId={post.id} stageWidth={480} onClose={() => setCommenting(false)} />
+      )}
       {shareSlug && (
         <ShareSheet slug={shareSlug} entityType="post" title={post.title || 'InstaRishta post'} onClose={() => setShareSlug(null)} />
       )}
@@ -660,12 +764,27 @@ export default function ChannelFeedPage() {
               >
                 <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: hasImage ? '#0d0d0c' : hasAudio ? '#0d1e18' : '#1E3932' }}>
                   {cover ? (
-                    <img
-                      src={cover}
-                      alt={post.title ?? ''}
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                      loading="lazy"
-                    />
+                    /* Biodata images are tall documents (typically ~1:1.9), not
+                       photos. object-cover on a 3/4 tile cropped 30-45% off
+                       them — names and contact rows were being cut away. The
+                       whole image has to be visible, so it is letterboxed with
+                       object-contain, over a blurred copy of itself so the tile
+                       still fills its grid cell instead of showing bars. */
+                    <>
+                      <img
+                        src={cover}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40"
+                        loading="lazy"
+                      />
+                      <img
+                        src={cover}
+                        alt={post.title ?? ''}
+                        className="relative w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                        loading="lazy"
+                      />
+                    </>
                   ) : (
                     /* Text / audio tile */
                     <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 p-2">
@@ -716,9 +835,14 @@ export default function ChannelFeedPage() {
 
                 {/* Caption block */}
                 <div className="px-2.5 py-2">
-                  <p className="text-xs font-bold text-white leading-snug line-clamp-2">
-                    {post.title || post.caption || 'Untitled post'}
-                  </p>
+                  {/* Imported biodata carries no title or caption — the image is
+                      the content. Printing "Untitled post" there labelled every
+                      one of them as broken; showing nothing reads as intended. */}
+                  {(post.title || post.caption) && (
+                    <p className="text-xs font-bold text-white leading-snug line-clamp-2">
+                      {post.title || post.caption}
+                    </p>
+                  )}
                   <p className="text-[11px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
                     {channel?.name} · {timeAgoShort(post.created_at)}
                   </p>

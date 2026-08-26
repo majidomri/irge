@@ -153,7 +153,7 @@ export default function NotificationBell() {
                 );
 
                 return n.slug ? (
-                  <Link key={n.key} href={`/post/${n.slug}`} className="block no-underline" style={{ color: 'inherit' }}>
+                  <Link key={n.key} href={`/p/${n.slug}`} className="block no-underline" style={{ color: 'inherit' }}>
                     {row}
                   </Link>
                 ) : (

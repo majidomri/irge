@@ -6,10 +6,12 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 
 export const nanoid13 = customAlphabet(ALPHABET, 13);
 
-// URL prefix for each entity type
+// URL prefix for each entity type.
+// profile and post share /p — one share route resolves both by slug, and
+// /post/* permanently redirects there. See src/app/p/[slug]/page.tsx.
 export const ENTITY_PATH: Record<string, string> = {
   profile:   'p',
-  post:      'post',
+  post:      'p',
   story:     's',
   channel:   'c',
   highlight: 'h',

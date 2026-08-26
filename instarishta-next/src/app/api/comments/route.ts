@@ -7,6 +7,7 @@
  *   401 → not signed in (commenting requires a session — see migration 010)
  *   403 → banned account
  *   409 → already posted this exact chip on this post
+ *   429 → daily per-profile quota reached (see CHIPS_PER_DAY)
  *
  * ir_comments has RLS enabled with no policies, so this route is the only
  * read/write path. GET is intentionally public with no session check — the
@@ -32,6 +33,50 @@ function isEntityType(v: unknown): v is EntityType {
   return v === 'post' || v === 'story';
 }
 
+/**
+ * How many comments one member may leave on one post per rolling day.
+ *
+ * The unique constraint (entity_type, entity_id, user_id, chip_key) only stops
+ * the *same* chip twice, so a member could post all ten chips on one profile
+ * and fill the thread with their own name. Three is enough to say something
+ * meaningful — interest, a question, a follow-up — without the thread becoming
+ * one person talking to themselves.
+ *
+ * Rolling 24h from each comment, not a calendar day: a midnight reset would
+ * just move the burst rather than prevent it.
+ */
+const CHIPS_PER_DAY = 3;
+const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Comments this member has left on this entity inside the window. */
+async function quotaFor(
+  db: ReturnType<typeof serviceClient>,
+  entityType: EntityType,
+  entityId: string,
+  userId: string,
+): Promise<{ used: number; remaining: number; limit: number; resetAt: string | null }> {
+  const since = new Date(Date.now() - WINDOW_MS).toISOString();
+  const { data } = await db
+    .from('ir_comments')
+    .select('created_at')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+    .eq('user_id', userId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: true });
+
+  const rows = data ?? [];
+  const used = rows.length;
+  // The quota frees up when the OLDEST comment in the window ages out.
+  const resetAt = used >= CHIPS_PER_DAY && rows[0]
+    ? new Date(new Date(rows[0].created_at).getTime() + WINDOW_MS).toISOString()
+    : null;
+
+  // `used` can exceed the limit for comments posted before it existed; clamp
+  // so the composer never renders a negative or inflated allowance.
+  return { used, remaining: Math.max(0, CHIPS_PER_DAY - used), limit: CHIPS_PER_DAY, resetAt };
+}
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const entityType = url.searchParams.get('entityType');
@@ -51,7 +96,26 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(200);
 
-  return NextResponse.json({ comments: data ?? [], count: count ?? 0 });
+  /**
+   * The viewer's own quota, when there is a viewer. The composer needs this on
+   * load — otherwise it renders every chip as available and the member only
+   * discovers the limit by being rejected. Anonymous visitors get null: they
+   * cannot comment at all, and the sign-in gate already tells them so.
+   *
+   * Never fatal — reading comments must not depend on a working session.
+   */
+  let quota: Awaited<ReturnType<typeof quotaFor>> | null = null;
+  try {
+    const session = await auth.api.getSession({ headers: req.headers });
+    if (session?.user?.email) {
+      const profile = await ensureProfile(db, session.user.email, session.user.name || null);
+      quota = await quotaFor(db, entityType, entityId, profile.id);
+    }
+  } catch {
+    quota = null;
+  }
+
+  return NextResponse.json({ comments: data ?? [], count: count ?? 0, quota });
 }
 
 export async function POST(req: NextRequest) {
@@ -83,6 +147,20 @@ export async function POST(req: NextRequest) {
   // blank author_name. || correctly treats '' as "keep looking".
   const authorName = profile.full_name || session.user.name || session.user.email.split('@')[0];
 
+  // Rate limit before the insert. Checked server-side because the client copy
+  // is only a courtesy — the composer disables itself, but nothing stops a
+  // direct POST.
+  const quota = await quotaFor(db, entityType, entityId, profile.id);
+  if (quota.remaining <= 0) {
+    return NextResponse.json(
+      {
+        error: `You can post ${CHIPS_PER_DAY} messages a day on a profile. Please try again tomorrow.`,
+        quota,
+      },
+      { status: 429 },
+    );
+  }
+
   const { data, error } = await db
     .from('ir_comments')
     .insert({
@@ -104,5 +182,8 @@ export async function POST(req: NextRequest) {
     actorUserId: profile.id, actorName: authorName, chipKey: chipKey,
   });
 
-  return NextResponse.json({ ok: true, comment: data }, { status: 201 });
+  // Post-insert quota so the composer can update its counter without refetching.
+  const after = await quotaFor(db, entityType, entityId, profile.id);
+
+  return NextResponse.json({ ok: true, comment: data, quota: after }, { status: 201 });
 }

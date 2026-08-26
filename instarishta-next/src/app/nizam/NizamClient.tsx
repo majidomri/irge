@@ -1,5 +1,6 @@
 'use client';
 import BiodataTab from './BiodataTab';
+import ImportTab from './ImportTab';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
@@ -21,6 +22,14 @@ export interface Channel {
   description:  string | null;
   cover_image:  string | null;
   created_at:   string;
+  /**
+   * ir_channels holds two different things: real channels (is_cohort false)
+   * and profession cohorts (is_cohort true, rendered at /cohorts). The public
+   * channel list filters on this — see getChannels() in lib/supabase.ts — so a
+   * post written to a cohort renders on no channel page at all. Admin tabs
+   * that publish content must not offer cohorts as a destination.
+   */
+  is_cohort:    boolean;
 }
 
 interface Post {
@@ -33,6 +42,8 @@ interface Post {
   image:       string | null;
   audio_url:   string | null;
   created_at:  string;
+  /** Admin-only triage flag from the importer — never rendered publicly. */
+  needs_redaction?: boolean;
 }
 
 interface Story {
@@ -71,11 +82,12 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata';
+type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
   { key: 'posts',    label: 'Posts',    icon: '📝' },
+  { key: 'import',   label: 'Import',   icon: '📥' },
   { key: 'stories',  label: 'Stories',  icon: '⭕' },
   { key: 'featured', label: 'Featured', icon: '⭐' },
   { key: 'interests', label: 'Interests', icon: '💚' },
@@ -302,6 +314,9 @@ export default function NizamClient({
         {tab === 'posts' && (
           <PostsTab channels={channels} toast={showToast} />
         )}
+        {tab === 'import' && (
+          <ImportTab channels={channels} toast={showToast} />
+        )}
         {tab === 'stories' && (
           <StoriesTab channels={channels} toast={showToast} />
         )}
@@ -354,6 +369,13 @@ function ChannelsTab({
   const [coverImage,  setCoverImage]  = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Inline edit state — one row at a time, seeded from the row being opened.
+  const [editingId,       setEditingId]       = useState<string | null>(null);
+  const [editName,        setEditName]        = useState('');
+  const [editSlug,        setEditSlug]        = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editCoverImage,  setEditCoverImage]  = useState('');
+
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -372,6 +394,39 @@ function ChannelsTab({
     setChannels(prev => [channel, ...prev]);
     setName(''); setSlug(''); setDescription(''); setCoverImage('');
     toast('Channel created ✓');
+  };
+
+  const saveEdit = async (id: string) => {
+    setBusy(true);
+    const res = await fetch('/api/admin/channels', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        name:        editName,
+        slug:        editSlug,
+        description: editDescription,
+        cover_image: editCoverImage,
+      }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({ error: 'Failed' }));
+      toast(error ?? 'Failed to update');
+      return;
+    }
+    const { channel } = await res.json();
+    setChannels(prev => prev.map(c => (c.id === id ? channel : c)));
+    setEditingId(null);
+    toast('Channel updated ✓');
+  };
+
+  const startEdit = (c: Channel) => {
+    setEditingId(c.id);
+    setEditName(c.name);
+    setEditSlug(c.slug);
+    setEditDescription(c.description ?? '');
+    setEditCoverImage(c.cover_image ?? '');
   };
 
   const remove = async (id: string) => {
@@ -405,16 +460,56 @@ function ChannelsTab({
         {channels.length === 0 && (
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No channels yet.</p>
         )}
-        {channels.map(c => (
+        {channels.map(c => editingId === c.id ? (
+          <div key={c.id} className="rounded-xl p-4 grid gap-3"
+            style={{ background: PANEL, border: `1px solid ${GREEN}` }}>
+            <p className="text-sm font-bold">Edit channel</p>
+            <Input value={editName} setValue={setEditName} placeholder="Name" />
+            <Input value={editSlug} setValue={setEditSlug} placeholder="URL slug" />
+            <Input value={editDescription} setValue={setEditDescription} placeholder="Short description (optional)" />
+            <Input value={editCoverImage} setValue={setEditCoverImage} placeholder="Cover image URL (optional)" />
+            {editSlug !== c.slug && (
+              <p className="text-[11px]" style={{ color: '#FF8B5A' }}>
+                Changing the slug changes this channel&apos;s URL. Existing links to
+                /channels/{c.slug} will 404.
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => saveEdit(c.id)} disabled={busy}
+                className="text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50"
+                style={{ background: GREEN, color: '#04150d' }}>
+                {busy ? 'Saving…' : 'Save'}
+              </button>
+              <button onClick={() => setEditingId(null)}
+                className="text-xs font-semibold px-4 py-2 rounded-lg"
+                style={{ background: 'transparent', border: `1px solid ${BORDER}`, color: '#fff' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
           <div key={c.id} className="rounded-xl px-4 py-3 flex items-center gap-3"
             style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
             {c.cover_image && (
               <img src={c.cover_image} alt="" className="w-10 h-10 rounded-lg object-cover" />
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm">{c.name}</p>
+              <p className="font-semibold text-sm">
+                {c.name}
+                {c.is_cohort && (
+                  <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded"
+                    style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)' }}>
+                    COHORT
+                  </span>
+                )}
+              </p>
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>/{c.slug}</p>
             </div>
+            <button onClick={() => startEdit(c)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ background: GREEN_BG, color: GREEN }}>
+              Edit
+            </button>
             <button onClick={() => remove(c.id)}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg"
               style={{ background: 'rgba(207,69,0,0.15)', color: '#FF8B5A' }}>
@@ -517,6 +612,12 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
                 <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
               )}
               <div className="flex-1 min-w-0">
+                {p.needs_redaction && (
+                  <p className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block mb-1"
+                    style={{ background: 'rgba(245,165,36,0.18)', color: '#f5a524' }}>
+                    NEEDS REDACTION
+                  </p>
+                )}
                 {p.title && <p className="font-semibold text-sm">{p.title}</p>}
                 {p.caption && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{p.caption.slice(0, 100)}</p>}
                 {p.audio_url && <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>🎙 Audio</p>}

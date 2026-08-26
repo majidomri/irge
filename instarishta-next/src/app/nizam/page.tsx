@@ -30,7 +30,7 @@ async function loadChannels(): Promise<Channel[]> {
   );
   const { data } = await db
     .from('ir_channels')
-    .select('id, name, slug, description, cover_image, created_at')
+    .select('id, name, slug, description, cover_image, created_at, is_cohort')
     .order('created_at', { ascending: false });
   return (data as Channel[]) ?? [];
 }

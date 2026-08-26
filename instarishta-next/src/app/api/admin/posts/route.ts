@@ -17,7 +17,7 @@ import { NextResponse } from 'next/server';
 import { withAdmin } from '@/lib/admin-route';
 import { ensureProfile } from '@/lib/credits';
 
-const COLS = 'id, channel_id, user_id, title, caption, image, audio_url, created_at';
+const COLS = 'id, channel_id, user_id, title, caption, image, audio_url, needs_redaction, created_at';
 
 export const GET = withAdmin(async (req, { db }) => {
   const channelId = new URL(req.url).searchParams.get('channel_id');
