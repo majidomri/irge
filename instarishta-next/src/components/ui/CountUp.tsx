@@ -57,25 +57,45 @@ export default function CountUp({
     return separator ? formatted.replace(/,/g, separator) : formatted;
   }, [maxDecimals, separator]);
 
-  useEffect(() => {
-    if (ref.current) ref.current.textContent = formatValue(direction === 'down' ? to : from);
-  }, [from, to, direction, formatValue]);
+  // The value the counter settles on. Rendered as real children so the number
+  // is present in the SSR HTML — previously this span shipped empty and was
+  // filled only from an effect, so the stat bar read blank until hydration and
+  // stayed blank forever whenever the observer below never fired.
+  const endValue   = direction === 'down' ? from : to;
+  const startValue = direction === 'down' ? to : from;
+
+  // Animation only ever runs client-side. Until it starts (and if it never
+  // does) React's own children stand as the rendered value.
+  const animating = useRef(false);
 
   useEffect(() => {
-    if (isInView && startWhen) {
-      if (typeof onStart === 'function') onStart();
-      const t1 = setTimeout(() => { motionValue.set(direction === 'down' ? from : to); }, delay * 1000);
-      const t2 = setTimeout(() => { if (typeof onEnd === 'function') onEnd(); }, delay * 1000 + duration * 1000);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
-    }
-  }, [isInView, startWhen, motionValue, direction, from, to, delay, onStart, onEnd, duration]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!isInView || !startWhen) return;
+    if (typeof onStart === 'function') onStart();
+
+    const t1 = setTimeout(() => {
+      // Rewind to the start only at the moment we actually begin animating, so
+      // a counter that is never scrolled into view keeps showing its real value.
+      animating.current = true;
+      if (ref.current) ref.current.textContent = formatValue(startValue);
+      motionValue.jump(startValue);
+      motionValue.set(endValue);
+    }, delay * 1000);
+
+    const t2 = setTimeout(() => {
+      animating.current = false;
+      if (ref.current) ref.current.textContent = formatValue(endValue);
+      if (typeof onEnd === 'function') onEnd();
+    }, delay * 1000 + duration * 1000);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); animating.current = false; };
+  }, [isInView, startWhen, motionValue, startValue, endValue, delay, onStart, onEnd, duration, formatValue]);
 
   useEffect(() => {
     const unsubscribe = springValue.on('change', (latest: number) => {
-      if (ref.current) ref.current.textContent = formatValue(latest);
+      if (animating.current && ref.current) ref.current.textContent = formatValue(latest);
     });
     return () => unsubscribe();
   }, [springValue, formatValue]);
 
-  return <span className={className} ref={ref} />;
+  return <span className={className} ref={ref}>{formatValue(endValue)}</span>;
 }
