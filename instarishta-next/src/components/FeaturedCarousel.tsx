@@ -33,7 +33,10 @@ export default function FeaturedCarousel({
       .or(`placement.eq.all,placement.eq.${placement}`)
       .order('sort_order', { ascending: true })
       .limit(10)
-      .then(({ data }: { data: FeaturedItem[] | null }) => {
+      .then(({ data, error }: { data: FeaturedItem[] | null; error?: unknown }) => {
+        // Without this the carousel disappears identically whether the table is
+        // empty or the anon-key query was rejected — log so the two differ.
+        if (error) console.error('[FeaturedCarousel] ir_featured query failed:', error);
         if (data && data.length > 0) setItems(data);
       });
   }, [placement, initialItems]);

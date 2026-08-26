@@ -6,6 +6,9 @@ import 'zuck.js/css';
 import 'zuck.js/skins/facesnap';
 import './zuck-overrides.css';
 import { supabase, incrementStoryLikes } from '@/lib/supabase';
+import {
+  LikeIcon, CommentIcon, ShareIcon, ViewersIcon, StoryActionButton,
+} from './StoryIcons';
 
 const CommentDrawer = dynamic(() => import('./CommentDrawer'), { ssr: false });
 const ShareSheet    = dynamic(() => import('./ShareSheet'), { ssr: false });
@@ -210,35 +213,56 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
       <div ref={containerRef} className="ir-zuck-stories" />
 
       {openStoryId && activeItemId && (
-        <div className="fixed left-0 right-0 bottom-0 flex items-center gap-4 px-5"
+        /* Bottom bar — mirrors the Xavio story viewer: poster chip on the
+           left, icon-only action cluster on the right. 64 px tall so the
+           48 px buttons clear Material's tap-target minimum. */
+        <div className="fixed left-0 right-0 bottom-0 flex items-center justify-between gap-3 px-4"
           style={{
             zIndex: 100050,
-            paddingTop: 22, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)',
+            height: 64, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, transparent 100%)',
           }}>
-          <button onClick={doLike} className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
-            <span className="text-xl">{activeItemId && liked.has(activeItemId) ? '❤️' : '🤍'}</span>
-            <span className="text-sm font-semibold text-white">{displayLikes}</span>
-          </button>
-          <button onClick={openComment} className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
-            <span className="text-xl">💬</span>
-            <span className="text-sm font-semibold text-white">Comment</span>
-          </button>
-          {activeStory?.isSelf && (
-            <button onClick={openViewers}
-              className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer">
-              <span className="text-xl">👁️</span>
-              <span className="text-sm font-semibold text-white">
-                {activeItem?.viewCount ?? 0}
+          <div className="flex items-center gap-2.5 min-w-0">
+            {activeStory?.photo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={activeStory.photo} alt="" className="h-9 w-9 rounded-lg object-cover shrink-0" />
+            )}
+            <span className="text-white text-[15px] font-semibold truncate max-w-[36vw]">
+              {activeStory?.name}
+            </span>
+            {displayLikes > 0 && (
+              <span className="shrink-0 text-[13px] font-semibold" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                {displayLikes} {displayLikes === 1 ? 'like' : 'likes'}
               </span>
-            </button>
-          )}
-          <button onClick={openShare} disabled={shareLoading}
-            className="flex items-center gap-1.5 border-0 bg-transparent cursor-pointer disabled:opacity-50">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-0.5 shrink-0">
+            <StoryActionButton
+              ariaLabel={activeItemId && liked.has(activeItemId) ? 'Liked' : 'Like'}
+              onClick={doLike}
+              tone={activeItemId && liked.has(activeItemId) ? 'pink' : 'white'}
+            >
+              <LikeIcon size={26} filled={!!activeItemId && liked.has(activeItemId)} />
+            </StoryActionButton>
+
+            <StoryActionButton ariaLabel="Comments" onClick={openComment}>
+              <CommentIcon size={26} />
+            </StoryActionButton>
+
+            <StoryActionButton ariaLabel="Share" onClick={openShare} disabled={shareLoading}>
+              <ShareIcon size={26} />
+            </StoryActionButton>
+
+            {/* Owner-only. There is deliberately no reply-privately action:
+                InstaRishta has no DM channel, and the comment chips are the
+                only sanctioned way to reach a poster. */}
+            {activeStory?.isSelf && (
+              <StoryActionButton ariaLabel={`Viewers (${activeItem?.viewCount ?? 0})`} onClick={openViewers}>
+                <ViewersIcon size={26} />
+              </StoryActionButton>
+            )}
+          </div>
         </div>
       )}
 

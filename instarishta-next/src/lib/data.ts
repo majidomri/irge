@@ -58,6 +58,16 @@ export type ProfilePlacement = 'home' | 'channels' | 'profiles' | 'all';
 // gate, not a real auth boundary, so this is the standard pattern.
 const WORKER_ORIGIN = 'https://instarishta.me';
 
+/**
+ * Every loader below degrades to an empty result rather than throwing, so a
+ * broken fetch, a missing env var and a genuinely empty table all render the
+ * same blank UI. Log the difference — silent catches here cost real debugging
+ * time when the featured carousel simply vanished with no trace anywhere.
+ */
+function loaderFailed(source: string, err: unknown): void {
+  console.error(`[data] ${source} failed — rendering empty:`, err);
+}
+
 export const getProfiles = unstable_cache(
   async () => devCached('profiles', 120_000, async () => {
     try {
@@ -65,10 +75,18 @@ export const getProfiles = unstable_cache(
         cache: 'no-store',
         headers: { 'Origin': WORKER_ORIGIN, 'Referer': WORKER_ORIGIN + '/' },
       });
-      if (!res.ok) return [];
+      if (!res.ok) {
+        loaderFailed('getProfiles', `worker responded ${res.status} ${res.statusText}`);
+        return [];
+      }
       const data = await res.json() as unknown;
-      return Array.isArray(data) ? data : [];
-    } catch {
+      if (!Array.isArray(data)) {
+        loaderFailed('getProfiles', 'worker payload was not an array');
+        return [];
+      }
+      return data;
+    } catch (err) {
+      loaderFailed('getProfiles', err);
       return [];
     }
   }),
@@ -85,15 +103,17 @@ export const getFeatured = unstable_cache(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       );
-      const { data } = await sb
+      const { data, error } = await sb
         .from('ir_featured')
         .select('id, title, description, image_url, link_url')
         .eq('active', true)
         .or(`placement.eq.all,placement.eq.${placement}`)
         .order('sort_order', { ascending: true })
         .limit(10);
+      if (error) loaderFailed(`getFeatured(${placement})`, error);
       return (data ?? []) as FeaturedItem[];
-    } catch {
+    } catch (err) {
+      loaderFailed(`getFeatured(${placement})`, err);
       return [] as FeaturedItem[];
     }
   }),
@@ -115,11 +135,13 @@ export const getBiodata = unstable_cache(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       );
-      const { data } = await sb.from('ir_biodata').select('profile_id, sections');
+      const { data, error } = await sb.from('ir_biodata').select('profile_id, sections');
+      if (error) loaderFailed('getBiodata', error);
       const out: Record<string, unknown> = {};
       for (const row of data ?? []) out[String(row.profile_id)] = row.sections;
       return out;
-    } catch {
+    } catch (err) {
+      loaderFailed('getBiodata', err);
       return {} as Record<string, unknown>;
     }
   }),

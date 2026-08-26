@@ -45,3 +45,7 @@ dist-protected-local/
 protected-local-server*.log
 protected-local-server.pid
 tmp-headless-profile*/
+
+# Credentials / recovery codes — never commit
+authentication.txt
+twilio_2FA_recovery_code.txt
