@@ -65,7 +65,7 @@ export interface ParsedBiodata {
  * biodata.json goes through — so empty values and empty sections disappear by
  * construction and the sheet can never render a blank slot.
  */
-function parseBiodata(title: string, body: string): ParsedBiodata {
+function parseBiodata(body: string): ParsedBiodata {
   const PERSONAL  = ['gender','age','city','nationality','mother tongue','language','height','weight','complexion','marital'];
   const PROF      = ['education','qualification','occupation','profession','job','income','salary','earning','employer'];
   const RELIGIOUS = ['sect','maslak','quran','hafiz','namaz','prayer','religious'];
@@ -128,7 +128,6 @@ function parseBiodata(title: string, body: string): ParsedBiodata {
   const about = aboutLines.join('\n').trim();
 
   const sections = normalizeSections([
-    { heading: 'Summary',              type: 'fields',   items: title ? [{ label: 'Title', value: title }] : [] },
     { heading: 'Personal Details',     type: 'fields',   items: personal },
     { heading: 'Educational Details',  type: 'timeline', items: education },
     { heading: 'Education & Career',   type: 'fields',   items: prof },
@@ -163,8 +162,8 @@ export default function BiodataModal({ profile, authored, onClose }: {
   // is memoised because it runs the extractor over the whole ad.
   const sections = useMemo(() => {
     const written = normalizeSections(authored);
-    return written.length ? written : parseBiodata(profile.title, profile.body).sections;
-  }, [authored, profile.title, profile.body]);
+    return written.length ? written : parseBiodata(profile.body).sections;
+  }, [authored, profile.body]);
 
   return (
     <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center">
@@ -172,12 +171,25 @@ export default function BiodataModal({ profile, authored, onClose }: {
       <section className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl overflow-hidden"
         style={{ background: '#fff', maxHeight: '90vh', overflowY: 'auto', zIndex: 1 }}>
 
-        <div className="sticky top-0 flex items-center justify-between px-5 py-3.5" style={{ background: '#1E3932', color: '#fff', zIndex: 2 }}>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'rgba(255,255,255,0.55)' }}>InstaRishta Biodata</p>
-            <p className="text-sm font-bold">Profile IR #{profile._num}</p>
+        {/* One header, not three. The dark bar, the avatar identity row below
+            it and the Summary/Title field were all restating the same thing —
+            gender and profile number — so they are merged here. */}
+        <div className="sticky top-0 flex items-center gap-3 px-5 py-3" style={{ background: '#1E3932', color: '#fff', zIndex: 2 }}>
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl font-bold shrink-0"
+            style={{ background: 'rgba(255,255,255,0.12)', color: isFemale ? '#F7A8C8' : '#7FD1A8' }}>
+            {isFemale ? '♀' : '♂'}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-extrabold truncate">{isFemale ? 'Bride (دلہن)' : 'Groom (دولہا)'}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>InstaRishta IR #{profile._num}</p>
+              {isUrgent(profile.body) && (
+                <span className="rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.06em]"
+                  style={{ background: 'rgba(255,138,76,0.22)', color: '#FFB68C' }}>Urgent</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             {profile.instagram_post_id && (
               <button onClick={() => setIgOpen(v => !v)}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -207,25 +219,9 @@ export default function BiodataModal({ profile, authored, onClose }: {
         )}
 
         <div className="p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shrink-0"
-              style={{ background: isFemale ? '#FDF0F5' : '#EEF6F0', color: isFemale ? '#C0397A' : '#006241' }}>
-              {isFemale ? '♀' : '♂'}
-            </div>
-            <div>
-              <p className="text-sm font-extrabold" style={{ color: '#141413' }}>{isFemale ? 'Bride (دلہن)' : 'Groom (دولہا)'}</p>
-              <p className="text-xs mt-0.5" style={{ color: '#A0A0A0' }}>InstaRishta Profile #{profile._num}</p>
-              {isUrgent(profile.body) && (
-                <span className="inline-block mt-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                  style={{ background: '#FFF3EE', color: '#CF4500' }}>Urgent</span>
-              )}
-            </div>
-          </div>
-
           {/* One view only. There is no raw fallback because there is nothing
               for it to add: an ad that yields no structured fields still
-              produces Summary + About sections carrying the title and the
-              complete original text. */}
+              produces an About section carrying the complete original text. */}
           <BiodataSheet sections={sections} isFemale={isFemale} />
 
           <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: '1px solid #F0ECE8' }}>
