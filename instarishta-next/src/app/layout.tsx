@@ -3,6 +3,7 @@ import { Inter, Noto_Naskh_Arabic } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
 import PreloadResources from '@/components/PreloadResources';
+import ContentProtection from '@/components/ContentProtection';
 import LazyNastaliq from '@/components/LazyNastaliq';
 
 // Variable Inter (latin) — ~80 KB single file with all weights, smaller than
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="min-h-full flex flex-col">
         <PreloadResources />
+        <ContentProtection />
         <LazyNastaliq />
         <SiteShell>{children}</SiteShell>
       </body>

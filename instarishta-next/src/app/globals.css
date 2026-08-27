@@ -170,3 +170,41 @@ body {
   --animate-star-movement-bottom: star-movement-bottom linear infinite alternate;
   --animate-star-movement-top: star-movement-top linear infinite alternate;
 }
+
+/* ── Content protection ───────────────────────────────────────────────────────
+   Profile ad text is the product, so casual selection and copying are turned
+   off site-wide. Deterrent only — anyone with devtools or View Source still
+   has the markup, and this cannot stop screenshots (no web API can).
+
+   Exemptions matter more than the rule: form fields must stay selectable or
+   typing, correcting and pasting all break, which would take /nizam's admin
+   textareas and the profile search box down with them. `.selectable` is the
+   opt-out for anything else that should stay copyable. */
+body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Suppress the iOS/Android long-press callout ("Copy / Look Up") */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select,
+[contenteditable="true"],
+.selectable,
+.selectable * {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Images are the other easy grab — block the drag-to-desktop shortcut. */
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
