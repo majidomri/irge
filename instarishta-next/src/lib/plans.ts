@@ -15,8 +15,37 @@ export type PlanId = 'ir6' | 'ir12';
 /** Plans no longer sold. Existing holders are grandfathered until expiry. */
 export const LEGACY_PLAN_IDS = ['silver', 'gold', 'diamond', 'platinum'] as const;
 
-/** Welcome credits for a new free account. One time — never resets. */
-export const FREE_CREDITS = 10;
+/**
+ * Welcome credits for a new free account. **Zero since migration 023.**
+ *
+ * Contact details are the whole product and a Google account costs nothing to
+ * create, so 10 free unlocks per account was 10 unlocks per *throwaway*
+ * account. The gift was not deleted — it moved to where it rewards a customer
+ * instead of funding a scraper (see PURCHASE_BONUS_CREDITS).
+ *
+ * Kept as a named constant rather than inlined: the free tier's contact
+ * allowance is a real number that the UI still renders, and a future decision
+ * to reinstate a small gated taster should be one edit here plus the matching
+ * literal in ir_sync_profile.
+ */
+export const FREE_CREDITS = 0;
+
+/**
+ * The one-time gift on a member's FIRST term purchase, as persistent
+ * bonus_credits. Mirrors the `+ 10` in ir_activate_plan (migration 023 §2) —
+ * change both together.
+ *
+ * Once per member, not per activation: ir_activate_plan is also the admin's
+ * manual tool in /nizam, and `welcome_bonus_at` is what stops a hand-edit (or
+ * an early re-buy) from minting another 10.
+ */
+export const PURCHASE_BONUS_CREDITS = 10;
+
+/**
+ * The bonus on every credit refill, on top of the 25 bought. Mirrors the
+ * `+ 30` (25 + 5) in ir_claim_order (migration 023 §3) — change both together.
+ */
+export const TOPUP_BONUS_CREDITS = 5;
 
 /**
  * Interests — a private "we're interested" signal that costs no contact credit.
@@ -87,7 +116,22 @@ export const PLANS: readonly Plan[] = [
 ] as const;
 
 /** Persistent credits for subscribers who burn a month early. */
-export const TOPUP = { id: 'topup25', name: 'Top-up 25', credits: 25, price: 349 } as const;
+/**
+ * The credit refill — deliberately NOT a third plan.
+ *
+ * There are two plans, Rishta 6 and Rishta 12. This is what an ACTIVE
+ * subscriber buys when their balance hits zero: priced like usage, unavailable
+ * from a cold start. The eligibility rule lives in src/lib/topup.ts and is
+ * enforced by POST /api/orders.
+ *
+ * `id` is a frozen wire value: the CHECK constraint in migration 008 and every
+ * existing ir_orders row carry 'topup25'. The 25 in the id is history — what a
+ * refill actually grants is `credits + TOPUP_BONUS_CREDITS`.
+ */
+export const TOPUP = { id: 'topup25', name: 'Credit refill', credits: 25, price: 349 } as const;
+
+/** What a refill actually lands in the account: 25 bought + 5 bonus. */
+export const TOPUP_TOTAL_CREDITS = TOPUP.credits + TOPUP_BONUS_CREDITS;
 
 export function getPlan(id: string): Plan | undefined {
   return PLANS.find((p) => p.id === id);

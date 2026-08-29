@@ -54,6 +54,8 @@ export interface ProfileState {
   monthly_credits:  number;          // per-cycle allowance (0 when not subscribed)
   credits_reset_at: string | null;   // when the cycle balance next refills
   is_banned:        boolean;
+  /** Profile creation. The grandfather fallback for pre-term purchasers — see phone-gate.ts. */
+  created_at:       string | null;
 }
 
 export interface UsageSummary extends ProfileState {
@@ -113,6 +115,7 @@ function toProfile(row: any): ProfileState {
     monthly_credits:  row.monthly_credits  ?? 0,
     credits_reset_at: row.credits_reset_at ?? null,
     is_banned:        row.is_banned ?? false,
+    created_at:       row.created_at ?? null,
   };
 }
 

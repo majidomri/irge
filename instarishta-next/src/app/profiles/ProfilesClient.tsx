@@ -29,6 +29,7 @@ const BiodataModal  = dynamic(() => import('./_modals/BiodataModal'),     { ssr:
 const PaymentModal  = dynamic(() => import('./_modals/PaymentModal'),     { ssr: false });
 const InterestModal = dynamic(() => import('./_modals/InterestModal'),    { ssr: false });
 const AuthModal     = dynamic(() => import('@/components/AuthModal'),      { ssr: false });
+const PhoneGateModal = dynamic(() => import('@/components/PhoneGateModal'), { ssr: false });
 const FilterDrawer  = dynamic(() => import('./_components/FilterDrawer'), { ssr: false });
 
 export type { Profile } from './_shared';
@@ -558,10 +559,12 @@ export default function ProfilesClient({
 
   // Contact-credit gating (better-auth): anon → sign-in; signed-in → spend a
   // credit; out of credits → upgrade. See src/lib/hooks/useContactCredits.ts.
-  const { remaining, canUse: canContact, isAnon, email, consume, refresh } = useContactCredits();
+  const { remaining, canUse: canContact, isAnon, email, consume, refresh, phoneLocked } = useContactCredits();
   const resetLabel = '';
   const [authGate,     setAuthGate]     = useState(false);
   const [paymentModal, setPaymentModal] = useState(false);
+  // Paid member, mobile not verified — the credits exist but cannot be spent.
+  const [phoneGate,    setPhoneGate]    = useState(false);
 
   // Interests — private, metered separately, and free of contact credits.
   const interests = useInterests(!isAnon);
@@ -579,10 +582,15 @@ export default function ProfilesClient({
 
   const handleContactRequest = useCallback(async (p: DeckProfile) => {
     if (isAnon) { setAuthGate(true); return; }
-    const ok = await consume();          // spends one contact credit
-    if (!ok) { setPaymentModal(true); return; }
+    // Known ahead of time from /api/account/profile — don't make the member tap
+    // into a 403 to find out their credits are locked.
+    if (phoneLocked) { setPhoneGate(true); return; }
+
+    const outcome = await consume();     // spends one contact credit
+    if (outcome === 'phone_required') { setPhoneGate(true); return; }
+    if (outcome !== 'ok')             { setPaymentModal(true); return; }
     setContact(p);
-  }, [isAnon, consume]);
+  }, [isAnon, consume, phoneLocked]);
 
   // Push a URL-param update. Defaults are removed from the URL to keep it tidy.
   const pushParams = useCallback((updates: Partial<Record<keyof FilterParams | 'q' | 'urgent', string | number | boolean | null>>) => {
@@ -1021,6 +1029,15 @@ export default function ProfilesClient({
 
       {paymentModal && (
         <PaymentModal userEmail={email} onClose={() => setPaymentModal(false)} />
+      )}
+
+      {phoneGate && (
+        <PhoneGateModal
+          onClose={() => setPhoneGate(false)}
+          // refresh() re-reads the profile, which clears phoneLocked and lets
+          // the next Contact tap through without a reload.
+          onLinked={() => { refresh(); setPhoneGate(false); }}
+        />
       )}
 
       {interest && (

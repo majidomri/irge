@@ -6,9 +6,10 @@ import { useSession, signOut } from '@/lib/auth-client';
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
 import { useRealtimeProfile } from '@/lib/hooks/useRealtimeProfile';
 import GradientText from '@/components/ui/GradientText';
-import { planLabel, FREE_CREDITS } from '@/lib/plans';
+import { planLabel, TOPUP, TOPUP_BONUS_CREDITS } from '@/lib/plans';
 import MyInterests from './_components/MyInterests';
 import ProfessionVerification from './_components/ProfessionVerification';
+import PhoneLink from '@/components/PhoneLink';
 
 interface UsageSummary {
   email: string;
@@ -23,6 +24,21 @@ interface UsageSummary {
   is_banned: boolean;
   audio: { remaining: number | null; limit: number };
   view: { remaining: number | null; limit: number };
+  /** Absent until /api/account/profile has answered. See src/lib/phone-gate.ts. */
+  phone?: {
+    number:   string | null;
+    verified: boolean;
+    required: boolean;   // this account has paid, so a number is expected
+    locked:   boolean;   // required && !verified — credits cannot be spent yet
+  };
+  /** Whether a credit refill is on offer right now. See src/lib/topup.ts. */
+  topup?: {
+    eligible: boolean;
+    reason:   string | null;
+    message:  string;
+    price:    number;
+    credits:  number;
+  };
 }
 
 function UsageStat({ label, remaining, limit, icon, note }: {
@@ -39,7 +55,7 @@ function UsageStat({ label, remaining, limit, icon, note }: {
           <span className="text-sm font-semibold text-white">{label}</span>
         </div>
         <span className="text-xs font-bold" style={{ color: low ? '#FF6B6B' : '#00A86B' }}>
-          {unlimited ? '∞' : `${remaining}/${limit}`}
+          {unlimited ? '∞' : limit === 0 ? String(remaining) : `${remaining}/${limit}`}
         </span>
       </div>
       {!unlimited && limit > 0 && (
@@ -51,6 +67,58 @@ function UsageStat({ label, remaining, limit, icon, note }: {
       {note && (
         <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.42)' }}>{note}</p>
       )}
+    </div>
+  );
+}
+
+/**
+ * The credit refill, offered only where it is actually valid: an active
+ * subscriber whose balance has reached zero (src/lib/topup.ts). It is not a
+ * third plan and is not sold on /pricing — this is its point of sale.
+ */
+function RefillCard({ price, credits }: { price: number; credits: number }) {
+  const router = useRouter();
+  const [busy,  setBusy]  = useState(false);
+  const [error, setError] = useState('');
+
+  async function startRefill() {
+    setBusy(true); setError('');
+    try {
+      const res  = await fetch('/api/orders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: TOPUP.id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.order) {
+        // A 409 here means the balance moved under us (a refill landed, or the
+        // term lapsed) — the message from the server is the accurate one.
+        setError(json.error ?? 'Could not start checkout. Please try again.');
+        setBusy(false);
+        return;
+      }
+      router.push(`/pay/${json.order.id}`);
+    } catch {
+      setError('Network error. Check your connection and try again.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-6 rounded-2xl p-4"
+      style={{ background: 'rgba(0,168,107,0.10)', border: '1px solid rgba(0,168,107,0.22)' }}>
+      <p className="text-sm font-semibold text-white">You are out of contact credits</p>
+      <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        Refill {credits} credits ({credits - TOPUP_BONUS_CREDITS} + {TOPUP_BONUS_CREDITS} bonus) without
+        restarting your term. They never reset and never expire.
+      </p>
+      {error && <p className="text-xs mt-2" style={{ color: '#FF8080' }}>{error}</p>}
+      <button
+        onClick={startRefill} disabled={busy}
+        className="mt-3 w-full rounded-full py-3 font-bold text-sm transition-all hover:opacity-90 disabled:opacity-40"
+        style={{ background: 'linear-gradient(135deg, #00A86B, #006241)', color: '#fff' }}
+      >
+        {busy ? 'Opening checkout…' : `Refill ${credits} credits · ₹${price.toLocaleString('en-IN')}`}
+      </button>
     </div>
   );
 }
@@ -157,6 +225,17 @@ export default function AccountPage() {
           </div>
         </div>
 
+        {/* Mobile number. Above the credits when they are locked behind it,
+            because the locked balance is the thing the member came to look at. */}
+        {summary?.phone && (
+          <PhoneLink
+            current={summary.phone.number}
+            verified={summary.phone.verified}
+            locked={summary.phone.locked}
+            onLinked={loadSummary}
+          />
+        )}
+
         {/* Credits + usage */}
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-[0.08em] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
@@ -171,11 +250,22 @@ export default function AccountPage() {
           ) : summary ? (
             <div className="flex flex-col gap-3">
               <UsageStat
-                icon="💍"
+                icon={summary.phone?.locked ? '🔒' : '💍'}
                 label={subscribed ? 'Contacts this month' : 'Profile contacts'}
                 remaining={summary.credits}
-                limit={subscribed ? summary.monthly_credits : FREE_CREDITS}
-                note={subscribed ? refillNote(summary.credits_reset_at) : 'Welcome credits — these do not refill'}
+                // Free accounts have no contact allowance since migration 023,
+                // so there is no denominator to show. A legacy balance from
+                // before that change still renders as a plain number.
+                limit={subscribed ? summary.monthly_credits : 0}
+                note={
+                  summary.phone?.locked
+                    ? 'Locked — verify your mobile above to spend these'
+                    : subscribed
+                      ? refillNote(summary.credits_reset_at)
+                      : summary.credits > 0
+                        ? 'Welcome credits — these do not refill'
+                        : 'Contact details unlock with Rishta 6 or Rishta 12'
+                }
               />
               {summary.bonus_credits > 0 && (
                 <UsageStat
@@ -196,6 +286,8 @@ export default function AccountPage() {
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Could not load usage.</p>
           )}
         </div>
+
+        {summary?.topup?.eligible && <RefillCard price={summary.topup.price} credits={summary.topup.credits} />}
 
         {/* Profession verification — the badge, or the way to earn it */}
         <div className="mb-4">

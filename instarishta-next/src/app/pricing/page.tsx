@@ -3,7 +3,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  PLANS, TOPUP, FREE_CREDITS, FREE_INTERESTS, FREE_ENTITLEMENTS,
+  PLANS, TOPUP, TOPUP_BONUS_CREDITS, TOPUP_TOTAL_CREDITS,
+  PURCHASE_BONUS_CREDITS, FREE_INTERESTS, FREE_ENTITLEMENTS,
   entitlementsFor, fmtAllowance, totalCredits, pricePerCredit,
 } from '@/lib/plans';
 import type { OrderPlanId } from '@/lib/orders';
@@ -38,9 +39,15 @@ const TIERS = [FREE_ENTITLEMENTS, ...PLANS.map(p => entitlementsFor(p.id))];
 
 const COMPARE_ROWS: { feature: string; cells: (string | boolean)[] }[] = [
   { feature: 'Contact unlocks',
-    cells: TIERS.map(t => (t.refillsMonthly ? `${t.contactPerCycle} / month` : `${t.welcomeCredits} once`)) },
+    cells: TIERS.map(t => (
+      t.refillsMonthly ? `${t.contactPerCycle} / month`
+        : t.welcomeCredits > 0 ? `${t.welcomeCredits} once`
+        : '—')) },
   { feature: 'Total over the term',
-    cells: TIERS.map(t => (t.refillsMonthly ? String(t.contactPerCycle * t.termMonths) : String(t.welcomeCredits))) },
+    cells: TIERS.map(t => (
+      t.refillsMonthly ? String(t.contactPerCycle * t.termMonths)
+        : t.welcomeCredits > 0 ? String(t.welcomeCredits)
+        : '—')) },
   { feature: 'Cost per unlock',
     cells: TIERS.map(t => (t.refillsMonthly ? `₹${(t.price / (t.contactPerCycle * t.termMonths)).toFixed(2)}` : '—')) },
   { feature: 'Credits refill monthly',      cells: TIERS.map(t => t.refillsMonthly) },
@@ -93,7 +100,11 @@ const FAQS = [
   },
   {
     q: 'What if I run out before the month is up?',
-    a: `You can buy a top-up of ${TOPUP.credits} extra credits for ₹${TOPUP.price} at any time. Top-up credits are permanent — they never reset and they stay with you even after your plan expires.`,
+    a: `Members on Rishta 6 or Rishta 12 can buy a refill the moment their balance reaches zero — ${TOPUP_TOTAL_CREDITS} credits for ₹${TOPUP.price} (${TOPUP.credits} plus a ${TOPUP_BONUS_CREDITS}-credit bonus). It appears in your account as soon as you run out. Refill credits are permanent: they never reset and they stay with you even after your plan expires.`,
+  },
+  {
+    q: 'Can I try it free?',
+    a: 'You can browse every profile, listen to audio biodata, and send interests for free — no payment and no card. Contact details are the one thing a plan unlocks. If a family accepts your interest, unlocking their number is what a contact credit is for.',
   },
   {
     q: 'How do I pay?',
@@ -252,30 +263,25 @@ export default function PricingPage() {
           })}
         </div>
 
+{/* The refill is NOT a third plan and is not sold from this page. It
+            unlocks inside the account for a member on a term whose balance has
+            reached zero (src/lib/topup.ts). Explained here so the answer to
+            "what if I run out" is visible before anyone buys, without inviting
+            a first-time visitor to pick the worst per-credit deal we sell. */}
         <div className="mt-5 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3"
           style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)' }}>
           <div>
             <p className="font-bold text-[0.88rem] text-[rgba(0,0,0,0.87)]">Ran out before the month is up?</p>
             <p className="text-[0.78rem] text-[rgba(0,0,0,0.52)]">
-              {TOPUP.credits} extra credits, one time — they never reset and never expire.
+              Members can refill {TOPUP_TOTAL_CREDITS} credits ({TOPUP.credits} + {TOPUP_BONUS_CREDITS} bonus)
+              for ₹{TOPUP.price}. It appears in your account the moment you reach zero — and refill
+              credits never reset or expire.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[1.1rem] font-extrabold" style={{ color: '#006241' }}>₹{TOPUP.price}</span>
-            <button
-              type="button"
-              onClick={() => startCheckout(TOPUP.id)}
-              disabled={busy !== null}
-              className="px-5 py-2 rounded-full font-bold text-[0.82rem] transition-all active:scale-95"
-              style={{
-                background: '#006241', color: '#fff',
-                opacity: busy !== null && busy !== TOPUP.id ? 0.5 : 1,
-                cursor:  busy !== null ? 'wait' : 'pointer',
-              }}
-            >
-              {busy === TOPUP.id ? 'Opening…' : 'Get top-up'}
-            </button>
-          </div>
+          <span className="text-[0.72rem] font-bold rounded-full px-3 py-1.5 shrink-0"
+            style={{ background: '#EEF6F0', color: '#006241' }}>
+            Members only
+          </span>
         </div>
 
         {buyError && (
@@ -379,7 +385,9 @@ export default function PricingPage() {
           <div className="text-3xl mb-3">🌙</div>
           <h3 className="text-[1.4rem] font-bold text-white mb-2">Ready to find your match?</h3>
           <p className="text-[rgba(255,255,255,0.7)] text-[0.88rem] mb-6">
-            Start with {FREE_CREDITS} free unlocks — no payment needed to look around.
+            Browse every profile, hear their audio biodata and send interests free.
+            A plan is what unlocks contact details — and your first one adds
+            {' '}{PURCHASE_BONUS_CREDITS} bonus credits on top.
           </p>
           <Link
             href="/profiles"

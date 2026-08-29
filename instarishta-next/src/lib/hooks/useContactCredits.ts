@@ -6,11 +6,25 @@
  * remaining contact credits from /api/account/profile and spends one via
  * /api/account/consume. Anonymous users have `isAnon = true` and no credits —
  * the caller routes them to the sign-in modal.
+ *
+ * `consume()` returns a REASON rather than a boolean: a paid member with an
+ * unverified mobile is refused for a completely different cause than one who has
+ * run out, and sending them to the upgrade modal would be a dead end — they
+ * already paid. See src/lib/phone-gate.ts.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/lib/auth-client';
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
 import { useRealtimeProfile } from '@/lib/hooks/useRealtimeProfile';
+
+/**
+ * Why a spend was refused.
+ *   'ok'             — charged, go ahead
+ *   'phone_required' — paid member, mobile not verified: show the linking form
+ *   'no_credits'     — out of balance: show the upgrade path
+ *   'error'          — network / unexpected; treated like no_credits by callers
+ */
+export type ConsumeOutcome = 'ok' | 'phone_required' | 'no_credits' | 'error';
 
 export interface ContactCredits {
   isAnon:    boolean;
@@ -18,7 +32,9 @@ export interface ContactCredits {
   remaining: number;
   canUse:    boolean;     // signed in AND has credits
   loading:   boolean;
-  consume:   () => Promise<boolean>;
+  /** True when a paid member still has to verify their mobile. */
+  phoneLocked: boolean;
+  consume:   () => Promise<ConsumeOutcome>;
   refresh:   () => void;
 }
 
@@ -29,6 +45,9 @@ export function useContactCredits(): ContactCredits {
 
   const [remaining, setRemaining] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  // Mirrors profile.phone.locked, so the deck can show the gate BEFORE the user
+  // spends a tap finding out. Also set defensively from a 403 on consume().
+  const [phoneLocked, setPhoneLocked] = useState(false);
 
   // Only ever setState inside the async callback — never synchronously in the
   // effect path (keeps it clear of react-hooks/set-state-in-effect).
@@ -36,7 +55,11 @@ export function useContactCredits(): ContactCredits {
     if (!user) return;
     fetch('/api/account/profile')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { setRemaining(typeof d?.credits === 'number' ? d.credits : 0); setLoaded(true); })
+      .then((d) => {
+        setRemaining(typeof d?.credits === 'number' ? d.credits : 0);
+        setPhoneLocked(d?.phone?.locked === true);
+        setLoaded(true);
+      })
       .catch(() => setLoaded(true));
   }, [user]);
 
@@ -49,7 +72,7 @@ export function useContactCredits(): ContactCredits {
   // Fallback near-real-time: focus + interval poll. Skipped once realtime is live.
   useLiveRefresh(refresh, !!user && !live);
 
-  const consume = useCallback(async (): Promise<boolean> => {
+  const consume = useCallback(async (): Promise<ConsumeOutcome> => {
     try {
       const res = await fetch('/api/account/consume', {
         method:  'POST',
@@ -59,12 +82,21 @@ export function useContactCredits(): ContactCredits {
       if (res.ok) {
         const d = await res.json().catch(() => null);
         if (d && typeof d.remaining === 'number') setRemaining(d.remaining);
-        return true;
+        setPhoneLocked(false);
+        return 'ok';
       }
-      if (res.status === 402) setRemaining(0);   // out of credits
-      return false;                              // 401 (anon) / 402 / error
+      if (res.status === 403) {
+        const d = await res.json().catch(() => null);
+        if (d?.code === 'phone_verification_required') {
+          setPhoneLocked(true);
+          return 'phone_required';
+        }
+        return 'error';                          // banned, or some other 403
+      }
+      if (res.status === 402) { setRemaining(0); return 'no_credits'; }
+      return 'error';                            // 401 (anon) / unexpected
     } catch {
-      return false;
+      return 'error';
     }
   }, []);
 
@@ -72,8 +104,11 @@ export function useContactCredits(): ContactCredits {
     isAnon,
     email:     user?.email ?? '',
     remaining,
-    canUse:    !isAnon && remaining > 0,
+    // Locked credits are not usable credits — say so, so the deck's contact
+    // button reflects reality instead of promising a spend that will 403.
+    canUse:    !isAnon && remaining > 0 && !phoneLocked,
     loading:   isPending || (!!user && !loaded),
+    phoneLocked,
     consume,
     refresh,
   };

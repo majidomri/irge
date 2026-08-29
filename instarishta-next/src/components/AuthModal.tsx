@@ -1,7 +1,33 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { signIn } from '@/lib/auth-client';
+import { useState, useEffect, useRef } from 'react';
+import type { ConfirmationResult } from 'firebase/auth';
+import { signIn, phoneNumber as phoneAuth } from '@/lib/auth-client';
+import {
+  clearRecaptcha,
+  confirmPhoneCode,
+  humanizePhoneError,
+  phoneSignInEnabled,
+  sendPhoneOtp,
+} from '@/lib/firebase-phone';
 import GradientText from '@/components/ui/GradientText';
+
+// Invisible reCAPTCHA mount point. Firebase needs a stable element id, and the
+// widget must not be torn down by React between the send and the confirm — so
+// the div is rendered for the whole life of the modal, not just the phone step.
+const RECAPTCHA_ID = 'ir-phone-recaptcha';
+
+/** Digits typed into the phone field, normalised to E.164 for India. */
+function toE164(input: string): string | null {
+  const raw = input.trim().replace(/[\s()-]/g, '');
+  // Already international.
+  if (raw.startsWith('+')) return /^\+[1-9]\d{7,14}$/.test(raw) ? raw : null;
+  const digits = raw.replace(/\D/g, '');
+  // Bare 10-digit Indian mobile, or the same with a 0 / 91 prefix.
+  if (/^[6-9]\d{9}$/.test(digits))        return `+91${digits}`;
+  if (/^0[6-9]\d{9}$/.test(digits))       return `+91${digits.slice(1)}`;
+  if (/^91[6-9]\d{9}$/.test(digits))      return `+${digits}`;
+  return null;
+}
 
 interface AuthModalProps {
   onClose:    () => void;
@@ -12,7 +38,7 @@ interface AuthModalProps {
   initialError?: string;
 }
 
-type Mode = 'choose' | 'password' | 'magic';
+type Mode = 'choose' | 'password' | 'magic' | 'phone' | 'otp';
 
 // Humanize the error codes better-auth appends to the URL when an OAuth
 // round-trip fails (see better-auth callback redirectOnError).
@@ -35,15 +61,29 @@ export default function AuthModal({ onClose, onSuccess, redirectTo, initialError
   const [mode,     setMode]     = useState<Mode>('choose');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState<'google' | 'email' | 'magic' | null>(null);
+  const [loading,  setLoading]  = useState<'google' | 'email' | 'magic' | 'phone' | 'otp' | null>(null);
   // Seed from any OAuth-failure code the opener read off the URL (humanized).
   const [error,    setError]    = useState(initialError ? humanizeAuthError(initialError) : '');
   const [sent,     setSent]     = useState(false);
+
+  // ── Phone sign-in state ────────────────────────────────────────────────────
+  const [phone, setPhone] = useState('');
+  const [otp,   setOtp]   = useState('');
+  // The E.164 number the OTP was actually sent to — shown on the code screen and
+  // posted to better-auth, so it can never drift from what the user retypes.
+  const [phoneE164, setPhoneE164] = useState('');
+  // Firebase's handle on the pending challenge. A ref, not state: replacing it
+  // must not re-render, and a stale render must never confirm against an old one.
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  // Tear the reCAPTCHA widget down with the modal. Left alive it holds a spent
+  // token, and the next open would fail its first send.
+  useEffect(() => clearRecaptcha, []);
 
   const next = redirectTo ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
 
@@ -68,6 +108,55 @@ export default function AuthModal({ onClose, onSuccess, redirectTo, initialError
     setLoading(null);
     if (error) { setError(error.message ?? 'Sign in failed'); return; }
     onSuccess?.(); onClose();
+  };
+
+  // ── Phone: step 1, send the SMS ────────────────────────────────────────────
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const e164 = toE164(phone);
+    if (!e164) { setError('Enter a valid mobile number (e.g. 98765 43210).'); return; }
+    setError(''); setLoading('phone');
+    try {
+      confirmationRef.current = await sendPhoneOtp(e164, RECAPTCHA_ID);
+      setPhoneE164(e164);
+      setOtp('');
+      setMode('otp');
+    } catch (err) {
+      setError(humanizePhoneError(err));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  // ── Phone: step 2, confirm the code, then exchange it for OUR session ──────
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const confirmation = confirmationRef.current;
+    if (!confirmation) { setError('That code expired. Please request a new one.'); setMode('phone'); return; }
+    if (!/^\d{6}$/.test(otp)) { setError('Enter the 6-digit code from the SMS.'); return; }
+
+    setError(''); setLoading('otp');
+    try {
+      // Firebase checks the code and gives us a signed ID token proving the
+      // number. better-auth's phoneNumber plugin takes that token in the `code`
+      // field, verifies its signature server-side, and sets our session cookie.
+      const idToken = await confirmPhoneCode(confirmation, otp);
+      const { error } = await phoneAuth.verify({ phoneNumber: phoneE164, code: idToken });
+      if (error) {
+        setError(error.message ?? 'Could not sign you in. Please try again.');
+        return;
+      }
+      confirmationRef.current = null;
+      clearRecaptcha();
+      onSuccess?.(); onClose();
+      // The session cookie is set but nothing on the page knows yet; a reload is
+      // the same thing the OAuth callback does, and keeps SSR'd pages honest.
+      if (typeof window !== 'undefined') window.location.assign(next);
+    } catch (err) {
+      setError(humanizePhoneError(err));
+    } finally {
+      setLoading(null);
+    }
   };
 
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -146,13 +235,19 @@ export default function AuthModal({ onClose, onSuccess, redirectTo, initialError
                     animationSpeed={5}
                     className="font-extrabold"
                   >
-                    {mode === 'password' ? 'Sign in with password' : mode === 'magic' ? 'Sign in by email' : 'Welcome back'}
+                    {mode === 'password' ? 'Sign in with password'
+                      : mode === 'magic' ? 'Sign in by email'
+                      : mode === 'phone' ? 'Sign in with your mobile'
+                      : mode === 'otp'   ? 'Enter the code'
+                      : 'Welcome back'}
                   </GradientText>
                 </h2>
                 <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
                   {mode === 'choose' && 'Pick a sign-in method below.'}
                   {mode === 'password' && 'Use your account email and password.'}
                   {mode === 'magic' && 'We will email you a one-time link. No password needed.'}
+                  {mode === 'phone' && 'We will text you a 6-digit code. No password needed.'}
+                  {mode === 'otp' && `Sent by SMS to ${phoneE164}.`}
                 </p>
               </div>
 
@@ -176,6 +271,18 @@ export default function AuthModal({ onClose, onSuccess, redirectTo, initialError
                     )}
                     {loading === 'google' ? 'Redirecting…' : 'Continue with Google'}
                   </button>
+
+                  {/* Hidden entirely when the Firebase env is absent, rather than
+                      offering a button that can only fail. */}
+                  {phoneSignInEnabled && (
+                    <button
+                      onClick={() => { setMode('phone'); setError(''); }}
+                      className="w-full rounded-full py-[13px] font-semibold text-sm mb-3 hover:opacity-90 transition-opacity"
+                      style={{ background: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }}
+                    >
+                      📱  Continue with mobile number
+                    </button>
+                  )}
 
                   <button
                     onClick={() => { setMode('magic'); setError(''); }}
@@ -228,6 +335,66 @@ export default function AuthModal({ onClose, onSuccess, redirectTo, initialError
                 </form>
               )}
 
+              {mode === 'phone' && (
+                <form onSubmit={handleSendOtp} className="flex flex-col gap-3">
+                  <div
+                    className="w-full flex items-center rounded-xl px-4 text-sm"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    <span className="font-semibold pr-2" style={{ color: 'rgba(255,255,255,0.55)' }}>+91</span>
+                    <input
+                      type="tel" inputMode="numeric" autoComplete="tel" required autoFocus
+                      value={phone} onChange={e => setPhone(e.target.value)}
+                      placeholder="98765 43210" maxLength={16}
+                      className="flex-1 bg-transparent py-3.5 outline-none"
+                      style={{ color: '#fff' }}
+                    />
+                  </div>
+                  {error && <p className="text-xs px-1" style={{ color: '#FF8080' }}>{error}</p>}
+                  <button
+                    type="submit" disabled={loading === 'phone'}
+                    className="w-full rounded-full py-[13px] font-bold text-sm transition-all hover:opacity-90 disabled:opacity-40"
+                    style={{ background: 'linear-gradient(135deg, #00A86B, #006241)', color: '#fff' }}
+                  >
+                    {loading === 'phone' ? 'Sending code…' : 'Send code'}
+                  </button>
+                  <button
+                    type="button" onClick={() => { setMode('choose'); setError(''); clearRecaptcha(); }}
+                    className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}
+                  >
+                    ← Other sign-in methods
+                  </button>
+                </form>
+              )}
+
+              {mode === 'otp' && (
+                <form onSubmit={handleVerifyOtp} className="flex flex-col gap-3">
+                  <input
+                    type="text" inputMode="numeric" autoComplete="one-time-code"
+                    pattern="\d{6}" maxLength={6} required autoFocus
+                    value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••••"
+                    className="w-full rounded-xl px-4 py-3.5 text-center text-lg font-bold tracking-[0.5em] outline-none"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                  />
+                  {error && <p className="text-xs px-1" style={{ color: '#FF8080' }}>{error}</p>}
+                  <button
+                    type="submit" disabled={loading === 'otp'}
+                    className="w-full rounded-full py-[13px] font-bold text-sm transition-all hover:opacity-90 disabled:opacity-40"
+                    style={{ background: 'linear-gradient(135deg, #00A86B, #006241)', color: '#fff' }}
+                  >
+                    {loading === 'otp' ? 'Verifying…' : 'Verify & sign in'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('phone'); setError(''); setOtp(''); confirmationRef.current = null; clearRecaptcha(); }}
+                    className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}
+                  >
+                    ← Use a different number
+                  </button>
+                </form>
+              )}
+
               {mode === 'magic' && (
                 <form onSubmit={handleMagicLink} className="flex flex-col gap-3">
                   <input
@@ -260,6 +427,11 @@ export default function AuthModal({ onClose, onSuccess, redirectTo, initialError
             </>
           )}
         </div>
+        {/* Invisible reCAPTCHA mounts here. Rendered for the whole life of the
+            modal — not just the phone step — because Firebase binds the widget
+            to this element when the code is sent and still needs it alive while
+            the user is typing the code on the next screen. */}
+        <div id={RECAPTCHA_ID} />
       </section>
     </div>
   );

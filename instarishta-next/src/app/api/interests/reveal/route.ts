@@ -2,6 +2,8 @@
  * POST /api/interests/reveal  { interestId }
  *   200 → { ok:true, phone, creditsLeft, alreadyRevealed }
  *   402 → out of contact credits
+ *   403 → account suspended, or a paid member whose mobile is not verified yet
+ *         (the latter returns { code:'phone_verification_required' })
  *   409 → the advertiser has not agreed to connect yet
  *   404 → not your interest
  *
@@ -15,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { serviceClient, ensureProfile } from '@/lib/credits';
 import { revealContact } from '@/lib/interests';
+import { phoneGateBlocks, PHONE_GATE_BODY, PHONE_GATE_STATUS } from '@/lib/phone-gate';
 
 export const runtime = 'nodejs';
 
@@ -43,6 +46,12 @@ export async function POST(req: NextRequest) {
   const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
   if (profile.is_banned) {
     return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
+  }
+
+  // Revealing a contact spends a credit, so the same gate applies here as on
+  // /api/account/consume — checked BEFORE revealContact, which charges.
+  if (phoneGateBlocks(session.user, profile)) {
+    return NextResponse.json(PHONE_GATE_BODY, { status: PHONE_GATE_STATUS });
   }
 
   const result = await revealContact(db, session.user.email, interestId, RELAY_PHONE);

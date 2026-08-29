@@ -10,12 +10,18 @@
  *
  * Repeat calls for the same plan return the SAME live order rather than minting
  * a new one, so reopening the modal never changes an amount the member has
- * already keyed into their UPI app. Node runtime.
+ * already keyed into their UPI app.
+ *
+ * A `topup25` refill is not sellable from a cold start — it needs an active
+ * term AND a zero balance. THIS is where that is enforced; see src/lib/topup.ts
+ * for why. Node runtime.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { serviceClient } from '@/lib/credits';
+import { ensureProfile, serviceClient } from '@/lib/credits';
 import { isOrderPlanId, ORDER_COLS, type Order } from '@/lib/orders';
+import { TOPUP } from '@/lib/plans';
+import { topupEligibility } from '@/lib/topup';
 
 export const runtime = 'nodejs';
 
@@ -31,6 +37,21 @@ export async function POST(req: NextRequest) {
   }
 
   const db = serviceClient();
+
+  // ensureProfile first: it expires a finished term and applies any due refill,
+  // so eligibility is judged on the member's real current state rather than a
+  // stale row that still looks subscribed.
+  if (body.plan === TOPUP.id) {
+    const profile = await ensureProfile(db, session.user.email, session.user.name || null); // || not ?? — better-auth defaults name to '', not null
+    const verdict = topupEligibility(profile);
+    if (!verdict.eligible) {
+      return NextResponse.json(
+        { error: verdict.message, code: verdict.reason },
+        { status: 409 },
+      );
+    }
+  }
+
   const { data, error } = await db
     .rpc('ir_create_order', { p_email: session.user.email, p_plan: body.plan })
     .single<Order>();

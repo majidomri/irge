@@ -14,6 +14,8 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth-client';
+import { phoneSignInEnabled } from '@/lib/firebase-phone';
 import {
   UPI_APPS, UPI_VPA, describeOrder, formatAmount, paiseSuffix,
   secondsLeft, formatCountdown, upiLink, isSettled, type Order,
@@ -43,6 +45,7 @@ export default function PayClient({ order: initial, qrSvg }: { order: Order; qrS
   const [utr,     setUtr]     = useState('');
   const [busy,    setBusy]    = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+  const { data: session } = useSession();
   const [granted, setGranted] = useState<GrantedProfile | null>(null);
   const [copied,  setCopied]  = useState<'amount' | 'vpa' | null>(null);
 
@@ -140,13 +143,24 @@ export default function PayClient({ order: initial, qrSvg }: { order: Order; qrS
 
   // ══ Claimed — credits are live ═════════════════════════════════════════════
   if (live) {
+    // Purchased credits stay locked until the member's mobile is verified (see
+    // src/lib/phone-gate.ts). Say so HERE, at the moment of purchase, rather
+    // than letting them find out on their first Contact tap. The form itself
+    // lives on /account — this screen is light-themed and a second copy of it
+    // would be a second copy to keep honest.
+    const phoneLocked = phoneSignInEnabled && session?.user?.phoneNumberVerified !== true;
+
     return (
       <Shell>
         <div className="px-6 py-10 text-center">
           <div className="text-5xl mb-4">🎉</div>
-          <h1 className="text-xl font-extrabold mb-1" style={{ color: INK }}>Your credits are live</h1>
+          <h1 className="text-xl font-extrabold mb-1" style={{ color: INK }}>
+            {phoneLocked ? 'Your credits are ready' : 'Your credits are live'}
+          </h1>
           <p className="text-sm mb-6" style={{ color: SLATE }}>
-            {info.label} is active on your account right now — no waiting.
+            {phoneLocked
+              ? `${info.label} is on your account. One quick step and you can start spending.`
+              : `${info.label} is active on your account right now — no waiting.`}
           </p>
 
           {granted && (
@@ -169,10 +183,23 @@ export default function PayClient({ order: initial, qrSvg }: { order: Order; qrS
             </p>
           </div>
 
-          <button onClick={() => router.push('/profiles')}
+          {phoneLocked && (
+            <div className="rounded-2xl px-5 py-4 mb-6 text-left"
+              style={{ background: '#FFF8E8', border: '1.5px solid #F0D8A0' }}>
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: '#8A6A16' }}>
+                🔒 One last step
+              </p>
+              <p className="text-xs leading-relaxed" style={{ color: SLATE }}>
+                Verify your mobile number to unlock these credits. It takes one SMS,
+                and it is how families reach you about your rishta.
+              </p>
+            </div>
+          )}
+
+          <button onClick={() => router.push(phoneLocked ? '/account' : '/profiles')}
             className="w-full rounded-full py-3.5 text-sm font-bold"
             style={{ background: BRAND, color: '#fff' }}>
-            Start browsing profiles
+            {phoneLocked ? 'Verify my mobile & unlock' : 'Start browsing profiles'}
           </button>
           <p className="mt-3 text-[10px]" style={{ color: '#B0A8A0' }}>
             Order <span className="font-mono">{order.id}</span> · all payments are final, no refunds

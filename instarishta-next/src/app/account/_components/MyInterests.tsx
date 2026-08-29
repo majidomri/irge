@@ -45,7 +45,12 @@ export default function MyInterests({ enabled, onCreditsChanged }: {
         refresh();
         return;
       }
-      if (res.status === 402)      setError('You are out of contact credits. Renew or top up to reveal this contact.');
+      if (res.status === 403 && data.code === 'phone_verification_required') {
+        // The linking card is right there on this same page — point at it
+        // rather than opening a second copy of the form in a modal.
+        setError('Verify your mobile number above to unlock your credits.');
+      }
+      else if (res.status === 402) setError('You are out of contact credits. Renew or top up to reveal this contact.');
       else if (res.status === 409) setError('This family has not agreed to connect yet.');
       else                         setError(data.error || 'Could not reveal the contact. Please try again.');
     } catch {

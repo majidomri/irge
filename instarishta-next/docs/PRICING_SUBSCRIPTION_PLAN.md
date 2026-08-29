@@ -631,3 +631,97 @@ rows would put the complexity straight back in as rows instead of columns.
   is the bulk of the work.
 - Notification path can reuse the existing Telegram sender in
   `api/payment-notify/route.ts`.
+
+---
+
+## 023 — Paid-only credits (supersedes §1's free tier and the top-up add-on)
+
+Migration `023_paid_only_credits.sql` changes three things about how credits
+enter an account. Everything above about *terms*, *monthly resets* and the
+`contact_credits` / `bonus_credits` split still holds — this only changes what is
+granted, and when.
+
+### 1. Welcome credits withdrawn: 10 → 0
+
+A free signup no longer arrives holding contact unlocks.
+
+The reason is not stinginess, it is arithmetic: contact details are the entire
+product, and a Google account costs nothing to create. Ten free unlocks per
+account meant ten unlocks per *throwaway* account, repeatable indefinitely, and
+the phone gate (AUTH_SETUP §8) does not cover free users — so nothing stood in
+the way of harvesting the catalogue for free.
+
+The free tier keeps everything that is not the product itself: browsing every
+profile, audio biodata, and 5 interests a month. The wall lands at the reveal.
+
+**No claw-back.** Existing balances stay exactly as they are — the same courtesy
+§1 extended when the welcome grant went 20 → 10.
+
+Changed in three places, so no insert path keeps handing out 10: the column
+default, the `ir_welcome_credits_trigger` NULL fallback, and the literal inside
+`ir_sync_profile`. `FREE_CREDITS` in `plans.ts` is now `0` and must match.
+
+### 2. The gift moves from signup to purchase: +10 on the first term
+
+The 10 credits were not deleted — they were relocated to where they reward a
+customer instead of funding a scraper. A member's **first** term activation
+grants +10 `bonus_credits` (persistent: they survive the monthly overwrite and
+outlive the term).
+
+Once per member, not per activation. `ir_activate_plan` is also the admin's
+manual tool in `/nizam`, so "every activation" would mint 10 credits on every
+hand-edit, and let a member stack bonuses by re-buying early. The new
+`welcome_bonus_at` column is the guard, and 023 backfills it for everyone who
+had already paid — otherwise every existing subscriber would collect a surprise
++10 on their next renewal.
+
+Mirror constant: `PURCHASE_BONUS_CREDITS` in `plans.ts`.
+
+> **Known edge.** `prev_state` does not snapshot `welcome_bonus_at`, so if a
+> first purchase is later *rejected*, the bonus credits are taken back but the
+> member stays marked as having had their welcome moment — a genuine
+> re-purchase would not re-grant the +10. It errs toward under-granting and an
+> admin can clear the column.
+
+### 3. The top-up becomes a refill, not a third plan
+
+§4 above described the top-up as an *optional add-on available at any time*.
+That is no longer true, and §4's own reasoning is why: at ₹349 for 25 credits it
+is deliberately the expensive way to buy credits (₹13.96 vs ₹12.22 and ₹9.37).
+Sat beside the two terms on `/pricing`, it invited a first-time buyer to pick
+the worst deal we sell, conclude the product was expensive, and leave.
+
+So it is now what an **active subscriber** reaches for when their balance hits
+zero — priced like usage, unavailable from a cold start:
+
+```
+active term (ir6 | ir12, unexpired)   AND   contact_credits + bonus_credits = 0
+```
+
+It also grants a bonus, the same idea as §2: **25 bought + 5 free = 30 credits**
+for ₹349 (`TOPUP_BONUS_CREDITS`).
+
+| | |
+| --- | --- |
+| The rule | `topupEligibility()` in `src/lib/topup.ts` — one function, used for both the verdict and the copy |
+| Enforced at | `POST /api/orders` → `409 { code: 'no_plan' \| 'credits_remaining' }` |
+| Surfaced at | `GET /api/account/profile` → `topup: { eligible, reason, message, price, credits }` |
+| Point of sale | the `RefillCard` on `/account`, and `PaymentModal` (which appends the option only when eligible) |
+| Not sold at | `/pricing` — it explains the refill and marks it *Members only* |
+
+`ir_create_order` stays a generic "reserve an amount for this plan id"
+primitive. It is `REVOKE`d from `anon`/`authenticated` and only ever reached
+through that one route, so the route is a sufficient gate; keeping the rule in
+TypeScript is what lets the same function answer the UI.
+
+The `topup25` **id is a frozen wire value** — the CHECK constraint in 008 and
+every existing `ir_orders` row carry it. The 25 in the id is history; what a
+refill actually grants lives in `ir_claim_order` and `TOPUP_TOTAL_CREDITS`.
+
+### Knock-on: the phone gate now covers everyone who can spend
+
+With no free contact credits, every member who can spend a credit has paid — so
+`hasPurchased()` is true for all of them, and the phone-verification gate
+(AUTH_SETUP §8) effectively applies to the whole spending population rather than
+to a paid subset. Grandfathered members (`plan_started_at` before
+`PHONE_GATE_FROM`) remain exempt.

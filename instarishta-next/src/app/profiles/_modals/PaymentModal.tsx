@@ -8,37 +8,56 @@
  * server-side and credits activate on the spot — so what is left here is a
  * plan picker and a redirect. Nothing is collected from the user in this modal.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { PLANS, TOPUP, totalCredits, pricePerCredit } from '@/lib/plans';
+import {
+  PLANS, TOPUP, TOPUP_BONUS_CREDITS, TOPUP_TOTAL_CREDITS, totalCredits, pricePerCredit,
+} from '@/lib/plans';
 import type { OrderPlanId } from '@/lib/orders';
 
-/** Subscription terms plus the standalone top-up, as one selectable list. */
-const OPTIONS = [
-  ...PLANS.map(p => ({
-    id:       p.id as OrderPlanId,
-    label:    p.name,
-    price:    p.price,
-    headline: `${p.monthlyCredits} credits / month · ${p.months} months`,
-    sub:      `${totalCredits(p)} total · ₹${pricePerCredit(p).toFixed(2)} per credit`,
-  })),
-  {
-    id:       TOPUP.id as OrderPlanId,
-    label:    TOPUP.name,
-    price:    TOPUP.price,
-    headline: `${TOPUP.credits} extra credits, one time`,
-    sub:      'Never expire · for when you run out mid-month',
-  },
-];
+/** The two terms. Always offered — they are the only cold-start products. */
+const PLAN_OPTIONS = PLANS.map(p => ({
+  id:       p.id as OrderPlanId,
+  label:    p.name,
+  price:    p.price,
+  headline: `${p.monthlyCredits} credits / month · ${p.months} months`,
+  sub:      `${totalCredits(p)} total · ₹${pricePerCredit(p).toFixed(2)} per credit`,
+}));
+
+/**
+ * The refill. Appended ONLY for an active subscriber whose balance is zero —
+ * see src/lib/topup.ts for why it is not a third plan. POST /api/orders refuses
+ * it otherwise, so this is presentation, not enforcement.
+ */
+const REFILL_OPTION = {
+  id:       TOPUP.id as OrderPlanId,
+  label:    TOPUP.name,
+  price:    TOPUP.price,
+  headline: `${TOPUP_TOTAL_CREDITS} credits — ${TOPUP.credits} + ${TOPUP_BONUS_CREDITS} bonus`,
+  sub:      'Never expire · tops you up without restarting your term',
+};
 
 export default function PaymentModal({ userEmail, onClose }: { userEmail: string; onClose: () => void }) {
   const router = useRouter();
-  const [plan,  setPlan]  = useState<OrderPlanId>(OPTIONS[0].id);
+  const [plan,  setPlan]  = useState<OrderPlanId>(PLAN_OPTIONS[0].id);
   const [busy,  setBusy]  = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The modal opens precisely when someone has run out, which is exactly the
+  // condition a refill is for — so ask, rather than assuming either way.
+  const [refillOffered, setRefillOffered] = useState(false);
 
-  const selected = OPTIONS.find(p => p.id === plan)!;
+  useEffect(() => {
+    let live = true;
+    fetch('/api/account/profile')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (live) setRefillOffered(d?.topup?.eligible === true); })
+      .catch(() => { /* leave the refill hidden — the plans still work */ });
+    return () => { live = false; };
+  }, []);
+
+  const options  = refillOffered ? [...PLAN_OPTIONS, REFILL_OPTION] : PLAN_OPTIONS;
+  const selected = options.find(p => p.id === plan) ?? PLAN_OPTIONS[0];
 
   async function startCheckout() {
     setBusy(true);
@@ -84,7 +103,7 @@ export default function PaymentModal({ userEmail, onClose }: { userEmail: string
             <div>
               <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: '#A0A0A0' }}>Choose a plan</p>
               <div className="flex flex-col gap-2">
-                {OPTIONS.map(p => (
+                {options.map(p => (
                   <button type="button" key={p.id} onClick={() => setPlan(p.id)}
                     className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 border-2 text-left transition-all"
                     style={{

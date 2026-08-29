@@ -18,14 +18,20 @@
  *   GOOGLE_CLIENT_SECRET  — paired secret
  *   RESEND_API_KEY        — for magic-link delivery (already in env from before)
  *   RESEND_FROM           — verified sender, e.g. "InstaRishta <auth@instarishta.me>"
+ *   FIREBASE_PROJECT_ID   — optional; enables phone (SMS OTP) sign-in. Firebase
+ *                           sends the SMS and owns the code, we verify its ID
+ *                           token. Unset = the phone endpoints reject cleanly.
  *
  * See docs/AUTH_SETUP.md for the full setup checklist (incl. the exact Google
  * Cloud redirect URIs that must be registered).
  */
 import { betterAuth } from 'better-auth';
-import { magicLink } from 'better-auth/plugins';
+import { APIError } from 'better-auth/api';
+import { magicLink, phoneNumber } from 'better-auth/plugins';
+import { createHash, createHmac } from 'node:crypto';
 import { Pool } from 'pg';
 import { Resend } from 'resend';
+import { E164, verifyFirebasePhoneToken } from './firebase-verify';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -125,6 +131,38 @@ async function audit(row: {
   }
 }
 
+// ── Phone sign-in identity helpers ───────────────────────────────────────────
+// better-auth's user table requires an email and a name, but a phone signup has
+// neither. Both stand-ins below MUST be safe to display, because they leak into
+// public surfaces: /api/comments falls back to `user.name`, and further to
+// `user.email.split('@')[0]`, for the author name on a comment. A raw phone
+// number in either field would publish the user's number.
+
+const PHONE_EMAIL_DOMAIN = 'phone.instarishta.local';
+
+/**
+ * Opaque, stable, per-phone placeholder email.
+ *
+ * HMAC — not a bare hash — because the space of Indian mobile numbers is ~10^10,
+ * which a plain SHA-256 rainbow table walks in seconds. Keyed with
+ * BETTER_AUTH_SECRET the handle is unguessable without the secret, while staying
+ * deterministic so the same number always maps back to the same account.
+ */
+function phoneTempEmail(phone: string): string {
+  const handle = createHmac('sha256', process.env.BETTER_AUTH_SECRET ?? '')
+    .update(phone)
+    .digest('hex')
+    .slice(0, 20);
+  return `p_${handle}@${PHONE_EMAIL_DOMAIN}`;
+}
+
+/** `+919876543210` -> `+91 98•••••210`. Recognisable to its owner, useless to anyone else. */
+function phoneTempName(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 7) return 'InstaRishta member';
+  return `+${digits.slice(0, 2)} ${digits.slice(2, 4)}${'•'.repeat(5)}${digits.slice(-3)}`;
+}
+
 export const auth = betterAuth({
   database: pool,
   secret:   process.env.BETTER_AUTH_SECRET,
@@ -206,6 +244,88 @@ export const auth = betterAuth({
         });
       },
     }),
+
+    // ── Phone (SMS OTP), verified by Firebase ────────────────────────────────
+    // Firebase Phone Auth runs the ENTIRE OTP round-trip in the browser: it
+    // sends the SMS, it owns the code, it checks the code. The server never
+    // sees a six-digit OTP. What the browser passes to /phone-number/verify as
+    // `code` is the resulting Firebase ID token, and `verifyOTP` below swaps
+    // better-auth's own OTP store out for a signature check on that token.
+    //
+    // Everything after that is stock better-auth: find-or-create the user by
+    // phone number, create the session, set the cookie.
+    phoneNumber({
+      // Required by the plugin's type but unreachable by design — Firebase is
+      // the sender, and it is driven from the client. Fail loud rather than
+      // quietly writing an OTP row nobody will ever redeem.
+      sendOTP: async () => {
+        throw new APIError('NOT_IMPLEMENTED', {
+          message: 'OTP delivery is handled by Firebase in the browser; this endpoint is unused.',
+        });
+      },
+
+      /**
+       * `code` is a Firebase ID token, not a six-digit OTP.
+       *
+       * Two things must hold: the token is genuinely Google-signed and minted by
+       * a phone sign-in (verifyFirebasePhoneToken), and its phone number is the
+       * one being claimed — without that second check, the holder of any valid
+       * token in the project could sign in as any number.
+       */
+      verifyOTP: async ({ phoneNumber: claimed, code }, ctx) => {
+        const verified = await verifyFirebasePhoneToken(code);
+        if (!verified) return false;
+
+        if (verified.phoneNumber !== claimed) {
+          console.warn('[auth] phone token/number mismatch — refusing sign-in');
+          return false;
+        }
+
+        // Single-use. The token stays valid at Google for an hour and it travels
+        // in a request body, so burn it here: mark it consumed in the
+        // verification table (whose rows expire on their own) and reject any
+        // second presentation. Keyed by digest — the token itself is never stored.
+        if (ctx) {
+          const marker = `firebase-idtoken:${createHash('sha256').update(code).digest('hex')}`;
+          if (await ctx.context.internalAdapter.findVerificationValue(marker)) {
+            console.warn('[auth] firebase phone token replayed — refusing sign-in');
+            return false;
+          }
+          await ctx.context.internalAdapter.createVerificationValue({
+            identifier: marker,
+            value:      'consumed',
+            // Outlives the 10-minute freshness window the verifier enforces, so
+            // a replay can never outlive its own marker.
+            expiresAt:  new Date(Date.now() + 60 * 60 * 1000),
+          });
+        }
+
+        return true;
+      },
+
+      // Reject anything that is not E.164 before it is used as a lookup key.
+      phoneNumberValidator: (value) => E164.test(value),
+
+      // A first-time number becomes an account on successful verification.
+      signUpOnVerification: {
+        getTempEmail: phoneTempEmail,
+        getTempName:  phoneTempName,
+      },
+
+      // A phone user has no password, so this plugin's password path
+      // (/sign-in/phone-number) is never usable for them — Firebase
+      // verification is the only way in, which is what we want.
+      requireVerification: true,
+
+      callbackOnVerification: async ({ user }) => {
+        await audit({
+          event:    'user.phone_verified',
+          userId:   user.id,
+          email:    user.email,
+          provider: 'phone-firebase',
+        });
+      },
+    }),
   ],
 
   // ── Session ────────────────────────────────────────────────────────────────
@@ -233,6 +353,9 @@ export const auth = betterAuth({
       '/sign-up/email':     { window: 300, max: 5  },
       '/sign-in/magic-link':{ window: 300, max: 4  },
       '/sign-in/social':    { window: 60,  max: 10 },
+      // Each attempt costs a Firebase SMS, and SMS-pumping fraud bills us for
+      // it — keep this tighter than the plugin's own 10/min default.
+      '/phone-number/verify': { window: 300, max: 8 },
     },
   },
 
