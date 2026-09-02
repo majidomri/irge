@@ -27,6 +27,7 @@
  */
 import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
+import QRCode from 'qrcode';
 import { getProfession, loadProfessions } from '@/lib/professions';
 
 export const runtime = 'nodejs';
@@ -112,6 +113,24 @@ export async function GET(
   const photo   = await toDataUri(post.image);
   const heading = (post.title || post.caption || 'A rishta on InstaRishta').slice(0, 110);
   const site    = process.env.NEXT_PUBLIC_SITE_URL?.replace(/^https?:\/\//, '') || 'instarishta.com';
+
+  /**
+   * The QR belongs on the forward, not on the post.
+   *
+   * A code printed into every feed image is clutter -- nobody scans a phone
+   * with the phone already holding the page. It earns its place only once the
+   * picture leaves the site: this card is what lands in a family WhatsApp
+   * group, often on someone else's screen, and there the code is the shortest
+   * path back. `toDataURL` rather than the `toString({type:'svg'})` used on
+   * the pay page: satori cannot decode SVG and drops it silently.
+   */
+  const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://instarishta.me'}/p/${slug}`;
+  const qr = await QRCode.toDataURL(shareUrl, {
+    margin: 1,
+    width: 200,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#0E1B16', light: '#FFFFFF' },
+  }).catch(() => null);
 
   return new ImageResponse(
     (
@@ -199,9 +218,21 @@ export async function GET(
                 Verified professionals only
               </span>
             </div>
-            <span style={{ fontSize: 30, color: 'rgba(255,255,255,0.75)' }}>
-              {`${site}/p/${slug}`}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {qr && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qr}
+                  alt=""
+                  width={150}
+                  height={150}
+                  style={{ width: 150, height: 150, borderRadius: 12 }}
+                />
+              )}
+              <span style={{ fontSize: 26, color: 'rgba(255,255,255,0.75)', marginTop: 10 }}>
+                {`${site}/p/${slug}`}
+              </span>
+            </div>
           </div>
         </div>
       </div>

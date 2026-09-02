@@ -14,6 +14,9 @@ import GradientText from '@/components/ui/GradientText';
 import TextType from '@/components/ui/TextType';
 import ClickSpark from '@/components/ui/ClickSpark';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
+import FeedFilters, {
+  applyFeedFilters, EMPTY_FILTERS, type FeedFilterState,
+} from './FeedFilters';
 import ZuckStories from '@/components/ZuckStories';
 import {
   LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
@@ -568,6 +571,7 @@ export default function ChannelFeedPage() {
   const [page,     setPage]      = useState(0);
   const [done,     setDone]      = useState(false);
   const [catFilter, setCatFilter] = useState('all');
+  const [filters,  setFilters]   = useState<FeedFilterState>(EMPTY_FILTERS);
   const [newBadge, setNewBadge]  = useState(false);
 
   const [modalPost,  setModalPost]  = useState<IPost | null>(null);
@@ -647,10 +651,12 @@ export default function ChannelFeedPage() {
     incrementLikes(id);
   };
 
+  // Category chips first -- they are the coarse cut and the one every post
+  // can answer -- then the biodata facets on whatever is left.
   const visiblePosts = useMemo(() => {
-    if (catFilter === 'all') return posts;
-    return posts.filter(p => catOf(p) === catFilter);
-  }, [posts, catFilter]);
+    const byCat = catFilter === 'all' ? posts : posts.filter(p => catOf(p) === catFilter);
+    return applyFeedFilters(byCat, filters);
+  }, [posts, catFilter, filters]);
 
   const usedCats = useMemo(() => new Set(posts.map(catOf)), [posts]);
 
@@ -718,6 +724,11 @@ export default function ChannelFeedPage() {
             </button>
           ))}
         </div>
+      )}
+
+      {/* ── Biodata filters ── */}
+      {posts.length > 0 && (
+        <FeedFilters posts={posts} value={filters} onChange={setFilters} />
       )}
 
       {/* ── New post badge ── */}

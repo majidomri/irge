@@ -220,6 +220,21 @@ export interface IPost {
   likes?: number;
   views?: number;
   created_at: string;
+
+  /**
+   * Biodata facets (migration 024), present only on posts published from the
+   * live show -- those are generated from the registry, so the values are
+   * known. A WhatsApp import is a picture and knows none of them, so every
+   * one of these is optional and `undefined` means "cannot answer", never
+   * "no".
+   */
+  gender?: string | null;
+  age?: number | null;
+  community?: string | null;
+  education?: string | null;
+  marital?: string | null;
+  state?: string | null;
+  is_urgent?: boolean | null;
 }
 
 export interface IStory {
