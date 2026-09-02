@@ -234,8 +234,11 @@ export default function BiodataModal({ profile, authored, onClose }: {
               produces an About section carrying the complete original text. */}
           {/* The post image, nothing else. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* Keyed on `id`, not `_num`: _num is the row's position in the
+              currently filtered list and shifts the moment anyone filters, so
+              an image keyed on it would follow the wrong profile. */}
           <img
-            src={`/api/share-card/IR-${profile._num}`}
+            src={`/api/share-card/IR-${profile.id ?? profile._num}`}
             alt={`Biodata IR #${profile._num}`}
             className="w-full rounded-2xl"
             style={{ display: 'block' }}
