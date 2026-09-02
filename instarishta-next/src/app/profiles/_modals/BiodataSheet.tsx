@@ -1,6 +1,7 @@
 'use client';
 import { textDir, URDU_FONT } from '../_shared';
-import type { BioSection, IconName } from '@/lib/biodata-schema';
+import { type BioSection, type IconName, iconFor } from '@/lib/biodata-schema';
+import { LIVE, accentFor } from '@/lib/live-theme';
 
 const ICON_PATHS: Record<IconName, React.ReactNode> = {
   user:       <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
@@ -18,11 +19,13 @@ const ICON_PATHS: Record<IconName, React.ReactNode> = {
   info:       <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></>,
 };
 
-function BioIcon({ name, color }: { name: IconName; color: string }) {
+function BioIcon({ name, color, size = 14, className = 'shrink-0 mt-0.5' }: {
+  name: IconName; color: string; size?: number; className?: string;
+}) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color}
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      className="shrink-0 mt-0.5" aria-hidden="true">
+      className={className} aria-hidden="true">
       {ICON_PATHS[name]}
     </svg>
   );
@@ -42,15 +45,30 @@ function rtlProps(value: string) {
   };
 }
 
-interface Palette { accent: string; accentBg: string }
+interface Palette { accent: string; accentBg: string; accentLine: string }
 
-function SectionShell({ heading, accent, accentBg, children }: Palette & {
+/**
+ * A heading is a glyph in a tinted tile beside a line of accent type -- the
+ * anchor the show's reel uses. The old tinted header strip is gone: on a dark
+ * ground a full-width band reads as a separate object sitting on the card
+ * rather than as the card's own title.
+ */
+function SectionShell({ heading, accent, accentBg, accentLine, children }: Palette & {
   heading: string; children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #F0ECE8' }}>
-      <div className="px-4 py-2" style={{ background: accentBg }}>
-        <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em]" style={{ color: accent }}>
+    <div className="rounded-2xl" style={{ border: `1px solid ${LIVE.hairline}`, background: LIVE.card }}>
+      <div className="flex items-center gap-3 px-4 pt-4 pb-1">
+        <span
+          className="flex items-center justify-center shrink-0"
+          style={{
+            width: 34, height: 34, borderRadius: 11,
+            background: accentBg, border: `1px solid ${accentLine}`,
+          }}
+        >
+          <BioIcon name={iconFor(heading)} color={accent} size={17} className="shrink-0" />
+        </span>
+        <p className="text-[0.95rem] font-extrabold tracking-[-0.01em]" style={{ color: accent }}>
           {heading}
         </p>
       </div>
@@ -59,7 +77,7 @@ function SectionShell({ heading, accent, accentBg, children }: Palette & {
   );
 }
 
-function SectionBody({ section, accent, accentBg }: Palette & { section: BioSection }) {
+function SectionBody({ section, accent, accentBg, accentLine }: Palette & { section: BioSection }) {
   switch (section.type) {
     case 'fields':
       // Two columns above a small phone, one below so Urdu keeps a usable measure.
@@ -71,12 +89,12 @@ function SectionBody({ section, accent, accentBg }: Palette & { section: BioSect
               <div key={f.label} className="flex items-start gap-2.5">
                 <BioIcon name={f.icon ?? 'info'} color={accent} />
                 <div className="min-w-0 flex-1">
-                  <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.06em]"
-                    style={{ color: '#A0A0A0' }}>
+                  <span className="block text-[0.6rem] font-medium uppercase tracking-[0.14em]"
+                    style={{ color: LIVE.muted, fontFamily: LIVE.mono }}>
                     {f.label}
                   </span>
-                  <span className="block text-[0.78rem] font-medium" {...dirAttrs}
-                    style={{ color: '#141413', textAlign: 'left', fontFamily }}>
+                  <span className="block text-[0.86rem] font-bold mt-0.5" {...dirAttrs}
+                    style={{ color: LIVE.cream, textAlign: 'left', fontFamily }}>
                     {f.value}
                   </span>
                 </div>
@@ -97,17 +115,22 @@ function SectionBody({ section, accent, accentBg }: Palette & { section: BioSect
                   <BioIcon name="graduation" color={accent} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[0.8rem] font-bold" {...dirAttrs}
-                    style={{ color: '#141413', fontFamily }}>
+                  <p className="text-[0.88rem] font-bold" {...dirAttrs}
+                    style={{ color: LIVE.cream, fontFamily }}>
                     {e.title}
                   </p>
                   {e.subtitle && (
                     <p className="text-[0.72rem]" {...rtlProps(e.subtitle)}
-                      style={{ color: '#696969', fontFamily: rtlProps(e.subtitle).fontFamily }}>
+                      style={{ color: LIVE.muted, fontFamily: rtlProps(e.subtitle).fontFamily }}>
                       {e.subtitle}
                     </p>
                   )}
-                  {e.meta && <p className="text-[0.65rem]" style={{ color: '#A0A0A0' }}>{e.meta}</p>}
+                  {/* The year, in the show's rose -- the one warm mark on a
+                      timeline that is otherwise gold and cream. */}
+                  {e.meta && (
+                    <p className="text-[0.64rem] font-bold tracking-[0.12em] mt-0.5"
+                      style={{ color: LIVE.rose, fontFamily: LIVE.mono }}>{e.meta}</p>
+                  )}
                 </div>
               </li>
             );
@@ -123,16 +146,16 @@ function SectionBody({ section, accent, accentBg }: Palette & { section: BioSect
             return (
               <div key={`${p.name}-${i}`} className="flex items-center gap-3">
                 <span className="w-9 h-9 rounded-full flex items-center justify-center text-[0.8rem] font-bold shrink-0"
-                  style={{ background: accentBg, color: accent }}>
+                  style={{ background: accentBg, color: accent, border: `1px solid ${accentLine}` }}>
                   {(p.role || p.name).trim().charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[0.78rem] font-semibold" {...dirAttrs}
-                    style={{ color: '#141413', fontFamily }}>
+                  <p className="text-[0.85rem] font-bold" {...dirAttrs}
+                    style={{ color: LIVE.cream, fontFamily }}>
                     {p.name}
                   </p>
                   {(p.role || p.detail) && (
-                    <p className="text-[0.68rem]" style={{ color: '#A0A0A0' }}>
+                    <p className="text-[0.7rem]" style={{ color: LIVE.muted }}>
                       {[p.role, p.detail].filter(Boolean).join(' · ')}
                     </p>
                   )}
@@ -149,8 +172,9 @@ function SectionBody({ section, accent, accentBg }: Palette & { section: BioSect
           {section.items.map((tag, i) => {
             const { fontFamily, ...dirAttrs } = rtlProps(tag);
             return (
-              <span key={`${tag}-${i}`} className="rounded-full px-3 py-1 text-[0.7rem] font-semibold"
-                {...dirAttrs} style={{ background: accentBg, color: accent, fontFamily }}>
+              <span key={`${tag}-${i}`} className="rounded-full px-3 py-1.5 text-[0.72rem] font-semibold"
+                {...dirAttrs}
+                style={{ background: accentBg, color: accent, border: `1px solid ${accentLine}`, fontFamily }}>
                 {tag}
               </span>
             );
@@ -163,7 +187,7 @@ function SectionBody({ section, accent, accentBg }: Palette & { section: BioSect
       return (
         <p className="text-sm px-4 py-3" {...dirAttrs}
           style={{
-            color: '#3A3A3A',
+            color: 'rgba(247,239,230,0.86)',
             lineHeight: dirAttrs.dir === 'rtl' ? 2.1 : 1.7,
             fontFamily,
           }}>
@@ -182,14 +206,13 @@ function SectionBody({ section, accent, accentBg }: Palette & { section: BioSect
 export default function BiodataSheet({ sections, isFemale }: {
   sections: BioSection[]; isFemale: boolean;
 }) {
-  const accent   = isFemale ? '#C0397A' : '#006241';
-  const accentBg = isFemale ? '#FDF0F5' : '#EEF6F0';
+  const palette = accentFor(isFemale);
 
   return (
     <div className="flex flex-col gap-3">
       {sections.map(section => (
-        <SectionShell key={section.heading} heading={section.heading} accent={accent} accentBg={accentBg}>
-          <SectionBody section={section} accent={accent} accentBg={accentBg} />
+        <SectionShell key={section.heading} heading={section.heading} {...palette}>
+          <SectionBody section={section} {...palette} />
         </SectionShell>
       ))}
     </div>

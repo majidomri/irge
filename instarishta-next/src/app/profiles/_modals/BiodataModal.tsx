@@ -4,6 +4,7 @@ import { type DeckProfile, isUrgent } from '../_shared';
 import { extractBioFields } from '@/lib/bio-extract';
 import { type BioSection, normalizeSections } from '@/lib/biodata-schema';
 import BiodataSheet from './BiodataSheet';
+import { LIVE, accentFor } from '@/lib/live-theme';
 import ReportModal from './ReportModal';
 
 interface BioRow { label: string; value: string }
@@ -154,6 +155,7 @@ export default function BiodataModal({ profile, authored, onClose }: {
   onClose: () => void;
 }) {
   const isFemale = profile.gender === 'female';
+  const { accent, accentBg, accentLine } = accentFor(isFemale);
   const [igOpen,    setIgOpen]    = useState(false);
   const [reporting, setReporting] = useState(false);
 
@@ -169,23 +171,34 @@ export default function BiodataModal({ profile, authored, onClose }: {
     <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
       <section className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl overflow-hidden"
-        style={{ background: '#fff', maxHeight: '90vh', overflowY: 'auto', zIndex: 1 }}>
+        style={{
+          // The show's ground, with its warm bloom at the top -- the same
+          // surface the broadcast and the published frames are painted on.
+          background: `radial-gradient(120% 62% at 50% 0%, ${LIVE.raise} 0%, ${LIVE.ground} 56%, ${LIVE.ground2} 100%)`,
+          border: `1px solid ${LIVE.hairline}`,
+          maxHeight: '90vh', overflowY: 'auto', zIndex: 1,
+        }}>
 
         {/* One header, not three. The dark bar, the avatar identity row below
             it and the Summary/Title field were all restating the same thing —
             gender and profile number — so they are merged here. */}
-        <div className="sticky top-0 flex items-center gap-3 px-5 py-3" style={{ background: '#1E3932', color: '#fff', zIndex: 2 }}>
+        <div className="sticky top-0 flex items-center gap-3 px-5 py-3"
+          style={{
+            background: LIVE.ground2, color: LIVE.cream,
+            borderBottom: `1px solid ${LIVE.goldDim}`, zIndex: 2,
+          }}>
           <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl font-bold shrink-0"
-            style={{ background: 'rgba(255,255,255,0.12)', color: isFemale ? '#F7A8C8' : '#7FD1A8' }}>
+            style={{ background: accentBg, color: accent, border: `1px solid ${accentLine}` }}>
             {isFemale ? '♀' : '♂'}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-extrabold truncate">{isFemale ? 'Bride (دلہن)' : 'Groom (دولہا)'}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>InstaRishta IR #{profile._num}</p>
+              <p className="text-[11px] font-semibold tracking-[0.14em]"
+                style={{ color: LIVE.muted, fontFamily: LIVE.mono }}>IR #{profile._num}</p>
               {isUrgent(profile.body) && (
                 <span className="rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.06em]"
-                  style={{ background: 'rgba(255,138,76,0.22)', color: '#FFB68C' }}>Urgent</span>
+                  style={{ background: LIVE.roseDim, color: LIVE.rose, border: `1px solid rgba(240,114,140,0.45)` }}>Urgent</span>
               )}
             </div>
           </div>
@@ -193,7 +206,7 @@ export default function BiodataModal({ profile, authored, onClose }: {
             {profile.instagram_post_id && (
               <button onClick={() => setIgOpen(v => !v)}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(255,255,255,0.15)' }}
+                style={{ background: 'rgba(247,239,230,0.10)', color: LIVE.cream }}
                 aria-label="View Instagram post">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/>
@@ -202,7 +215,7 @@ export default function BiodataModal({ profile, authored, onClose }: {
               </button>
             )}
             <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold"
-              style={{ background: 'rgba(255,255,255,0.15)' }}>×</button>
+              style={{ background: 'rgba(247,239,230,0.10)', color: LIVE.cream }}>×</button>
           </div>
         </div>
 
@@ -224,14 +237,15 @@ export default function BiodataModal({ profile, authored, onClose }: {
               produces an About section carrying the complete original text. */}
           <BiodataSheet sections={sections} isFemale={isFemale} />
 
-          <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: '1px solid #F0ECE8' }}>
-            <p className="text-xs" style={{ color: '#A0A0A0' }}>instarishta.me</p>
-            <p className="text-xs font-semibold" style={{ color: '#006241' }}>IR #{profile._num}</p>
+          <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: `1px solid ${LIVE.goldDim}` }}>
+            <p className="text-xs" style={{ color: LIVE.muted }}>instarishta.me</p>
+            <p className="text-xs font-bold tracking-[0.14em]"
+              style={{ color: LIVE.gold, fontFamily: LIVE.mono }}>IR #{profile._num}</p>
           </div>
 
           <button onClick={() => setReporting(true)}
             className="mt-3 text-xs font-semibold flex items-center gap-1.5"
-            style={{ color: '#CF4500' }}>
+            style={{ color: LIVE.muted }}>
             🚩 Report this profile
           </button>
         </div>
