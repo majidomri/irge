@@ -4,276 +4,383 @@ import { useMemo, useState } from 'react';
 import type { IPost } from '@/lib/supabase';
 
 /**
- * Filters for the channel feed, in the shape /profiles uses.
+ * The RishtaSwipe filter modal, ported to the channel feed.
  *
- * The browse page can filter by gender, community, education, marital status,
- * state and age because it reads structured profile records. A post is a
- * picture, and for most of this feed that is all it will ever be -- the
- * WhatsApp imports carry no biodata anyone can query. Posts published from
- * the live show do, because they are generated from the registry and the
- * publisher writes the facets alongside the pixels (migration 024).
+ * This is a port, not a redesign: same trigger ("Show Filters" with the
+ * sliders glyph), same dialog (a narrow centred card, header, 70vh scroll
+ * area), same running order inside it -- Stats card first, then Search, then
+ * a select per facet, then the age range, the urgent switch and a full-width
+ * Clear. The facet selects build their option lists from the rows actually
+ * present and print a count beside each, exactly as `Filters.tsx` does, so a
+ * value nobody has is never offered.
  *
- * So this deliberately does NOT mirror the browse page's control set. Every
- * option offered is derived from the posts actually loaded, so a value that
- * would match nothing is never shown, and the panel says plainly how many
- * posts cannot answer a facet question at all rather than dropping them
- * silently. A filter that quietly hides four thousand imports would read as
- * a broken feed.
+ * It is hand-built rather than imported because this app has no Radix and no
+ * shadcn -- no Dialog, Slider, Switch or Card to reach for -- so the markup
+ * reproduces what those components render. It also has no lucide, hence the
+ * inline glyphs.
+ *
+ * Two honest differences from the original, both forced by the data:
+ *
+ *   - No height filter. `ir_posts` has no height; the original reads it off
+ *     the profile document. Offering the control would be offering a slider
+ *     that matches everything.
+ *   - Most posts in a channel are WhatsApp imports with no biodata at all, so
+ *     the panel says how many a facet filter cannot include. The original
+ *     never needed that line because every profile it filtered had fields.
  */
+
+const AGE = { min: 18, max: 60 };
 
 export type FeedFilterState = {
   q: string;
-  gender: string;
-  community: string;
-  education: string;
-  marital: string;
-  state: string;
-  ageMin: number;
-  ageMax: number;
+  facets: Record<string, string>;
+  age: [number, number];
   urgentOnly: boolean;
-  sort: 'newest' | 'views' | 'likes';
 };
 
 export const EMPTY_FILTERS: FeedFilterState = {
-  q: '', gender: 'all', community: '', education: '', marital: '', state: '',
-  ageMin: 18, ageMax: 60, urgentOnly: false, sort: 'newest',
+  q: '',
+  facets: {},
+  age: [AGE.min, AGE.max],
+  urgentOnly: false,
 };
 
-const AGE_FLOOR = 18;
-const AGE_CEIL = 60;
+/** Post columns offered as dropdown facets, in the order they appear. */
+const FACETS: { key: keyof IPost; label: string }[] = [
+  { key: 'gender', label: 'Bride / Groom' },
+  { key: 'marital', label: 'Marital status' },
+  { key: 'community', label: 'Community' },
+  { key: 'state', label: 'State' },
+  { key: 'education', label: 'Education' },
+];
+
+const PRETTY: Record<string, string> = {
+  bride: 'Bride', groom: 'Groom',
+  'never-married': 'Never married', divorced: 'Divorced',
+  widowed: 'Widowed', separated: 'Separated',
+};
+const label = (v: string) => PRETTY[v] ?? v;
 
 export function activeCount(f: FeedFilterState): number {
   return [
-    !!f.q, f.gender !== 'all', !!f.community, !!f.education, !!f.marital,
-    !!f.state, f.urgentOnly, f.sort !== 'newest',
-    f.ageMin > AGE_FLOOR || f.ageMax < AGE_CEIL,
+    !!f.q.trim(),
+    ...Object.values(f.facets).map(Boolean),
+    f.urgentOnly,
+    f.age[0] > AGE.min || f.age[1] < AGE.max,
   ].filter(Boolean).length;
 }
 
-/** True when this filter set asks a question only a faceted post can answer. */
 export function usesFacets(f: FeedFilterState): boolean {
-  return (
-    f.gender !== 'all' || !!f.community || !!f.education || !!f.marital ||
-    !!f.state || f.urgentOnly || f.ageMin > AGE_FLOOR || f.ageMax < AGE_CEIL
-  );
+  return Object.values(f.facets).some(Boolean) || f.urgentOnly;
 }
 
 export function applyFeedFilters(posts: IPost[], f: FeedFilterState): IPost[] {
   const q = f.q.trim().toLowerCase();
-  const out = posts.filter((p) => {
+
+  return posts.filter((p) => {
     if (q) {
       const hay = `${p.title ?? ''} ${p.caption ?? ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (f.gender !== 'all' && p.gender !== f.gender) return false;
-    if (f.community && p.community !== f.community) return false;
-    if (f.education && p.education !== f.education) return false;
-    if (f.marital && p.marital !== f.marital) return false;
-    if (f.state && p.state !== f.state) return false;
-    if (f.urgentOnly && !p.is_urgent) return false;
-    if (f.ageMin > AGE_FLOOR || f.ageMax < AGE_CEIL) {
-      if (typeof p.age !== 'number') return false;
-      if (p.age < f.ageMin || p.age > f.ageMax) return false;
+
+    for (const [key, want] of Object.entries(f.facets)) {
+      if (!want) continue;
+      const got = p[key as keyof IPost];
+      if (got == null || got === '') return false;
+      if (String(got) !== want) return false;
     }
+
+    if (f.urgentOnly && !p.is_urgent) return false;
+
+    // An unanswered age never excludes a post -- filtering on a blank is the
+    // same mistake as rendering one. The original keeps this rule too.
+    if (typeof p.age === 'number' && (p.age < f.age[0] || p.age > f.age[1])) return false;
+
     return true;
   });
-
-  if (f.sort === 'views') return [...out].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
-  if (f.sort === 'likes') return [...out].sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
-  return out;
-}
-
-/** Values actually present, with their counts. Never offers a dead option. */
-function options(posts: IPost[], key: keyof IPost): { value: string; n: number }[] {
-  const counts = new Map<string, number>();
-  for (const p of posts) {
-    const v = p[key];
-    if (typeof v !== 'string' || !v) continue;
-    counts.set(v, (counts.get(v) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([value, n]) => ({ value, n }))
-    .sort((a, b) => b.n - a.n || a.value.localeCompare(b.value));
 }
 
 const GREEN = '#00A86B';
-const chip = (on: boolean) => ({
-  background: on ? GREEN : 'rgba(255,255,255,0.08)',
-  color: on ? '#0B0B0A' : 'rgba(255,255,255,0.7)',
-  borderColor: on ? GREEN : 'rgba(255,255,255,0.12)',
-});
+const LINE = 'rgba(255,255,255,0.12)';
+const MUTED = 'rgba(255,255,255,0.5)';
 
 export default function FeedFilters({
   posts,
   value,
   onChange,
+  matched,
 }: {
   posts: IPost[];
   value: FeedFilterState;
   onChange: (next: FeedFilterState) => void;
+  /** What the current filters left, for the Stats card. */
+  matched: IPost[];
 }) {
   const [open, setOpen] = useState(false);
-  const set = (patch: Partial<FeedFilterState>) => onChange({ ...value, ...patch });
+  const set = <K extends keyof FeedFilterState>(k: K, v: FeedFilterState[K]) =>
+    onChange({ ...value, [k]: v });
 
-  const communities = useMemo(() => options(posts, 'community'), [posts]);
-  const educations = useMemo(() => options(posts, 'education'), [posts]);
-  const maritals = useMemo(() => options(posts, 'marital'), [posts]);
-  const states = useMemo(() => options(posts, 'state'), [posts]);
-  const genders = useMemo(() => options(posts, 'gender'), [posts]);
-  const faceted = useMemo(() => posts.filter((p) => p.gender != null).length, [posts]);
+  /** Only values someone actually has are offered, with their counts. */
+  const facets = useMemo(
+    () =>
+      FACETS.map(({ key, label: facetLabel }) => {
+        const counts = new Map<string, number>();
+        for (const p of posts) {
+          const raw = p[key];
+          if (raw == null || raw === '') continue;
+          const s = String(raw);
+          counts.set(s, (counts.get(s) ?? 0) + 1);
+        }
+        if (!counts.size) return null;
+        return {
+          key: key as string,
+          label: facetLabel,
+          options: [...counts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([v, count]) => ({ value: v, count, label: label(v) })),
+        };
+      }).filter(Boolean) as { key: string; label: string; options: { value: string; count: number; label: string }[] }[],
+    [posts],
+  );
 
+  const stats = useMemo(() => ({
+    total: matched.length,
+    grooms: matched.filter((p) => p.gender === 'groom').length,
+    brides: matched.filter((p) => p.gender === 'bride').length,
+    urgent: matched.filter((p) => p.is_urgent).length,
+  }), [matched]);
+
+  const unfilterable = posts.filter((p) => p.gender == null).length;
   const n = activeCount(value);
-  const unfilterable = posts.length - faceted;
 
-  // Nothing in this channel carries facets and nobody has typed anything:
-  // the panel would be a row of empty selects, so it stays out of the way.
-  if (faceted === 0 && !value.q && n === 0) return null;
+  // Nothing in this channel carries biodata: the panel would be a search box
+  // and four empty selects, so it stays out of the way.
+  if (facets.length === 0) return null;
 
   return (
-    <div style={{ background: '#0B0B0A' }}>
-      <div className="px-4 pb-3 flex items-center gap-2">
-        <input
-          value={value.q}
-          onChange={(e) => set({ q: e.target.value })}
-          placeholder="Search these posts"
-          className="flex-1 rounded-full px-4 py-2 text-sm outline-none border"
-          style={{
-            background: 'rgba(255,255,255,0.06)',
-            borderColor: 'rgba(255,255,255,0.12)',
-            color: '#fff',
-          }}
-        />
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold border"
-          style={chip(open || n > 0)}
-        >
-          Filters{n > 0 ? ` · ${n}` : ''}
-        </button>
-        {n > 0 && (
-          <button
-            onClick={() => onChange({ ...EMPTY_FILTERS })}
-            className="shrink-0 rounded-full px-3 py-2 text-xs font-semibold border"
-            style={chip(false)}
-          >
-            Clear
-          </button>
-        )}
-      </div>
+    <div style={{ background: '#0B0B0A' }} className="px-4 pb-3">
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold border"
+        style={{ background: n > 0 ? GREEN : 'rgba(255,255,255,0.08)', color: n > 0 ? '#0B0B0A' : '#fff', borderColor: n > 0 ? GREEN : LINE }}
+      >
+        <SlidersIcon />
+        Show Filters{n > 0 ? ` · ${n}` : ''}
+      </button>
 
       {open && (
-        <div className="px-4 pb-4 flex flex-col gap-3">
-          {genders.length > 0 && (
-            <Row label="Looking for">
-              <Chip on={value.gender === 'all'} onClick={() => set({ gender: 'all' })}>
-                Anyone
-              </Chip>
-              {genders.map((g) => (
-                <Chip
-                  key={g.value}
-                  on={value.gender === g.value}
-                  onClick={() => set({ gender: value.gender === g.value ? 'all' : g.value })}
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full rounded-2xl overflow-hidden"
+            style={{ maxWidth: 384, background: '#141413', border: `1px solid ${LINE}` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 pt-6 pb-2">
+              <h2 className="text-lg font-bold text-white">Filters</h2>
+              <button
+                onClick={() => setOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-lg"
+                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff' }}
+                aria-label="Close filters"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="overflow-y-auto" style={{ maxHeight: '70vh' }}>
+              <div className="p-6 flex flex-col gap-6">
+                {/* ── Stats ── */}
+                <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}` }}>
+                  <p className="text-sm font-bold text-white mb-4">Statistics</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Stat label="Total Matches" value={stats.total} tint={GREEN} glyph={<UsersIcon />} />
+                    <Stat label="Grooms" value={stats.grooms} tint="#3B82F6" glyph={<UserIcon />} />
+                    <Stat label="Brides" value={stats.brides} tint="#EC4899" glyph={<UserPlusIcon />} />
+                    <Stat label="Urgent" value={stats.urgent} tint="#F59E0B" glyph={<ZapIcon />} />
+                  </div>
+                </div>
+
+                {/* ── Search ── */}
+                <Field label="Search">
+                  <input
+                    value={value.q}
+                    onChange={(e) => set('q', e.target.value)}
+                    placeholder="Name, ID or a word from their description"
+                    className="w-full rounded-md px-3 py-2 text-sm outline-none border"
+                    style={{ background: 'rgba(255,255,255,0.06)', borderColor: LINE, color: '#fff' }}
+                  />
+                </Field>
+
+                {/* ── One select per facet ── */}
+                {facets.map((f) => (
+                  <Field key={f.key} label={f.label}>
+                    <select
+                      value={value.facets[f.key] ?? ''}
+                      onChange={(e) => set('facets', { ...value.facets, [f.key]: e.target.value })}
+                      className="w-full rounded-md px-3 py-2 text-sm outline-none border"
+                      style={{ background: 'rgba(255,255,255,0.06)', borderColor: LINE, color: '#fff' }}
+                    >
+                      <option value="">Any</option>
+                      {f.options.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label} ({o.count})
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ))}
+
+                {/* ── Age ── */}
+                <Field label={`Age · ${value.age[0]}–${value.age[1]}`}>
+                  <DualRange
+                    min={AGE.min}
+                    max={AGE.max}
+                    value={value.age}
+                    onChange={(v) => set('age', v)}
+                  />
+                </Field>
+
+                {/* ── Urgent ── */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-white">Looking urgently only</span>
+                  <button
+                    role="switch"
+                    aria-checked={value.urgentOnly}
+                    onClick={() => set('urgentOnly', !value.urgentOnly)}
+                    className="relative rounded-full transition-colors"
+                    style={{
+                      width: 44, height: 24,
+                      background: value.urgentOnly ? GREEN : 'rgba(255,255,255,0.18)',
+                    }}
+                  >
+                    <span
+                      className="absolute rounded-full transition-all"
+                      style={{
+                        width: 18, height: 18, top: 3,
+                        left: value.urgentOnly ? 23 : 3,
+                        background: '#fff',
+                      }}
+                    />
+                  </button>
+                </div>
+
+                {unfilterable > 0 && usesFacets(value) && (
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    {unfilterable} post{unfilterable === 1 ? '' : 's'} in this channel carry no
+                    biodata details, so these filters cannot include them.
+                  </p>
+                )}
+
+                <button
+                  onClick={() => onChange({ ...EMPTY_FILTERS })}
+                  className="w-full rounded-md py-2 text-sm font-semibold border"
+                  style={{ background: 'transparent', borderColor: LINE, color: '#fff' }}
                 >
-                  {g.value === 'bride' ? 'Brides' : g.value === 'groom' ? 'Grooms' : g.value}
-                  <span className="opacity-60 ml-1">{g.n}</span>
-                </Chip>
-              ))}
-            </Row>
-          )}
-
-          <Select label="Community" value={value.community} opts={communities} onPick={(v) => set({ community: v })} />
-          <Select label="Education" value={value.education} opts={educations} onPick={(v) => set({ education: v })} />
-          <Select label="Marital status" value={value.marital} opts={maritals} onPick={(v) => set({ marital: v })} />
-          <Select label="State" value={value.state} opts={states} onPick={(v) => set({ state: v })} />
-
-          <Row label={`Age ${value.ageMin}–${value.ageMax}`}>
-            <input
-              type="range" min={AGE_FLOOR} max={AGE_CEIL} value={value.ageMin}
-              onChange={(e) => set({ ageMin: Math.min(Number(e.target.value), value.ageMax) })}
-              className="flex-1" style={{ accentColor: GREEN }}
-            />
-            <input
-              type="range" min={AGE_FLOOR} max={AGE_CEIL} value={value.ageMax}
-              onChange={(e) => set({ ageMax: Math.max(Number(e.target.value), value.ageMin) })}
-              className="flex-1" style={{ accentColor: GREEN }}
-            />
-          </Row>
-
-          <Row label="Sort">
-            {(['newest', 'views', 'likes'] as const).map((s) => (
-              <Chip key={s} on={value.sort === s} onClick={() => set({ sort: s })}>
-                {s === 'newest' ? 'Newest' : s === 'views' ? 'Most viewed' : 'Most liked'}
-              </Chip>
-            ))}
-            <Chip on={value.urgentOnly} onClick={() => set({ urgentOnly: !value.urgentOnly })}>
-              Urgent only
-            </Chip>
-          </Row>
-
-          {/* Said out loud rather than left as a mysteriously short feed. */}
-          {unfilterable > 0 && usesFacets(value) && (
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              {unfilterable} post{unfilterable === 1 ? '' : 's'} in this channel carry no biodata
-              details, so these filters cannot include them.
-            </p>
-          )}
+                  Clear filters
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label: text, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs font-semibold shrink-0" style={{ color: 'rgba(255,255,255,0.45)', minWidth: 92 }}>
-        {label}
-      </span>
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium text-white">{text}</span>
       {children}
     </div>
   );
 }
 
-function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+function Stat({ label: text, value, tint, glyph }: {
+  label: string; value: number; tint: string; glyph: React.ReactNode;
+}) {
   return (
-    <button
-      onClick={onClick}
-      className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all"
-      style={chip(on)}
-    >
-      {children}
-    </button>
+    <div className="flex items-center gap-3">
+      <div className="p-2 rounded-md" style={{ background: `${tint}33`, color: tint }}>
+        {glyph}
+      </div>
+      <div>
+        <p className="text-xs" style={{ color: MUTED }}>{text}</p>
+        <p className="text-xl font-bold text-white">{value}</p>
+      </div>
+    </div>
   );
 }
 
-function Select({
-  label, value, opts, onPick,
-}: {
-  label: string;
-  value: string;
-  opts: { value: string; n: number }[];
-  onPick: (v: string) => void;
+/**
+ * Two thumbs on one track, which is what the original's Slider gives.
+ * The inputs are stacked; each only takes pointer events on its own thumb so
+ * the lower one is still reachable where the ranges overlap.
+ */
+function DualRange({ min, max, value, onChange }: {
+  min: number; max: number; value: [number, number]; onChange: (v: [number, number]) => void;
 }) {
-  if (opts.length === 0) return null;
+  const pct = (n: number) => ((n - min) / (max - min)) * 100;
   return (
-    <Row label={label}>
-      <select
-        value={value}
-        onChange={(e) => onPick(e.target.value)}
-        className="rounded-full px-3 py-1.5 text-xs font-semibold border outline-none"
-        style={{
-          background: value ? GREEN : 'rgba(255,255,255,0.08)',
-          color: value ? '#0B0B0A' : 'rgba(255,255,255,0.7)',
-          borderColor: value ? GREEN : 'rgba(255,255,255,0.12)',
-        }}
-      >
-        <option value="">Any</option>
-        {opts.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.value} ({o.n})
-          </option>
-        ))}
-      </select>
-    </Row>
+    <div className="relative" style={{ height: 24 }}>
+      <div className="absolute rounded-full" style={{ left: 0, right: 0, top: 10, height: 4, background: 'rgba(255,255,255,0.18)' }} />
+      <div
+        className="absolute rounded-full"
+        style={{ left: `${pct(value[0])}%`, right: `${100 - pct(value[1])}%`, top: 10, height: 4, background: GREEN }}
+      />
+      <input
+        type="range" min={min} max={max} value={value[0]}
+        onChange={(e) => onChange([Math.min(Number(e.target.value), value[1]), value[1]])}
+        className="ir-thumb absolute w-full" style={{ top: 0, accentColor: GREEN }}
+        aria-label="Minimum age"
+      />
+      <input
+        type="range" min={min} max={max} value={value[1]}
+        onChange={(e) => onChange([value[0], Math.max(Number(e.target.value), value[0])])}
+        className="ir-thumb absolute w-full" style={{ top: 0, accentColor: GREEN }}
+        aria-label="Maximum age"
+      />
+      <style>{`
+        .ir-thumb {
+          -webkit-appearance: none; appearance: none;
+          background: transparent; height: 24px; margin: 0;
+          pointer-events: none;
+        }
+        .ir-thumb::-webkit-slider-thumb {
+          -webkit-appearance: none; appearance: none;
+          width: 18px; height: 18px; border-radius: 9999px;
+          background: #fff; border: 2px solid ${GREEN};
+          pointer-events: auto; cursor: pointer;
+        }
+        .ir-thumb::-moz-range-thumb {
+          width: 18px; height: 18px; border-radius: 9999px;
+          background: #fff; border: 2px solid ${GREEN};
+          pointer-events: auto; cursor: pointer;
+        }
+      `}</style>
+    </div>
   );
 }
+
+/* Lucide's glyphs, inlined -- this app does not carry the icon package. */
+const svg = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+
+const SlidersIcon = () => (
+  <svg {...svg} width={16} height={16}><line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" /><line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" /><line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" /><line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" /></svg>
+);
+const UsersIcon = () => (
+  <svg {...svg}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+);
+const UserIcon = () => (
+  <svg {...svg}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+);
+const UserPlusIcon = () => (
+  <svg {...svg}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" /></svg>
+);
+const ZapIcon = () => (
+  <svg {...svg}><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /></svg>
+);

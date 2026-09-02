@@ -756,7 +756,7 @@ export default function ChannelFeedPage() {
 
       {/* ── Biodata filters ── */}
       {posts.length > 0 && (
-        <FeedFilters posts={posts} value={filters} onChange={setFilters} />
+        <FeedFilters posts={posts} value={filters} onChange={setFilters} matched={visiblePosts} />
       )}
 
       {/* ── New post badge ── */}
