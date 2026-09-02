@@ -19,8 +19,17 @@
  * means we can check the content type, reject what satori cannot render, and
  * fall back to a branded panel instead of a void.
  *
- * Portrait 1080×1350 — a 4:5 card is what fills a phone screen in a WhatsApp
- * thread; a 1200×630 landscape OG image renders as a thin strip there.
+ * The card IS the picture. It used to be a photo panel with a caption block
+ * under it -- name, brand line, short URL -- which on a biodata frame
+ * repeated what the frame already says in its own lockup, and cost the frame
+ * a third of its height to say it. Now the image fills the card and the only
+ * thing over it is the QR, because that is the one thing the picture cannot
+ * carry itself.
+ *
+ * A show frame is 1080×1920 and the card matches it, so `cover` crops
+ * nothing. Anything else keeps the 4:5 that fills a phone screen in a
+ * WhatsApp thread, and is contained rather than cropped -- a 1200×630
+ * landscape OG image renders as a thin strip there.
  *
  * Public: the underlying post is already public, and the card exposes nothing
  * the post page does not. Node runtime (needs the service-role client).
@@ -32,8 +41,10 @@ import { getProfession, loadProfessions } from '@/lib/professions';
 
 export const runtime = 'nodejs';
 
-const WIDTH  = 1080;
-const HEIGHT = 1350;
+const WIDTH = 1080;
+/** A show frame's own size; anything else gets the 4:5 forward card. */
+const FRAME_HEIGHT = 1920;
+const CARD_HEIGHT  = 1350;
 
 const GREEN = '#00A86B';
 const INK   = '#0E1B16';
@@ -90,7 +101,10 @@ export async function GET(
   const table = nano.entity_type === 'story' ? 'ir_stories' : 'ir_posts';
   const { data: post } = await db
     .from(table)
-    .select('image, title, caption, user_id')
+    // `*` rather than a column list: the two tables differ (ir_stories has no
+    // title, caption or facets) and a conditional select string defeats
+    // supabase-js's literal-type parser.
+    .select('*')
     .eq('id', nano.entity_id)
     .maybeSingle();
 
@@ -111,8 +125,9 @@ export async function GET(
   const profession = getProfession(await loadProfessions(db), professionKey);
 
   const photo   = await toDataUri(post.image);
-  const heading = (post.title || post.caption || 'A rishta on InstaRishta').slice(0, 110);
-  const site    = process.env.NEXT_PUBLIC_SITE_URL?.replace(/^https?:\/\//, '') || 'instarishta.com';
+  // A post carrying biodata facets is one of ours: a 1080x1920 show frame.
+  const isFrame = (post as { gender?: string | null }).gender != null;
+  const HEIGHT  = isFrame ? FRAME_HEIGHT : CARD_HEIGHT;
 
   /**
    * The QR belongs on the forward, not on the post.
@@ -139,102 +154,92 @@ export async function GET(
           width: '100%',
           height: '100%',
           display: 'flex',
-          flexDirection: 'column',
+          position: 'relative',
           backgroundColor: INK,
         }}
       >
-        {/* Photo — fixed height so the caption block never gets squeezed out */}
-        <div style={{ display: 'flex', width: '100%', height: 860, position: 'relative' }}>
-          {photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photo}
-              alt=""
-              width={WIDTH}
-              height={860}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            // No usable photo. A branded panel, not an empty rectangle — this
-            // card gets forwarded into family groups and a blank top half
-            // reads as broken.
-            <div
-              style={{
-                display: 'flex',
-                width: '100%',
-                height: '100%',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#12241D',
-              }}
-            >
-              <span style={{ fontSize: 120, fontWeight: 800, color: 'rgba(0,168,107,0.30)' }}>
-                InstaRishta
-              </span>
-            </div>
-          )}
-
-          {profession && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 40,
-                left: 40,
-                display: 'flex',
-                alignItems: 'center',
-                padding: '14px 26px',
-                borderRadius: 999,
-                backgroundColor: 'rgba(0,0,0,0.62)',
-                border: `2px solid ${GREEN}`,
-              }}
-            >
-              <span style={{ fontSize: 34, marginRight: 12 }}>{profession.icon}</span>
-              <span style={{ fontSize: 32, fontWeight: 700, color: '#FFFFFF' }}>
-                {`Verified ${profession.label}`}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Caption + brand */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            padding: '48px 56px',
-          }}
-        >
-          <div style={{ display: 'flex', fontSize: 52, lineHeight: 1.25, fontWeight: 700, color: '#FFFFFF' }}>
-            {heading}
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo}
+            alt=""
+            width={WIDTH}
+            height={HEIGHT}
+            style={{
+              width: '100%',
+              height: '100%',
+              // A frame and the card are the same shape, so `cover` takes
+              // nothing off it. An import is an unknown shape and is
+              // contained, which is what stops a tall biodata scan losing its
+              // bottom half to the crop.
+              objectFit: isFrame ? 'cover' : 'contain',
+            }}
+          />
+        ) : (
+          // No usable photo. A branded panel, not an empty rectangle -- this
+          // card gets forwarded into family groups and a blank one reads as
+          // broken.
+          <div
+            style={{
+              display: 'flex',
+              width: '100%',
+              height: '100%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#12241D',
+            }}
+          >
+            <span style={{ fontSize: 120, fontWeight: 800, color: 'rgba(0,168,107,0.30)' }}>
+              InstaRishta
+            </span>
           </div>
+        )}
 
-          <div style={{ display: 'flex', flex: 1 }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 38, fontWeight: 800, color: GREEN }}>InstaRishta</span>
-              <span style={{ fontSize: 26, color: 'rgba(255,255,255,0.55)' }}>
-                Verified professionals only
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              {qr && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={qr}
-                  alt=""
-                  width={150}
-                  height={150}
-                  style={{ width: 150, height: 150, borderRadius: 12 }}
-                />
-              )}
-              <span style={{ fontSize: 26, color: 'rgba(255,255,255,0.75)', marginTop: 10 }}>
-                {`${site}/p/${slug}`}
-              </span>
-            </div>
+        {profession && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 40,
+              left: 40,
+              display: 'flex',
+              alignItems: 'center',
+              padding: '14px 26px',
+              borderRadius: 999,
+              backgroundColor: 'rgba(0,0,0,0.62)',
+              border: `2px solid ${GREEN}`,
+            }}
+          >
+            <span style={{ fontSize: 34, marginRight: 12 }}>{profession.icon}</span>
+            <span style={{ fontSize: 32, fontWeight: 700, color: '#FFFFFF' }}>
+              {`Verified ${profession.label}`}
+            </span>
           </div>
-        </div>
+        )}
+
+        {/* The only thing laid over the picture. On a white plate because a
+            QR on a dark photograph does not scan.
+
+            Top-right on a show frame: the lower third is where the name, the
+            fact grid and the description live, and the code was landing in
+            the middle of the last paragraph. Up there it is over open
+            photograph. An import has no such guarantee, so it keeps the
+            bottom corner, which is the likelier margin on a scanned biodata. */}
+        {qr && (
+          <div
+            style={{
+              position: 'absolute',
+              right: 40,
+              ...(isFrame ? { top: 40 } : { bottom: 40 }),
+              display: 'flex',
+              padding: 14,
+              borderRadius: 20,
+              backgroundColor: '#FFFFFF',
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qr} alt="" width={160} height={160} style={{ width: 160, height: 160 }} />
+          </div>
+        )}
       </div>
     ),
     {
