@@ -56,7 +56,18 @@ export function useContactCredits(): ContactCredits {
     fetch('/api/account/profile')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        setRemaining(typeof d?.credits === 'number' ? d.credits : 0);
+        // `total_credits`, not `credits`. The latter is only the monthly cycle
+        // balance; purchased top-ups live in `bonus_credits` and survive resets
+        // and expiry. Reading the cycle alone showed 0 to a member holding 25
+        // bought credits -- and because `canUse` gates on this number, it also
+        // refused to let them spend what they had paid for. The spend path
+        // already returns cycle + bonus (see the consume branch below), so only
+        // the initial load was wrong.
+        setRemaining(
+          typeof d?.total_credits === 'number' ? d.total_credits
+          : typeof d?.credits === 'number' ? d.credits
+          : 0,
+        );
         setPhoneLocked(d?.phone?.locked === true);
         setLoaded(true);
       })

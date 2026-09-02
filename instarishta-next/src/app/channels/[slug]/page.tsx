@@ -327,6 +327,18 @@ function PostModal({
 
   const onSwipeEnd = (e: React.TouchEvent) => {
     if (swipeRef.current.inCar) return;
+
+    /**
+     * An overlay owns its own touches.
+     *
+     * The comment drawer and the share sheet render inside this element, so
+     * every tap in them bubbles here — and the drawer docks against the post's
+     * right edge, which is the tap zone for "next post". Tapping the comment
+     * box therefore jumped to the next post and opened ITS comments. The
+     * keyboard handler already declines to act while an overlay is up; this is
+     * the same rule for touch.
+     */
+    if (commenting || shareSlug) return;
     const dx = e.changedTouches[0].clientX - swipeRef.current.x;
     const dy = e.changedTouches[0].clientY - swipeRef.current.y;
 
