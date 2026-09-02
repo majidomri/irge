@@ -793,7 +793,22 @@ export default function ChannelFeedPage() {
             const cover = post.thumb ?? post.image ?? null;
             const hasImage = !!cover;
             const hasAudio = !!post.audio_url;
-            const extra = Array.isArray(post.images) ? post.images.length : 0;
+            /**
+             * A show frame is a known shape: the capture writes 1080x1920 and
+             * the publisher writes the biodata facets alongside it, so a post
+             * carrying facets is one of ours and its tile can be cut to 9:16
+             * and filled edge to edge -- `cover` on a matching aspect crops
+             * nothing. An import is an unknown shape and keeps the letterbox,
+             * which is what stops it losing a third of its content.
+             */
+            const isFrame = post.gender != null;
+            /* Frames beyond the cover. `images` holds the whole carousel with
+               the cover as images[0], so the count is one less than its
+               length -- "+3" on a three-frame biodata promised a fourth. */
+            const extra = Math.max(
+              0,
+              [...new Set([post.image, ...(Array.isArray(post.images) ? post.images : [])].filter(Boolean))].length - 1,
+            );
             return (
               <button
                 key={post.id}
@@ -801,7 +816,7 @@ export default function ChannelFeedPage() {
                 className="relative overflow-hidden border-0 p-0 cursor-pointer block text-left rounded-2xl"
                 style={{ background: '#171715' }}
               >
-                <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: hasImage ? '#0d0d0c' : hasAudio ? '#0d1e18' : '#1E3932' }}>
+                <div className="relative w-full overflow-hidden" style={{ aspectRatio: isFrame ? '9/16' : '3/4', background: hasImage ? '#0d0d0c' : hasAudio ? '#0d1e18' : '#1E3932' }}>
                   {cover ? (
                     /* Biodata images are tall documents (typically ~1:1.9), not
                        photos. object-cover on a 3/4 tile cropped 30-45% off
@@ -810,17 +825,25 @@ export default function ChannelFeedPage() {
                        object-contain, over a blurred copy of itself so the tile
                        still fills its grid cell instead of showing bars. */
                     <>
-                      <img
-                        src={cover}
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40"
-                        loading="lazy"
-                      />
+                      {/* The blurred fill only exists to hide letterbox bars.
+                          A frame has none -- its tile is cut to its own
+                          aspect -- so painting one behind it is a gradient
+                          smear down both edges of every card. */}
+                      {!isFrame && (
+                        <img
+                          src={cover}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40"
+                          loading="lazy"
+                        />
+                      )}
                       <img
                         src={cover}
                         alt={post.title ?? ''}
-                        className="relative w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                        className={`relative w-full h-full transition-transform duration-300 hover:scale-105 ${
+                          isFrame ? 'object-cover' : 'object-contain'
+                        }`}
                         loading="lazy"
                       />
                     </>
@@ -872,20 +895,24 @@ export default function ChannelFeedPage() {
                   )}
                 </div>
 
-                {/* Caption block */}
-                <div className="px-2.5 py-2">
-                  {/* Imported biodata carries no title or caption — the image is
-                      the content. Printing "Untitled post" there labelled every
-                      one of them as broken; showing nothing reads as intended. */}
-                  {(post.title || post.caption) && (
-                    <p className="text-xs font-bold text-white leading-snug line-clamp-2">
-                      {post.title || post.caption}
+                {/* Caption block — text and audio tiles only.
+                    On an image post it repeated what the picture already says:
+                    a biodata frame carries the name and the IR id in its own
+                    lockup, and the age badge on the tile already gives the
+                    time. Two lines of chrome under every card, saying nothing
+                    new, and pushing the images apart. */}
+                {!hasImage && (
+                  <div className="px-2.5 py-2">
+                    {(post.title || post.caption) && (
+                      <p className="text-xs font-bold text-white leading-snug line-clamp-2">
+                        {post.title || post.caption}
+                      </p>
+                    )}
+                    <p className="text-[11px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                      {channel?.name} · {timeAgoShort(post.created_at)}
                     </p>
-                  )}
-                  <p className="text-[11px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    {channel?.name} · {timeAgoShort(post.created_at)}
-                  </p>
-                </div>
+                  </div>
+                )}
               </button>
             );
           })}
