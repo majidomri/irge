@@ -210,7 +210,15 @@ function PostModal({
   onLike: (id: string) => void; onNavigate: (p: IPost) => void;
   onPlayAttempt?: () => Promise<boolean>;
 }) {
-  const imgs    = [post.image, ...(Array.isArray(post.images) ? post.images : [])].filter((v): v is string => Boolean(v));
+  // Deduped: `image` is the cover and `images` is the carousel, and whether
+  // the cover is also the first carousel entry depends on who wrote the row.
+  // The show's publisher writes the full set to `images` with `images[0]` as
+  // the cover, so a plain concat showed frame one twice and counted "1 / 4"
+  // on a three-frame biodata.
+  const imgs    = [...new Set(
+    [post.image, ...(Array.isArray(post.images) ? post.images : [])]
+      .filter((v): v is string => Boolean(v)),
+  )];
   const isAudio = !!post.audio_url;
   const isText  = !post.image && !isAudio;
   const hasImg  = imgs.length > 0;
@@ -350,8 +358,15 @@ function PostModal({
     // column below so a real (portrait) photo never stretches to fill an
     // ultra-wide desktop viewport; the leftover sides just stay solid black.
     <div className="fixed inset-0 z-200" style={{ background: '#000' }}>
+    {/* A biodata frame is a document, not a snapshot: it is meant to be read
+        edge to edge, so an image post gets the whole viewport and the chrome
+        floats over it. The 480 cap stays for audio and text posts, where the
+        panel below the media is the content and a phone-width column reads
+        better than a full-bleed one. `contain` means an uncapped width still
+        cannot stretch the frame -- on a wide screen the height limits it and
+        the sides simply stay black. */}
     <div className="relative mx-auto flex flex-col overflow-hidden h-full"
-      style={{ background: '#0d1117', maxWidth: 480 }}
+      style={{ background: '#0d1117', maxWidth: hasImg && !isAudio ? undefined : 480 }}
       onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
 
       {/* Ambient blur */}
@@ -364,8 +379,11 @@ function PostModal({
         }} />
       )}
 
-      {/* Top bar */}
-      <div className="relative z-10 flex items-center gap-3 px-4 pb-3 shrink-0"
+      {/* Top bar. Over the image, not above it, so the frame keeps the full
+          height of the viewport. */}
+      <div className={`z-20 flex items-center gap-3 px-4 pb-3 shrink-0 ${
+        hasImg && !isAudio ? 'absolute inset-x-0 top-0' : 'relative'
+      }`}
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)', background: 'linear-gradient(to bottom,rgba(0,0,0,0.65) 0%,transparent 100%)' }}>
         <button onClick={onClose}
           className="w-9 h-9 rounded-full flex items-center justify-center text-xl border-0"
@@ -391,7 +409,9 @@ function PostModal({
       {hasImg && (
         <div ref={carouselRef}
           className={`relative z-10 overflow-hidden ${isAudio ? 'shrink-0' : 'flex-1 min-h-0'}`}
-          style={isAudio ? { height: '32dvh' } : { minHeight: '40dvh' }}>
+          // Full viewport for a biodata: the bars float over it now, so there
+          // is no row left to share the height with.
+          style={isAudio ? { height: '32dvh' } : { minHeight: '100%' }}>
           <div ref={scrollRef}
             className="ir-no-scrollbar absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
             style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
@@ -436,9 +456,9 @@ function PostModal({
           the biodata above it was squeezed. It only earns flex when it has
           something to show; otherwise it collapses and the image takes the
           space. */}
-      <div className={`relative z-10 overflow-hidden px-5 pt-3 pb-2 ${
-        (isAudio || isText || post.title || post.caption) ? 'flex-1 min-h-0' : 'shrink-0'
-      }`}>
+      <div className={`relative z-10 overflow-hidden ${
+        hasImg && !isAudio ? 'hidden' : 'px-5 pt-3 pb-2'
+      } ${(isAudio || isText) ? 'flex-1 min-h-0' : 'shrink-0'}`}>
         {/* Audio player */}
         {isAudio && (
           <AudioPlayer url={post.audio_url!} title={post.title} caption={post.caption} onPlayAttempt={onPlayAttempt} />
@@ -473,18 +493,26 @@ function PostModal({
           </div>
         )}
 
-        {/* Image post text */}
-        {hasImg && !isAudio && (
-          <div className="mt-1">
-            {post.title   && <p className="text-sm font-bold text-white mb-1.5">{post.title}</p>}
-            {post.caption && <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{post.caption}</p>}
-          </div>
-        )}
+        {/* No title or caption for an image post. On a biodata frame the name,
+            the IR id and every fact are already drawn into the picture, so the
+            text below it repeated what the reader could see -- and, worse, the
+            panel claimed flex-1 to say it, halving the height of the very
+            thing it was describing. */}
       </div>
 
       {/* ── Bottom bar ── */}
-      <div className="relative z-10 px-5 py-3 shrink-0"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.4)' }}>
+      <div className={`z-20 px-5 py-3 shrink-0 ${
+        hasImg && !isAudio ? 'absolute inset-x-0 bottom-0' : 'relative'
+      }`}
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          borderTop: hasImg && !isAudio ? 'none' : '1px solid rgba(255,255,255,0.08)',
+          // Over a full-bleed frame the bar is a scrim, not a panel: a hard
+          // edge across the bottom of the biodata would read as a crop.
+          background: hasImg && !isAudio
+            ? 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, transparent 100%)'
+            : 'rgba(0,0,0,0.4)',
+        }}>
         {/* Same shape as the story viewer's bar (see StoryIcons.tsx): meta
             on the left, icon-only action cluster on the right. */}
         <div className="flex items-center justify-between gap-3">
