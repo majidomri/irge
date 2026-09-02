@@ -4,9 +4,8 @@
  * This is the distribution surface. Rishtas in India spread through family
  * WhatsApp groups, not through links — an aunt forwards a picture, and the
  * picture has to carry everything on its own because nobody in that group is
- * going to tap through to read context. So the card bakes in the photo, the
- * verified profession and the short URL, and every forward carries the badge
- * and the brand into a group of exactly the right people.
+ * going to tap through to read context. So the card is the picture, whole,
+ * with a QR back to it.
  *
  * Rendered with next/og (satori). Satori is not a browser: every container
  * with more than one child needs an explicit `display: flex`, there is no
@@ -37,7 +36,6 @@
 import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
-import { getProfession, loadProfessions } from '@/lib/professions';
 
 export const runtime = 'nodejs';
 
@@ -46,7 +44,6 @@ const WIDTH = 1080;
 const FRAME_HEIGHT = 1920;
 const CARD_HEIGHT  = 1350;
 
-const GREEN = '#00A86B';
 const INK   = '#0E1B16';
 
 /** Raster formats satori can decode. SVG and AVIF are not among them. */
@@ -109,20 +106,6 @@ export async function GET(
     .maybeSingle();
 
   if (!post) return new Response('Not found', { status: 404 });
-
-  // The badge is the whole reason this card is worth forwarding, so resolve
-  // the poster's verified profession. Absent (or unverified) simply means no
-  // badge — never a placeholder one.
-  let professionKey: string | null = null;
-  if (post.user_id) {
-    const { data: owner } = await db
-      .from('ir_user_profiles')
-      .select('profession_key')
-      .eq('id', post.user_id)
-      .maybeSingle();
-    professionKey = owner?.profession_key ?? null;
-  }
-  const profession = getProfession(await loadProfessions(db), professionKey);
 
   const photo   = await toDataUri(post.image);
   // A post carrying biodata facets is one of ours: a 1080x1920 show frame.
@@ -191,27 +174,6 @@ export async function GET(
           >
             <span style={{ fontSize: 120, fontWeight: 800, color: 'rgba(0,168,107,0.30)' }}>
               InstaRishta
-            </span>
-          </div>
-        )}
-
-        {profession && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 40,
-              left: 40,
-              display: 'flex',
-              alignItems: 'center',
-              padding: '14px 26px',
-              borderRadius: 999,
-              backgroundColor: 'rgba(0,0,0,0.62)',
-              border: `2px solid ${GREEN}`,
-            }}
-          >
-            <span style={{ fontSize: 34, marginRight: 12 }}>{profession.icon}</span>
-            <span style={{ fontSize: 32, fontWeight: 700, color: '#FFFFFF' }}>
-              {`Verified ${profession.label}`}
             </span>
           </div>
         )}
