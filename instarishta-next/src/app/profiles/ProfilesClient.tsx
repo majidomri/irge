@@ -353,9 +353,23 @@ const ProfileCard = memo(function ProfileCard({
         </p>
       </div>
 
-      <div data-no-capture className="px-4 pb-2.5 flex justify-between items-center">
-        <span className="text-[10px]" style={{ color: '#D1CDC7' }}>double-tap to save · hold for biodata</span>
-        <span className="text-[10px]" style={{ color: '#D1CDC7' }}>↕ swipe</span>
+      {/* The biodata was reachable only by long-press, right-click, or a line
+          of 10px grey type nobody reads -- a whole structured view hidden
+          behind a gesture. The gestures still work; this is the way in. */}
+      <div data-no-capture className="px-4 pb-2.5 flex justify-between items-center gap-2">
+        <button
+          onClick={e => { e.stopPropagation(); onBiodata(profile); }}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold"
+          style={{ background: '#EEF6F0', color: '#006241', border: '1px solid #CFE6D8' }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 4h9a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z" />
+            <path d="M20 4h-4a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h5z" />
+          </svg>
+          Biodata
+        </button>
+        <span className="text-[10px]" style={{ color: '#D1CDC7' }}>double-tap to save · ↕ swipe</span>
       </div>
     </div>
   );

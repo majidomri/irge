@@ -4,6 +4,7 @@ import { type DeckProfile, isUrgent } from '../_shared';
 import { extractBioFields } from '@/lib/bio-extract';
 import { type BioSection, normalizeSections } from '@/lib/biodata-schema';
 import BiodataSheet from './BiodataSheet';
+import LiveBiodata from '@/components/LiveBiodata';
 import { LIVE, accentFor } from '@/lib/live-theme';
 import ReportModal from './ReportModal';
 
@@ -167,6 +168,22 @@ export default function BiodataModal({ profile, authored, onClose }: {
     return written.length ? written : parseBiodata(profile.body).sections;
   }, [authored, profile.body]);
 
+  /**
+   * The same document the show renders.
+   *
+   * The ad's prose becomes registry values, and `resolveBiodata` turns those
+   * into the exact `ResolvedSection[]` the broadcast reel reads -- so the
+   * popup, the frames published to the feed and the show itself are three
+   * views of one biodata instead of three definitions of one.
+   *
+   * Hand-authored sections from /nizam still win, and still render through the
+   * old sheet: someone read the ad and wrote those down against a different
+   * vocabulary, and silently dropping their work would be worse than carrying
+   * two presenters for as long as that vocabulary exists.
+   */
+  const authoredWins = normalizeSections(authored).length > 0;
+
+
   return (
     <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
@@ -235,7 +252,11 @@ export default function BiodataModal({ profile, authored, onClose }: {
           {/* One view only. There is no raw fallback because there is nothing
               for it to add: an ad that yields no structured fields still
               produces an About section carrying the complete original text. */}
-          <BiodataSheet sections={sections} isFemale={isFemale} />
+          {/* The biodata as the show presents it -- the same components the
+              broadcast runs and the published frames are screenshots of. */}
+          {authoredWins
+            ? <BiodataSheet sections={sections} isFemale={isFemale} />
+            : <LiveBiodata ad={profile} irId={`IR-${profile._num}`} />}
 
           <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: `1px solid ${LIVE.goldDim}` }}>
             <p className="text-xs" style={{ color: LIVE.muted }}>instarishta.me</p>
