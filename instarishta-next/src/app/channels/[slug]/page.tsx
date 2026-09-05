@@ -654,6 +654,10 @@ export default function ChannelFeedPage() {
   const [siblings, setSiblings]  = useState<{ id: string; name: string; slug: string }[]>([]);
   const [catFilter, setCatFilter] = useState('all');
   const [filters,  setFilters]   = useState<FeedFilterState>(EMPTY_FILTERS);
+  // The feed owns this, not FeedFilters: the trigger lives in the bottom dock
+  // on a phone and in the top bar on a desktop, and the panel has to open
+  // from both.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [newBadge, setNewBadge]  = useState(false);
 
   const [modalPost,  setModalPost]  = useState<IPost | null>(null);
@@ -873,6 +877,86 @@ export default function ChannelFeedPage() {
   }, [total, page]);
   const [currentPage, setCurrentPage] = useState(1);
 
+  /**
+   * The three navigation controls, written once and placed twice.
+   *
+   * A phone puts them in a dock in the thumb arc; a desktop has no thumb arc
+   * and no bottom nav to sit above, so there they belong in the bar at the
+   * top with everything else you point at. Same chips either way.
+   */
+  const channelChips = (
+    <>
+      <span className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold"
+        style={{ background: '#00A86B', color: '#0B0B0A' }}>
+        {channel?.name ?? 'Loading…'}
+      </span>
+      {siblings
+        .filter(c => c.slug !== channel?.slug)
+        .map(c => (
+          <a
+            key={c.id}
+            href={`/channels/${c.slug}`}
+            className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border no-underline"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.78)',
+              borderColor: 'rgba(255,255,255,0.14)',
+            }}
+          >
+            {c.name} ›
+          </a>
+        ))}
+    </>
+  );
+
+  const pagerChips = pageNumbers.map(n => {
+    const loaded = n <= page;
+    return (
+      <button
+        key={n}
+        onClick={() => goToPage(n)}
+        aria-label={`Page ${n}`}
+        aria-current={n === currentPage}
+        className="shrink-0 rounded-lg text-xs font-bold border"
+        style={{
+          minWidth: 32, height: 32,
+          background: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.06)',
+          color:      n === currentPage ? '#0B0B0A' : loaded ? '#fff' : 'rgba(255,255,255,0.45)',
+          borderColor: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.14)',
+        }}
+      >
+        {n}
+      </button>
+    );
+  });
+
+  const nFilters = activeCount(filters);
+  const filterButton = (
+    <button
+      onClick={() => setFiltersOpen(true)}
+      aria-label={nFilters > 0 ? `Filters, ${nFilters} active` : 'Filters'}
+      className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 h-8 text-xs font-bold border"
+      style={{
+        background: nFilters > 0 ? '#00A86B' : 'rgba(255,255,255,0.06)',
+        color:      nFilters > 0 ? '#0B0B0A' : '#fff',
+        borderColor: nFilters > 0 ? '#00A86B' : 'rgba(255,255,255,0.14)',
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" />
+        <line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" />
+        <line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" />
+        <line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" />
+        <line x1="16" x2="16" y1="18" y2="22" />
+      </svg>
+      Filters
+      {nFilters > 0 && (
+        <span className="rounded-full px-1.5 text-[11px] font-extrabold"
+          style={{ background: '#0B0B0A', color: '#00A86B' }}>{nFilters}</span>
+      )}
+    </button>
+  );
+
   if (error) return (
     <div className="text-center py-20 px-6">
       <span className="text-5xl block mb-4">⚠️</span>
@@ -901,9 +985,24 @@ export default function ChannelFeedPage() {
       {/* ── Featured profiles spotlight ── */}
       <FeaturedCarousel placement="channels" label="Spotlight Profiles" />
 
-      {/* The channel strip that used to sit here now lives in the bottom dock,
-          within thumb reach — see the dock below. */}
       <div className="sticky top-0 z-40" style={{ background: '#0B0B0A' }}>
+
+      {/* ── Desktop control bar ──
+          On a phone these three live in the bottom dock. On a desktop there
+          is no bottom nav for a dock to stand on and no thumb to reach it
+          with, so they sit in the top bar: channels on the left, pages and
+          the drawer trigger on the right. */}
+      <div className="hidden md:flex items-center gap-3 px-4 py-2.5">
+        <div className="flex gap-2 overflow-x-auto items-center flex-1 min-w-0"
+          style={{ scrollbarWidth: 'none' }}>
+          {channelChips}
+        </div>
+        {pageNumbers.length > 1 && !filtering && (
+          <div className="flex items-center gap-1.5 shrink-0">{pagerChips}</div>
+        )}
+        {posts.length > 0 && filterButton}
+      </div>
+
       {/* ── Category filter chips ── */}
       {posts.length > 0 && (
         <div className="px-4 pb-3 flex gap-2 overflow-x-auto" style={{ background: '#0B0B0A', boxShadow: '0 1px 0 rgba(255,255,255,0.08)', scrollbarWidth: 'none' }}>
@@ -968,86 +1067,45 @@ export default function ChannelFeedPage() {
       {/*
         ── Bottom dock: everything you navigate with, inside the thumb arc ──
 
-        Channels, pages and the filter FAB are all navigation, and navigation
-        at the top of a phone screen needs a second hand. They sit together
-        just above the site's bottom nav instead: the channel strip on top
-        (swipe it sideways to reach the next group, tap to go), the pager
-        under it, and the filter FAB — rendered by FeedFilters — pinned to the
-        right of that same row, which is what the 130px of right padding
-        keeps clear.
+        Phone only. Channels, pages and the filter trigger are all navigation,
+        and navigation at the top of a phone screen needs a second hand, so
+        they sit together directly on top of the site's bottom nav: the
+        channel strip (swipe sideways for the next group), the pager under
+        it, and the filter button at the end of that row.
 
-        The dock itself takes no pointer events, so the gaps between the rows
-        stay part of the feed and the tiles behind it are still tappable; only
-        the rows themselves are live.
+        One solid surface, flush against the nav below it. It used to be two
+        floating rows over a fade with a FAB laid over the corner, which left
+        the feed showing through the gaps and through the hole the FAB made
+        -- tiles sliding past between the controls.
       */}
-      <div className="fixed inset-x-0 z-[110] flex flex-col gap-1.5 pointer-events-none"
+      <div className="md:hidden fixed inset-x-0 z-[110] flex flex-col gap-2 py-2.5"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)',
-          background: 'linear-gradient(to top, rgba(11,11,10,0.92) 30%, transparent 100%)',
-          paddingTop: 24,
-        }}>
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
+          background: 'rgba(10,20,15,0.97)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+        } as React.CSSProperties}>
 
-        {/* Channels: where you are, and what you can swipe to. Current channel
-            first and highlighted, every other channel a chip away. */}
-        <div className="px-4 flex gap-2 overflow-x-auto items-center pointer-events-auto"
-          style={{ scrollbarWidth: 'none', paddingRight: 130 }}>
-          <span className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold shadow-lg"
-            style={{ background: '#00A86B', color: '#0B0B0A', boxShadow: '0 6px 18px rgba(0,0,0,0.45)' }}>
-            {channel?.name ?? 'Loading…'}
-          </span>
-          {siblings
-            .filter(c => c.slug !== channel?.slug)
-            .map(c => (
-              <a
-                key={c.id}
-                href={`/channels/${c.slug}`}
-                className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border no-underline shadow-lg"
-                style={{
-                  background: 'rgba(20,20,19,0.92)',
-                  color: 'rgba(255,255,255,0.8)',
-                  borderColor: 'rgba(255,255,255,0.14)',
-                  boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
-                }}
-              >
-                {c.name} ›
-              </a>
-            ))}
+        <div className="px-4 flex gap-2 overflow-x-auto items-center"
+          style={{ scrollbarWidth: 'none' }}>
+          {channelChips}
         </div>
 
-        {pageNumbers.length > 1 && !filtering && (
-        <div className="px-4 flex items-center gap-1.5 overflow-x-auto pointer-events-auto"
-          style={{
-            paddingRight: 130,   // clear of the filter FAB
-            scrollbarWidth: 'none',
-          }}>
-          {pageNumbers.map(n => {
-            const loaded = n <= page;
-            return (
-              <button
-                key={n}
-                onClick={() => goToPage(n)}
-                aria-label={`Page ${n}`}
-                aria-current={n === currentPage}
-                className="shrink-0 rounded-lg text-xs font-bold border shadow-lg"
-                style={{
-                  minWidth: 34, height: 34,
-                  background: n === currentPage ? '#00A86B' : 'rgba(20,20,19,0.92)',
-                  color:      n === currentPage ? '#0B0B0A' : loaded ? '#fff' : 'rgba(255,255,255,0.45)',
-                  borderColor: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.14)',
-                  boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
-                }}
-              >
-                {n}
-              </button>
-            );
-          })}
+        <div className="px-4 flex items-center gap-1.5 overflow-x-auto"
+          style={{ scrollbarWidth: 'none' }}>
+          {pageNumbers.length > 1 && !filtering && pagerChips}
+          <div className="flex-1" />
+          {posts.length > 0 && filterButton}
         </div>
-        )}
       </div>
 
       {/* ── Biodata filters ── */}
       {posts.length > 0 && (
-        <FeedFilters posts={posts} value={filters} onChange={setFilters} matched={visiblePosts} />
+        <FeedFilters
+          posts={posts} value={filters} onChange={setFilters} matched={visiblePosts}
+          open={filtersOpen} onOpenChange={setFiltersOpen}
+        />
       )}
 
       {/* ── New post badge ── */}

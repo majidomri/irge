@@ -111,14 +111,27 @@ export default function FeedFilters({
   value,
   onChange,
   matched,
+  open: openProp,
+  onOpenChange,
 }: {
   posts: IPost[];
   value: FeedFilterState;
   onChange: (next: FeedFilterState) => void;
   /** What the current filters left, for the Stats card. */
   matched: IPost[];
+  /**
+   * Optional controlled open state. The feed owns the trigger now — it has to
+   * sit inside the bottom dock on a phone and in the top bar on a desktop,
+   * and neither is a place this component can reach. Pass `open` and this
+   * renders the panel only; leave it out and it keeps its own FAB.
+   */
+  open?: boolean;
+  onOpenChange?: (next: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [selfOpen, setSelfOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : selfOpen;
+  const setOpen = (v: boolean) => { if (controlled) onOpenChange?.(v); else setSelfOpen(v); };
   const set = <K extends keyof FeedFilterState>(k: K, v: FeedFilterState[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -210,12 +223,11 @@ export default function FeedFilters({
       )}
 
       {/*
-        The trigger is a FAB, not a row.
-        As an inline button it scrolled away with the feed, so changing a
-        filter meant scrolling back to the top first. Fixed in the bottom-right
-        thumb arc it is reachable one-handed at any scroll position, and it
-        sits above the site's bottom nav rather than over it.
+        The fallback trigger, for a caller that does not supply its own.
+        The feed does: a floating FAB over a bottom dock meant two surfaces
+        stacked in the same corner, which is what put a hole in the dock.
       */}
+      {!controlled && (
       <button
         onClick={() => setOpen(true)}
         aria-label={n > 0 ? `Filters, ${n} active` : 'Filters'}
@@ -235,6 +247,7 @@ export default function FeedFilters({
             style={{ background: '#0B0B0A', color: GREEN }}>{n}</span>
         )}
       </button>
+      )}
 
       {open && (
         /*
