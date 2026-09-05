@@ -854,29 +854,42 @@ export default function ChannelFeedPage() {
 
   const nFilters = activeCount(filters);
   const filterButton = (
+    /**
+     * Icon only, inverted, with the count as a badge.
+     *
+     * The word "Filters" cost 87px of a 360px row that the channel strip
+     * needs, and the glyph already says it. Light on a dark dock -- the one
+     * inverted thing down there -- so it reads as the action among a row of
+     * chips rather than as another chip. The count moves to a red badge
+     * because it is a state to clear, not a label: it should catch the eye
+     * that is scanning past, which a grey pill in the button never did.
+     */
     <button
       onClick={() => setFiltersOpen(true)}
       aria-label={nFilters > 0 ? `Filters, ${nFilters} active` : 'Filters'}
-      className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 h-8 text-xs font-bold border"
-      style={{
-        /* Opaque, not a 6% white wash: the channel strip scrolls underneath
-           this button and a translucent one let the chips show through it. */
-        background: nFilters > 0 ? '#00A86B' : '#22221f',
-        color:      nFilters > 0 ? '#0B0B0A' : '#fff',
-        borderColor: nFilters > 0 ? '#00A86B' : 'rgba(255,255,255,0.14)',
-      }}
+      className="relative shrink-0 grid place-items-center rounded-full border-0"
+      style={{ width: 36, height: 36, background: '#F3F0EE', color: '#0B0B0A' }}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" />
         <line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" />
         <line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" />
         <line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" />
         <line x1="16" x2="16" y1="18" y2="22" />
       </svg>
-      Filters
       {nFilters > 0 && (
-        <span className="rounded-full px-1.5 text-[11px] font-extrabold"
-          style={{ background: '#0B0B0A', color: '#00A86B' }}>{nFilters}</span>
+        <span
+          className="absolute grid place-items-center rounded-full text-[10px] font-extrabold tabular-nums"
+          style={{
+            top: -3, right: -3, minWidth: 17, height: 17, padding: '0 4px',
+            background: '#E5484D', color: '#fff',
+            // Against the dock, so the badge reads as attached to the button
+            // rather than floating over whatever chip is behind it.
+            border: '2px solid rgba(10,20,15,1)',
+          }}
+        >
+          {nFilters}
+        </span>
       )}
     </button>
   );
