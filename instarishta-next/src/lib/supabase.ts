@@ -3,13 +3,11 @@ import { getDb } from './db';
 // Reuse the singleton browser client — prevents "multiple GoTrueClient instances" warning
 export const supabase = getDb();
 
-/**
- * 24, not 9. Nine filled barely two rows of a five-column desktop grid, so the
- * first screen looked like the whole channel -- and the post viewer, which can
- * only page through what is loaded, capped at "1 / 9" on a channel holding
- * eighty-seven.
- */
-export const POST_PAGE_SIZE = 24;
+// Defined in feed-constants.ts and re-exported here, so the server data path
+// can share it without importing this module (which builds a browser client
+// on import). Every existing `from '@/lib/supabase'` import keeps working.
+import { POST_PAGE_SIZE } from './feed-constants';
+export { POST_PAGE_SIZE };
 
 // ── Channels ─────────────────────────────────────────────────────────────────
 
