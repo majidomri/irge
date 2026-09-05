@@ -229,7 +229,7 @@ function PostModal({
   const [shareLoading, setShareLoading] = useState(false);
   const scrollRef   = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const swipeRef    = useRef({ x: 0, y: 0, inCar: false });
+  const swipeRef    = useRef({ x: 0, y: 0, inCar: false, onControl: false });
   const postIdx     = allPosts.indexOf(post);
 
   // Lock body scroll while modal is mounted
@@ -322,6 +322,22 @@ function PostModal({
     swipeRef.current = {
       x: t.clientX, y: t.clientY,
       inCar: imgs.length > 1 && !!carouselRef.current?.contains(e.target as Node),
+      /**
+       * A tap on a control is that control's, not the frame's.
+       *
+       * THIS is what made the comment button jump. Like, Comment and Share sit
+       * in a column down the RIGHT edge, and the right third is the tap zone
+       * for "next post" -- so one tap both navigated and opened the drawer,
+       * landing you on the next post's comments. Guarding on `commenting` did
+       * not help: at touch time the drawer is not open yet.
+       *
+       * Recorded at touchstart rather than touchend because the element under
+       * the finger can change once React re-renders. Same test the double-tap
+       * and long-press handlers on this element already use.
+       */
+      onControl: !!(e.target as Element)?.closest?.(
+        'button, a, input, textarea, select, label, [role="button"]',
+      ),
     };
   };
 
@@ -339,6 +355,7 @@ function PostModal({
      * the same rule for touch.
      */
     if (commenting || shareSlug) return;
+    if (swipeRef.current.onControl) return;
     const dx = e.changedTouches[0].clientX - swipeRef.current.x;
     const dy = e.changedTouches[0].clientY - swipeRef.current.y;
 
@@ -421,9 +438,10 @@ function PostModal({
       {hasImg && (
         <div ref={carouselRef}
           className={`relative z-10 overflow-hidden ${isAudio ? 'shrink-0' : 'flex-1 min-h-0'}`}
-          // Full viewport for a biodata: the bars float over it now, so there
-          // is no row left to share the height with.
-          style={isAudio ? { height: '32dvh' } : { minHeight: '100%' }}>
+          // The action row is back in flow below, so the image takes what is
+          // left rather than the whole frame -- it must END above the icons,
+          // not run under them.
+          style={isAudio ? { height: '32dvh' } : { minHeight: '40dvh' }}>
           <div ref={scrollRef}
             className="ir-no-scrollbar absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
             style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
@@ -513,17 +531,17 @@ function PostModal({
       </div>
 
       {/* ── Bottom bar ── */}
-      <div className={`z-20 px-5 py-3 shrink-0 ${
-        hasImg && !isAudio ? 'absolute inset-x-0 bottom-0' : 'relative'
-      }`}
+      {/* In flow, not floating.
+          These icons used to sit ON the image, which put every tap in two
+          places at once: the button, and the frame's own right-edge "next"
+          zone. Giving the row its own 20px band means the image ends above
+          it and a tap on an icon can only be a tap on that icon. */}
+      <div className="relative z-20 shrink-0"
         style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
-          borderTop: hasImg && !isAudio ? 'none' : '1px solid rgba(255,255,255,0.08)',
-          // Over a full-bleed frame the bar is a scrim, not a panel: a hard
-          // edge across the bottom of the biodata would read as a crop.
-          background: hasImg && !isAudio
-            ? 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, transparent 100%)'
-            : 'rgba(0,0,0,0.4)',
+          padding: 20,
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(0,0,0,0.55)',
         }}>
         {/* Same shape as the story viewer's bar (see StoryIcons.tsx): meta
             on the left, icon-only action cluster on the right. */}

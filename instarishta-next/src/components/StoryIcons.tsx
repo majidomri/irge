@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useRef } from 'react';
 
 /**
  * Story / post action icons — copied verbatim from the Xavio story
@@ -99,6 +100,24 @@ export function ViewersIcon({ size = 26, className, strokeWidth = 1.8 }: IconPro
  * 48 px tap target (Material minimum), same active-state feedback as the
  * Xavio `ActionButton`. `tone="pink"` is the liked state.
  */
+/**
+ * An action button that keeps its press to itself.
+ *
+ * These sit in a row down the RIGHT edge of both the story viewer and the post
+ * modal, and both of those treat a tap on the right as "next". So tapping
+ * Comment advanced first and opened the drawer second -- on the item you had
+ * just been moved to. Same symptom in stories and in posts, one cause.
+ *
+ * The listeners are attached natively rather than through React's props
+ * because React binds at the root container: by the time a synthetic handler
+ * runs, a native listener on an ancestor (zuck.js's viewer) has already seen
+ * the event and advanced. Only a listener on the button itself gets there
+ * first.
+ *
+ * pointerdown/touchstart/mousedown are all covered because the two viewers do
+ * not agree on which they navigate from, and passive:false is required to keep
+ * the option of preventDefault on touch.
+ */
 export function StoryActionButton({
   onClick,
   ariaLabel,
@@ -112,10 +131,22 @@ export function StoryActionButton({
   tone?: 'white' | 'pink';
   disabled?: boolean;
 }) {
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const swallow = (e: Event) => e.stopPropagation();
+    const events = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'mouseup'];
+    for (const name of events) el.addEventListener(name, swallow, { passive: false });
+    return () => { for (const name of events) el.removeEventListener(name, swallow); };
+  }, []);
+
   return (
     <button
+      ref={ref}
       type="button"
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick(e); }}
       disabled={disabled}
       aria-label={ariaLabel}
       className={`h-12 w-12 grid place-items-center border-0 bg-transparent cursor-pointer transition-all active:opacity-70 active:scale-95 disabled:opacity-50 ${
