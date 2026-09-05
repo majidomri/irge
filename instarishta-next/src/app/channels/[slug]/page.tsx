@@ -1,6 +1,7 @@
 'use client';
 import { Fragment, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import {
   supabase,
@@ -22,6 +23,7 @@ import { useChromeAutoHide } from '@/lib/hooks/useChromeAutoHide';
 import {
   LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
 } from '@/components/StoryIcons';
+import { isOptimizable } from '@/lib/img';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
@@ -567,11 +569,18 @@ function PostModal({
                     is most of why the carousel felt sticky. The ambient blur
                     behind the whole modal already fills the frame, and it
                     follows `carIdx`, so nothing is lost but the jank. */}
-                <img src={url} alt={`Photo ${i + 1}`}
-                  className="relative w-full h-full object-contain select-none"
-                  loading={i === 0 ? 'eager' : 'lazy'}
+                {/* Full-bleed, so it asks for the viewport width -- and gets
+                    AVIF where the browser takes it. `object-contain` keeps
+                    the whole biodata visible; the optimizer only changes the
+                    bytes, never the framing. */}
+                <Image src={url} alt={`Photo ${i + 1}`}
+                  fill
+                  sizes="100vw"
+                  className="object-contain select-none"
+                  priority={i === 0}
                   style={{ pointerEvents: 'none' }}
-                  draggable={false} />
+                  draggable={false}
+                  unoptimized={!isOptimizable(url)} />
               </div>
             ))}
           </div>
@@ -1267,24 +1276,43 @@ export default function ChannelFeedPage() {
                           aspect -- so painting one behind it is a gradient
                           smear down both edges of every card. */}
                       {!isFrame && (
-                        <img
+                        <Image
                           src={cover}
                           alt=""
                           aria-hidden="true"
-                          className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40"
-                          loading="lazy"
+                          fill
+                          // The blur behind a letterboxed import is decoration:
+                          // it is scaled 110% and blurred to nothing, so it can
+                          // be fetched at the smallest size that exists.
+                          sizes="80px"
+                          className="object-cover scale-110 blur-xl opacity-40"
+                          unoptimized={!isOptimizable(cover)}
                         />
                       )}
-                      <img
+                      {/*
+                        Through the optimizer, and sized to the tile.
+                        These were plain <img> pointing at the original: a
+                        1080x1920 frame downloaded in full to be drawn in a
+                        177x236 box, twenty-four of them on the first screen.
+                        `sizes` tells the optimizer what the tile is actually
+                        worth at each breakpoint, and the Accept header picks
+                        AVIF over WebP over JPEG.
+                      */}
+                      <Image
                         src={cover}
                         alt={post.title ?? ''}
-                        className={`relative w-full h-full transition-transform duration-300 hover:scale-105 ${
+                        fill
+                        sizes="(min-width: 1200px) 20vw, (min-width: 900px) 25vw, (min-width: 640px) 33vw, 50vw"
+                        className={`transition-transform duration-300 hover:scale-105 ${
                           isFrame ? 'object-cover' : 'object-contain'
                         }`}
                         // Anchored to the top so the crop takes the empty
                         // bottom, never the name.
                         style={isFrame ? { objectPosition: 'top' } : undefined}
-                        loading="lazy"
+                        // The first row is above the fold on every viewport;
+                        // the rest stay lazy.
+                        priority={i < 2}
+                        unoptimized={!isOptimizable(cover)}
                       />
                     </>
                   ) : (

@@ -29,6 +29,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { serviceClient, ensureProfile } from '@/lib/credits';
+import { optimized } from '@/lib/img';
 
 export const runtime = 'nodejs';
 
@@ -117,7 +118,16 @@ export async function GET(req: NextRequest) {
     return {
       id: key,
       name: key === 'house' ? (channel?.name ?? 'InstaRishta') : (nameById[key] ?? 'Member'),
-      photo: latest.image,
+      /**
+       * zuck.js builds its own <img> from these URLs, so next/image can never
+       * see them -- the ring and the full-screen story both downloaded the
+       * whole 1080x1920 original, one of them to fill a 64px circle. Rewriting
+       * the URL through the optimizer is the only way in, and it brings the
+       * AVIF negotiation with it.
+       *
+       * 160 for the ring (64px at DPR 2, rounded up to a configured size).
+       */
+      photo: optimized(latest.image, 160),
       lastUpdated: toUnixSeconds(latest.created_at),
       // A group counts as seen only when every item in it has been watched —
       // one new story re-lights the whole ring, which is the behaviour people
@@ -128,7 +138,9 @@ export async function GET(req: NextRequest) {
         id: s.id,
         type: 'photo',
         length: 5,
-        src: s.image,
+        // Full-screen, so the largest a phone can use: 1200 covers a 430pt
+        // viewport at DPR 3 and comes back ~47 KB as AVIF against 233 KB raw.
+        src: optimized(s.image, 1200),
         time: toUnixSeconds(s.created_at),
         likes: s.likes ?? 0,
         seen: seenIds.has(s.id),

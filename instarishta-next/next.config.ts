@@ -64,6 +64,21 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'placehold.co' },
       { protocol: 'https', hostname: 'cxgxyqxeakjrghfzkuko.supabase.co' },
     ],
+    /**
+     * AVIF first, WebP second, original last.
+     *
+     * The default is ['image/webp'] alone, so no visitor was ever served
+     * AVIF. The optimizer picks by the browser's Accept header, which is the
+     * same progressive enhancement the <picture> element gives -- browsers
+     * that understand AVIF get it, the rest get WebP, and anything older
+     * gets the original. Nothing has to be stored twice for it.
+     *
+     * AVIF encodes slower than WebP, which costs on a cache miss; with a
+     * 31-day TTL below and content-addressed URLs that never change behind
+     * themselves, a miss is close to a one-off per image.
+     */
+    formats: ['image/avif', 'image/webp'],
+
     // Uploaded images never change behind their URL, so re-optimising them
     // every 60s (the default TTL) is pure waste — each miss is another
     // billable transformation. 31 days.
@@ -72,7 +87,9 @@ const nextConfig: NextConfig = {
     // eight device sizes generate far more variants than this layout asks
     // for: covers render at container width, thumbnails at 80px.
     deviceSizes: [640, 828, 1200, 1920],
-    imageSizes: [80, 160, 256],
+    // 384 earns its place: a feed tile is ~177px wide on a phone, which at
+    // DPR 2 asks for 354 and would otherwise round all the way up to 640.
+    imageSizes: [80, 160, 256, 384],
   },
 
   turbopack: {

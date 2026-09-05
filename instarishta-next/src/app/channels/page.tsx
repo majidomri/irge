@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getChannels, type IChannel } from '@/lib/supabase';
+import Image from 'next/image';
+import { isOptimizable } from '@/lib/img';
 
 const CATEGORIES = [
   { id: 'medical',   label: 'Medical & Health',      kw: ['doctor','mbbs','surgeon','physician','nurse','pharmacist','dentist','medical','hospital','health'] },
@@ -67,7 +69,8 @@ function ChannelCard({ ch }: { ch: IChannel }) {
           }}
         >
           {ch.cover_image
-            ? <img src={ch.cover_image} alt={ch.name} className="w-full h-full object-cover" loading="lazy" />
+            ? <Image src={ch.cover_image} alt={ch.name} fill sizes="96px"
+                className="object-cover" unoptimized={!isOptimizable(ch.cover_image)} />
             : <div className="w-full h-full flex items-center justify-center text-4xl">💍</div>
           }
         </div>
