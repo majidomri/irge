@@ -268,6 +268,44 @@ function PostModal({
   // Reset carousel position when post changes
   useEffect(() => { setCarIdx(0); scrollRef.current?.scrollTo({ left: 0 }); }, [post.id]);
 
+  /**
+   * Move the carousel by whole slides, and only by whole slides.
+   *
+   * `scroll-snap-type: x mandatory` refuses every position that is not a snap
+   * point -- setting scrollLeft to 500 on a 1440-wide slide put it straight
+   * back to 0. So a mouse wheel, which arrives as a run of small deltas, never
+   * accumulated enough to cross the threshold and the carousel simply never
+   * moved on a desktop; a short or slow swipe sprang back the same way, which
+   * is the stickiness on a phone. Nothing nudges the scroller any more: every
+   * input asks for slide n, and this is the one thing that goes there.
+   */
+  const goToSlide = useCallback((i: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const next = Math.max(0, Math.min(i, imgs.length - 1));
+    el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
+    setCarIdx(next);
+  }, [imgs.length]);
+
+  /**
+   * A wheel over the carousel steps it, rather than being swallowed by a
+   * scroller that cannot accept a partial scroll. Either axis works -- a
+   * plain mouse only emits deltaY, and a trackpad's horizontal swipe reads
+   * more naturally as sideways -- and one gesture is one slide, locked for
+   * 320ms so an inertial trackpad flick does not run through the whole set.
+   */
+  const wheelLock = useRef(0);
+  const onCarouselWheel = useCallback((e: React.WheelEvent) => {
+    if (imgs.length < 2) return;
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(d) < 4) return;
+    e.preventDefault();
+    const now = Date.now();
+    if (now < wheelLock.current) return;
+    wheelLock.current = now + 320;
+    goToSlide(carIdx + (d > 0 ? 1 : -1));
+  }, [imgs.length, carIdx, goToSlide]);
+
   const goPrev = useCallback(() => {
     if (postIdx > 0) onNavigate(allPosts[postIdx - 1]);
   }, [postIdx, allPosts, onNavigate]);
@@ -319,15 +357,12 @@ function PostModal({
       if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
       if (imgs.length > 1 && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
-        const next = e.key === 'ArrowDown'
-          ? Math.min(carIdx + 1, imgs.length - 1)
-          : Math.max(carIdx - 1, 0);
-        scrollRef.current?.scrollTo({ left: next * (scrollRef.current?.clientWidth ?? 0), behavior: 'smooth' });
+        goToSlide(carIdx + (e.key === 'ArrowDown' ? 1 : -1));
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [goPrev, goNext, onClose, commenting, imgs.length, carIdx]);
+  }, [goPrev, goNext, onClose, commenting, imgs.length, carIdx, goToSlide]);
 
   // Nano-id slugs are get-or-create — resolved on demand rather than
   // fetched for every post in the feed just in case someone shares it.
@@ -461,6 +496,7 @@ function PostModal({
           flex child refuses to shrink below its content size. */}
       {hasImg && (
         <div ref={carouselRef}
+          onWheel={onCarouselWheel}
           className={`relative z-10 overflow-hidden ${isAudio ? 'shrink-0' : 'flex-1 min-h-0'}`}
           // The action row is back in flow below, so the image takes what is
           // left rather than the whole frame -- it must END above the icons,
@@ -468,16 +504,21 @@ function PostModal({
           style={isAudio ? { height: '32dvh' } : { minHeight: '40dvh' }}>
           <div ref={scrollRef}
             className="ir-no-scrollbar absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
-            style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollBehavior: 'smooth',
+              // A sideways swipe belongs to the carousel; without this it
+              // chains to the page and, on iOS, to the back gesture.
+              overscrollBehaviorX: 'contain',
+            } as React.CSSProperties}>
             {imgs.map((url, i) => (
               <div key={i} className="min-w-full h-full snap-center relative overflow-hidden">
-                {/* Blurred backdrop fills the frame; the real image is contained
-                    on top so no part of the biodata is cropped away. */}
-                <img src={url} alt="" aria-hidden="true"
-                  className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-35"
-                  loading={i === 0 ? 'eager' : 'lazy'}
-                  style={{ pointerEvents: 'none' }}
-                  draggable={false} />
+                {/* No per-slide blurred copy here any more. Every slide was
+                    painting a blur-2xl of a 1080x1920 image at full size, and
+                    the compositor redrew all of them through a drag -- which
+                    is most of why the carousel felt sticky. The ambient blur
+                    behind the whole modal already fills the frame, and it
+                    follows `carIdx`, so nothing is lost but the jank. */}
                 <img src={url} alt={`Photo ${i + 1}`}
                   className="relative w-full h-full object-contain select-none"
                   loading={i === 0 ? 'eager' : 'lazy'}
@@ -487,12 +528,41 @@ function PostModal({
             ))}
           </div>
 
-          {/* Carousel dots — overlaid on image so they're visible without scrolling */}
+          {/* Carousel controls.
+              A mouse cannot swipe, and there was nothing to click: the ‹ › at
+              the top move between POSTS, so a three-frame biodata could only
+              be read with the arrow keys. These sit against the image edges,
+              lower than the post arrows so the two are never confused, and
+              they are real buttons -- which also means the tap-to-navigate
+              guard in onSwipeStart already treats them as controls and a tap
+              on one cannot also jump to the next post. */}
+          {imgs.length > 1 && carIdx > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToSlide(carIdx - 1); }}
+              aria-label="Previous photo"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center text-2xl border-0"
+              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', backdropFilter: 'blur(8px)' }}>‹</button>
+          )}
+          {imgs.length > 1 && carIdx < imgs.length - 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToSlide(carIdx + 1); }}
+              aria-label="Next photo"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center text-2xl border-0"
+              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', backdropFilter: 'blur(8px)' }}>›</button>
+          )}
+
+          {/* Dots — overlaid on the image so they are visible without
+              scrolling, and each one goes to its own frame rather than just
+              reporting which frame you are on. */}
           {imgs.length > 1 && (
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-2 z-10 flex justify-center gap-1.5 px-3 py-1.5 rounded-full pointer-events-none"
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-2 z-10 flex justify-center gap-1.5 px-3 py-1.5 rounded-full"
               style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
               {imgs.map((_, i) => (
-                <span key={i} className="rounded-full transition-all"
+                <button key={i}
+                  onClick={(e) => { e.stopPropagation(); goToSlide(i); }}
+                  aria-label={`Photo ${i + 1}`}
+                  aria-current={i === carIdx}
+                  className="rounded-full transition-all border-0 p-0"
                   style={{
                     width: i === carIdx ? 18 : 6, height: 6,
                     background: i === carIdx ? '#00A86B' : 'rgba(255,255,255,0.45)',
