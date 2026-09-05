@@ -1,4 +1,5 @@
 'use client';
+import { useId } from 'react';
 import CountUp from '@/components/ui/CountUp';
 import {
   EDUCATION_OPTIONS,
@@ -46,11 +47,16 @@ function DualRangeSlider({ valueMin, valueMax, onMin, onMax }: {
     <div className="relative" style={{ height: 28, marginTop: 6 }}>
       <div className="absolute inset-x-0 rounded-full" style={{ top: 10, height: 4, background: '#E8E4E0' }} />
       <div className="absolute rounded-full" style={{ top: 10, height: 4, background: '#006241', left: `${minPct}%`, right: `${100 - maxPct}%` }} />
+      {/* The visible thumbs are the divs below; these inputs are the actual
+          controls and are transparent, so without a name they are two
+          unlabelled sliders to anyone not looking at the screen. */}
       <input type="range" min={MIN} max={MAX} value={valueMin}
+        aria-label="Minimum age"
         onChange={e => onMin(Math.min(+e.target.value, valueMax - 1))}
         className="absolute inset-0 w-full opacity-0 cursor-pointer"
         style={{ height: 28, zIndex: valueMin > (MIN + MAX) / 2 ? 5 : 3 }} />
       <input type="range" min={MIN} max={MAX} value={valueMax}
+        aria-label="Maximum age"
         onChange={e => onMax(Math.max(+e.target.value, valueMin + 1))}
         className="absolute inset-0 w-full opacity-0 cursor-pointer"
         style={{ height: 28, zIndex: valueMin > (MIN + MAX) / 2 ? 3 : 5 }} />
@@ -66,10 +72,14 @@ function CSelect({ label, value, onChange, options }: {
   label: string; value: string; onChange: (v: string) => void;
   options: { label: string; value: string }[];
 }) {
+  /* A <p> beside a <select> names nothing: Lighthouse flagged every one of
+     these as an unlabelled form element. `useId` keeps the pair unique even
+     though this drawer renders five of them, and now the channel feed too. */
+  const id = useId();
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.05em] mb-1" style={{ color: '#A0A0A0' }}>{label}</p>
-      <select value={value} onChange={e => onChange(e.target.value)}
+      <label htmlFor={id} className="block text-[10px] font-semibold uppercase tracking-[0.05em] mb-1" style={{ color: '#A0A0A0' }}>{label}</label>
+      <select id={id} value={value} onChange={e => onChange(e.target.value)}
         className="w-full rounded-lg px-2.5 py-2 text-xs border outline-none"
         style={{ borderColor: '#E0DBD6', background: '#FAF9F8', color: '#141413' }}>
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -186,6 +196,7 @@ export default function FilterDrawer(props: DrawerProps) {
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.05em] mb-1" style={{ color: '#A0A0A0' }}>Profile ID</p>
               <input type="text" inputMode="numeric" pattern="[0-9]*" value={idFilter}
+                aria-label="Profile ID"
                 onChange={e => setIdFilter(e.target.value.replace(/\D/g, ''))}
                 placeholder="e.g. 42"
                 className="w-full rounded-lg px-2.5 py-2 text-xs border outline-none"

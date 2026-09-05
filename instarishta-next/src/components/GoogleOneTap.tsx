@@ -52,7 +52,17 @@ export function GoogleOneTap() {
 
     prompted.current = true;
 
-    void client.oneTap({
+    /**
+     * Off the critical path, always.
+     *
+     * Lighthouse on the live feed: Google's gsi/client is 74 KB of script,
+     * and the page's LCP is already 85% "load delay" -- the browser waiting
+     * to discover the first image. A sign-in convenience has no business
+     * competing for the main thread while that is happening, so it waits for
+     * the browser to be idle, with a timeout so it still runs on a page that
+     * never goes idle.
+     */
+    const start = () => void client.oneTap!({
       // Where to land after a successful sign-in: back where they were, so
       // signing in never costs someone their place in the feed.
       callbackURL: pathname || '/',
@@ -71,6 +81,28 @@ export function GoogleOneTap() {
         },
       },
     }).catch(() => {});
+
+    /**
+     * `requestIdleCallback` is typed as always present but is not (Safari
+     * only shipped it in 2023), so the capability is tested with `typeof`
+     * rather than truthiness -- which TS flags as always-true against its own
+     * lib types.
+     */
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (h: number) => void;
+    };
+    const idle = typeof w.requestIdleCallback === 'function';
+    const id = idle
+      ? w.requestIdleCallback!(start, { timeout: 4000 })
+      : window.setTimeout(start, 2500);
+
+    return () => {
+      // Cancel with the same mechanism that scheduled it, or navigating away
+      // mid-wait leaves a prompt queued for a page that is gone.
+      if (idle) w.cancelIdleCallback?.(id);
+      else window.clearTimeout(id);
+    };
   }, [session, isPending, pathname]);
 
   return null;
