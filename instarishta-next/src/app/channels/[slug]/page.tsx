@@ -15,7 +15,7 @@ import TextType from '@/components/ui/TextType';
 import ClickSpark from '@/components/ui/ClickSpark';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 import FeedFilters, {
-  applyFeedFilters, EMPTY_FILTERS, type FeedFilterState,
+  activeCount, applyFeedFilters, EMPTY_FILTERS, type FeedFilterState,
 } from './FeedFilters';
 import ZuckStories from '@/components/ZuckStories';
 import {
@@ -668,15 +668,37 @@ export default function ChannelFeedPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const realtimeRef = useRef<any>(null);
 
+  /**
+   * Fetch one page.
+   *
+   * Two callers can want the same page at the same moment -- the scroll
+   * sentinel and the "a filter needs the whole channel" effect -- and the
+   * `loading` state flag is set asynchronously, so both sail past it and
+   * append the same batch twice. That is what put 17 tiles on screen for 10
+   * matching posts. `inFlight` is a ref, so the second caller sees the lock
+   * immediately; the id check is the belt to that braces, and also covers a
+   * realtime insert arriving for a post already on screen.
+   */
+  const inFlight = useRef<number | null>(null);
+
   const loadPosts = useCallback(async (ch: IChannel, pg: number) => {
+    if (inFlight.current === pg) return;
+    inFlight.current = pg;
     setLoading(true);
     try {
       const batch = await getPosts(ch.id, pg);
       if (batch.length < POST_PAGE_SIZE) setDone(true);
-      setPosts(prev => pg === 0 ? batch : [...prev, ...batch]);
+      setPosts(prev => {
+        if (pg === 0) return batch;
+        const seen = new Set(prev.map(p => p.id));
+        return [...prev, ...batch.filter((p: IPost) => !seen.has(p.id))];
+      });
       setPage(pg + 1);
     } catch { /* silent */ }
-    finally { setLoading(false); }
+    finally {
+      setLoading(false);
+      inFlight.current = null;
+    }
   }, []);
 
   useEffect(() => {
@@ -692,7 +714,7 @@ export default function ChannelFeedPage() {
         await loadPosts(ch, 0);
 
         realtimeRef.current = subscribeChannel(ch.id, (post) => {
-          setPosts(prev => [post, ...prev]);
+          setPosts(prev => prev.some((x: IPost) => x.id === post.id) ? prev : [post, ...prev]);
           setNewBadge(true);
           setTimeout(() => setNewBadge(false), 5000);
         });
@@ -730,6 +752,22 @@ export default function ChannelFeedPage() {
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [channel, page, done]);
+
+  const filtering = catFilter !== 'all' || activeCount(filters) > 0;
+
+  /**
+   * A filter searches the channel, not the scroll position.
+   *
+   * The feed loads a page at a time and every filter ran over `posts` -- only
+   * what had been fetched. Filtering to B.com showed 5 matches at 48 loaded
+   * and 10 at 93, and every chip count moved as you scrolled. So the moment a
+   * filter is on, pull the rest of the channel; then the matches, the counts
+   * and the header all describe the same, whole thing.
+   */
+  useEffect(() => {
+    if (!filtering || !channel || done || loading) return;
+    void loadPosts(channel, page);
+  }, [filtering, channel, done, loading, page, loadPosts]);
 
   const loadMore = useCallback(() => {
     if (!channel || loading || done) return;
@@ -861,9 +899,12 @@ export default function ChannelFeedPage() {
             </div>
           )}
           <div className="flex-1" />
+          {/* Under a filter this counts matches, not how far the loader got --
+              "93 / 93 posts" over five visible cards was the feed describing
+              its own fetching rather than the screen. */}
           <span className="text-xs font-semibold shrink-0 tabular-nums" style={{ color: 'rgba(255,255,255,0.55)' }}>
-            <span style={{ color: '#fff' }}>{posts.length}</span>
-            {total != null && ` / ${total}`} posts
+            <span style={{ color: '#fff' }}>{filtering ? visiblePosts.length : posts.length}</span>
+            {total != null && ` / ${total}`} {filtering ? 'matching' : 'posts'}
           </span>
         </div>
 
@@ -969,7 +1010,7 @@ export default function ChannelFeedPage() {
         is reachable while scrolling with one thumb, which is how this feed is
         actually read.
       */}
-      {pageNumbers.length > 1 && (
+      {pageNumbers.length > 1 && !filtering && (
         <div className="fixed inset-x-0 z-[110] px-4 flex items-center gap-1.5 overflow-x-auto"
           style={{
             bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)',
