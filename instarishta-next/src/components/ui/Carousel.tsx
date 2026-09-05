@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { motion, PanInfo, useMotionValue, useTransform } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { isOptimizable } from '@/lib/img';
 
 export interface CarouselItem {
   id: string | number;
@@ -49,9 +51,13 @@ function Card({ item, index, itemWidth, cardHeight, trackItemOffset, x, transiti
       onClick={() => item.link_url && onNavigate(item.link_url)}
     >
       {item.image_url ? (
-        <img src={item.image_url} alt={item.title}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          draggable={false} />
+        <Image src={item.image_url} alt={item.title}
+          fill
+          // A full-width banner on a phone, a column on a desktop.
+          sizes="(min-width: 900px) 640px, 100vw"
+          className="object-cover pointer-events-none"
+          draggable={false}
+          unoptimized={!isOptimizable(item.image_url)} />
       ) : (
         <div className="absolute inset-0"
           style={{ background: 'linear-gradient(135deg, #1E3932 0%, #2b5148 100%)' }} />

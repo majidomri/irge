@@ -23,7 +23,7 @@ import { useChromeAutoHide } from '@/lib/hooks/useChromeAutoHide';
 import {
   LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
 } from '@/components/StoryIcons';
-import { isOptimizable } from '@/lib/img';
+import { isOptimizable, optimized } from '@/lib/img';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
@@ -504,10 +504,15 @@ function PostModal({
       style={{ background: '#0d1117', maxWidth: hasImg && !isAudio ? undefined : 480 }}
       onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
 
-      {/* Ambient blur */}
+      {/* Ambient blur.
+          A CSS background, so next/image can never see it -- and once the
+          slide above moved to the optimizer, this stopped sharing that fetch
+          and started pulling the whole 1080x1920 original on its own, to be
+          blurred to nothing. 80px is more than a 36px blur behind a
+          brightness of 0.15 can show. */}
       {coverForBg && (
         <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: `url(${coverForBg})`,
+          backgroundImage: `url(${optimized(coverForBg, 80)})`,
           backgroundSize: 'cover', backgroundPosition: 'center',
           filter: 'blur(36px) brightness(0.15)', transform: 'scale(1.18)',
           transition: 'background-image 0.4s',

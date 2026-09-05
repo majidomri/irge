@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import StarBorder from '@/components/ui/StarBorder';
 const Masonry = dynamic(() => import('@/components/ui/Masonry'), { ssr: false });
 import FeaturedCarousel from '@/components/FeaturedCarousel';
+import Image from 'next/image';
+import { isOptimizable } from '@/lib/img';
 
 type Channel = { slug: string; name: string; description: string | null; cover_image: string | null };
 
@@ -387,7 +389,9 @@ export default function HomePage() {
                   style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)' }}>
                   <div style={{ aspectRatio: '1', overflow: 'hidden', background: 'rgba(165,180,252,.06)' }}>
                     {ch.cover_image ? (
-                      <img src={ch.cover_image} alt={ch.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                      <Image src={ch.cover_image} alt={ch.name} fill sizes="96px"
+                        style={{ objectFit: 'cover' }}
+                        unoptimized={!isOptimizable(ch.cover_image)} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '38px' }}>💍</div>
                     )}
