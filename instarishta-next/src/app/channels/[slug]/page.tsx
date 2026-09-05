@@ -265,8 +265,23 @@ function PostModal({
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Reset carousel position when post changes
-  useEffect(() => { setCarIdx(0); scrollRef.current?.scrollTo({ left: 0 }); }, [post.id]);
+  /**
+   * Where a new post opens.
+   *
+   * Forward always opens on the first frame. Backward has to open on the
+   * LAST one, or the sequence is not reversible: stepping back out of a post
+   * and forward again would return you to a different frame than the one you
+   * left, and reading a three-frame biodata backwards would skip two thirds
+   * of it. `landOnLast` carries that intent across the post change.
+   */
+  const landOnLast = useRef(false);
+  useEffect(() => {
+    const last = landOnLast.current ? imgs.length - 1 : 0;
+    landOnLast.current = false;
+    setCarIdx(last);
+    scrollRef.current?.scrollTo({ left: last * (scrollRef.current?.clientWidth ?? 0) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.id]);
 
   /**
    * Move the carousel by whole slides, and only by whole slides.
@@ -287,24 +302,6 @@ function PostModal({
     setCarIdx(next);
   }, [imgs.length]);
 
-  /**
-   * A wheel over the carousel steps it, rather than being swallowed by a
-   * scroller that cannot accept a partial scroll. Either axis works -- a
-   * plain mouse only emits deltaY, and a trackpad's horizontal swipe reads
-   * more naturally as sideways -- and one gesture is one slide, locked for
-   * 320ms so an inertial trackpad flick does not run through the whole set.
-   */
-  const wheelLock = useRef(0);
-  const onCarouselWheel = useCallback((e: React.WheelEvent) => {
-    if (imgs.length < 2) return;
-    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(d) < 4) return;
-    e.preventDefault();
-    const now = Date.now();
-    if (now < wheelLock.current) return;
-    wheelLock.current = now + 320;
-    goToSlide(carIdx + (d > 0 ? 1 : -1));
-  }, [imgs.length, carIdx, goToSlide]);
 
   const goPrev = useCallback(() => {
     if (postIdx > 0) onNavigate(allPosts[postIdx - 1]);
@@ -313,6 +310,52 @@ function PostModal({
   const goNext = useCallback(() => {
     if (postIdx < allPosts.length - 1) onNavigate(allPosts[postIdx + 1]);
   }, [postIdx, allPosts, onNavigate]);
+
+  /**
+   * One sequence, not two.
+   *
+   * A biodata's frames and the channel's posts were separate axes with a
+   * separate control each, which put four chevrons on one screen -- a pair
+   * for posts, a pair for frames, and the close button wearing the same
+   * glyph again. Nobody can be asked to tell those apart mid-read.
+   *
+   * So this is the stories model that zuck.js and Instagram both use, and
+   * that the story viewer on this very site already follows: forward means
+   * the next frame of this biodata, and when the frames run out it means the
+   * next post. One direction, one meaning, whatever you drive it with.
+   */
+  const goForward = useCallback(() => {
+    if (carIdx < imgs.length - 1) goToSlide(carIdx + 1);
+    else goNext();
+  }, [carIdx, imgs.length, goToSlide, goNext]);
+
+  const goBack = useCallback(() => {
+    if (carIdx > 0) { goToSlide(carIdx - 1); return; }
+    landOnLast.current = true;
+    goPrev();
+  }, [carIdx, goToSlide, goPrev]);
+
+  /** Nothing further in that direction, so the control is not offered. */
+  const atStart = postIdx === 0 && carIdx === 0;
+  const atEnd   = postIdx === allPosts.length - 1 && carIdx === imgs.length - 1;
+
+  /**
+   * A wheel drives the same sequence, rather than being swallowed by a
+   * scroller that cannot accept a partial scroll. Either axis works -- a
+   * plain mouse only emits deltaY, and a trackpad's horizontal swipe reads
+   * more naturally as sideways -- and one gesture is one step, locked for
+   * 320ms so an inertial trackpad flick does not run through the whole set.
+   */
+  const wheelLock = useRef(0);
+  const onCarouselWheel = useCallback((e: React.WheelEvent) => {
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(d) < 4) return;
+    e.preventDefault();
+    const now = Date.now();
+    if (now < wheelLock.current) return;
+    wheelLock.current = now + 320;
+    if (d > 0) goForward(); else goBack();
+  }, [goForward, goBack]);
 
   /**
    * The viewer can only page through posts the feed has loaded, and the feed
@@ -328,8 +371,9 @@ function PostModal({
    * Keyboard navigation. The modal had none — not even Escape — so on desktop
    * the only way through a channel was clicking the small chevrons.
    *
-   * ←/→ move between posts, ↑/↓ move within a multi-image post's carousel
-   * (so the two axes never fight), Escape closes.
+   * ←/→ walk the sequence: the next frame, then the next post. ↑/↓ skip a
+   * whole biodata at a time, for readers who want the covers only. Escape
+   * closes.
    *
    * Arrows keep working while the comment drawer is open, on purpose: the
    * drawer is docked beside the post, not on top of it, so navigating with
@@ -353,16 +397,14 @@ function PostModal({
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
 
-      if (e.key === 'ArrowLeft')  { e.preventDefault(); goPrev(); }
-      if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
-      if (imgs.length > 1 && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-        e.preventDefault();
-        goToSlide(carIdx + (e.key === 'ArrowDown' ? 1 : -1));
-      }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); goBack(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); goForward(); }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); goNext(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [goPrev, goNext, onClose, commenting, imgs.length, carIdx, goToSlide]);
+  }, [goPrev, goNext, goBack, goForward, onClose, commenting]);
 
   // Nano-id slugs are get-or-create — resolved on demand rather than
   // fetched for every post in the feed just in case someone shares it.
@@ -401,7 +443,10 @@ function PostModal({
   };
 
   const onSwipeEnd = (e: React.TouchEvent) => {
-    if (swipeRef.current.inCar) return;
+    /* A swipe inside the carousel is the same swipe: it steps the sequence
+       rather than being left to a mandatory-snap scroller that springs back
+       from anything short of a full page. */
+    void swipeRef.current.inCar;
 
     /**
      * An overlay owns its own touches.
@@ -429,14 +474,14 @@ function PostModal({
      */
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
       const zone = e.changedTouches[0].clientX / window.innerWidth;
-      if (zone < 0.33) goPrev();
-      else if (zone > 0.67) goNext();
+      if (zone < 0.33) goBack();
+      else if (zone > 0.67) goForward();
       return;
     }
 
     if (Math.abs(dx) < 65 || Math.abs(dy) > Math.abs(dx) * 0.9) return;
-    if (dx < 0) goNext();
-    if (dx > 0) goPrev();
+    if (dx < 0) goForward();
+    if (dx > 0) goBack();
   };
 
   const coverForBg = imgs[carIdx] || imgs[0];
@@ -473,9 +518,12 @@ function PostModal({
         hasImg && !isAudio ? 'absolute inset-x-0 top-0' : 'relative'
       }`}
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)', background: 'linear-gradient(to bottom,rgba(0,0,0,0.65) 0%,transparent 100%)' }}>
-        <button onClick={onClose}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-xl border-0"
-          style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}>‹</button>
+        {/* ✕, not ‹. Close is not a direction, and wearing the same glyph as
+            the navigation was a third chevron on a screen that already had
+            too many. */}
+        <button onClick={onClose} aria-label="Close"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-lg border-0"
+          style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}>✕</button>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
           style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)' }}>
           {postIdx + 1} / {total ?? allPosts.length}
@@ -527,29 +575,6 @@ function PostModal({
               </div>
             ))}
           </div>
-
-          {/* Carousel controls.
-              A mouse cannot swipe, and there was nothing to click: the ‹ › at
-              the top move between POSTS, so a three-frame biodata could only
-              be read with the arrow keys. These sit against the image edges,
-              lower than the post arrows so the two are never confused, and
-              they are real buttons -- which also means the tap-to-navigate
-              guard in onSwipeStart already treats them as controls and a tap
-              on one cannot also jump to the next post. */}
-          {imgs.length > 1 && carIdx > 0 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); goToSlide(carIdx - 1); }}
-              aria-label="Previous photo"
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center text-2xl border-0"
-              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', backdropFilter: 'blur(8px)' }}>‹</button>
-          )}
-          {imgs.length > 1 && carIdx < imgs.length - 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); goToSlide(carIdx + 1); }}
-              aria-label="Next photo"
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center text-2xl border-0"
-              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', backdropFilter: 'blur(8px)' }}>›</button>
-          )}
 
           {/* Dots — overlaid on the image so they are visible without
               scrolling, and each one goes to its own frame rather than just
@@ -688,22 +713,28 @@ function PostModal({
         <ShareSheet slug={shareSlug} entityType="post" title={post.title || 'InstaRishta post'} onClose={() => setShareSlug(null)} />
       )}
 
-      {/* Prev / next post arrows */}
-      {postIdx > 0 && (
-        <button onClick={() => onNavigate(allPosts[postIdx - 1])}
-          className="absolute left-2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-xl border-0"
-          style={{ top: 'calc(11vh + 50px)', background: 'rgba(255,255,255,0.13)', color: '#fff' }}>‹</button>
+      {/* The one pair of arrows, for the one sequence.
+          Mid-height, where a mouse expects them, and only where there is a
+          mouse: `pointer: coarse` hides them, because a finger has the tap
+          zones and the swipe and does not need a target sitting on top of
+          the biodata it is reading. Same reasoning zuck.js uses. */}
+      {!atStart && (
+        <button onClick={goBack} aria-label="Previous"
+          className="ir-nav absolute left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full items-center justify-center text-2xl border-0"
+          style={{ background: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(8px)' }}>‹</button>
       )}
-      {postIdx < allPosts.length - 1 && (
-        <button onClick={() => onNavigate(allPosts[postIdx + 1])}
-          className="absolute right-2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-xl border-0"
-          style={{ top: 'calc(11vh + 50px)', background: 'rgba(255,255,255,0.13)', color: '#fff' }}>›</button>
+      {!atEnd && (
+        <button onClick={goForward} aria-label="Next"
+          className="ir-nav absolute right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full items-center justify-center text-2xl border-0"
+          style={{ background: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(8px)' }}>›</button>
       )}
 
       {/* Hide native scrollbars on the carousel + scroll content (WebKit + Firefox + IE) */}
       <style>{`
         .ir-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
         .ir-no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+        .ir-nav { display: flex; }
+        @media (pointer: coarse) { .ir-nav { display: none; } }
       `}</style>
     </div>
     </div>
