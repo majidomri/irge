@@ -1109,9 +1109,13 @@ export default function ChannelFeedPage() {
              * row -- `1 / -1` -- so the tiles keep their columns.
              *
              * Not while filtering: matches are drawn from the whole channel,
-             * so they have no pages to be divided into.
+             * so they have no pages to be divided into. Not on a channel that
+             * fits in one page either -- "Page 1 · 2 profiles" over a
+             * two-post channel is a rule marking nothing.
              */
-            const startsPage = !filtering && i % POST_PAGE_SIZE === 0;
+            const startsPage = !filtering
+              && (total ?? 0) > POST_PAGE_SIZE   // one short page has no pages to mark
+              && i % POST_PAGE_SIZE === 0;
             const pageNo = Math.floor(i / POST_PAGE_SIZE) + 1;
             const onThisPage = Math.min(POST_PAGE_SIZE, visiblePosts.length - i);
 
