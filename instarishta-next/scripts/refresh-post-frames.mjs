@@ -128,15 +128,51 @@ async function main() {
       .maybeSingle());
     if (error) throw new Error(`${set.irId}: ${error.message}`);
 
-    if (!nano) { missing++; continue; }               // captured but never published
+    /**
+     * The slug is the usual handle, but not the only one.
+     *
+     * A post can carry this profile's frames under a different slug -- the
+     * relink that pointed existing posts at ads left several that way -- and
+     * then the frames it shows can never be refreshed, because the id they
+     * were shot under matches nothing. publish-posts.mjs identifies exactly
+     * this case by title, which is written as "<name> · <IR id>", so fall
+     * back to the same lookup rather than skipping a post whose pixels are
+     * demonstrably ours.
+     */
+    let post = null;
+    if (nano) {
+      const { data, error: postErr } = await withRetry(set.irId, () => db
+        .from('ir_posts')
+        .select('id, image, images')
+        .eq('id', nano.entity_id)
+        .maybeSingle());
+      if (postErr) throw new Error(`${set.irId}: ${postErr.message}`);
+      post = data;
+    }
 
-    const { data: post, error: postErr } = await withRetry(set.irId, () => db
-      .from('ir_posts')
-      .select('id, image, images')
-      .eq('id', nano.entity_id)
-      .maybeSingle());
-    if (postErr) throw new Error(`${set.irId}: ${postErr.message}`);
-    if (!post) { missing++; continue; }
+    /**
+     * Only for a NAMED profile, and the restriction is the whole point.
+     *
+     * An ad has no name, so its title is the bare IR id -- and the relink
+     * left posts whose title says one ad while their slug says another. A
+     * title match there would push the wrong person's frames onto a post
+     * that was deliberately pointed elsewhere, undoing a correct refresh
+     * done by slug. "<name> · <IR id>" is specific enough to trust; "IR-2266"
+     * is not.
+     */
+    if (!post && set.name) {
+      const title = `${set.name} · ${set.irId}`;
+      const { data, error: titleErr } = await withRetry(set.irId, () => db
+        .from('ir_posts')
+        .select('id, image, images')
+        .eq('title', title)
+        .maybeSingle());
+      if (titleErr) throw new Error(`${set.irId}: ${titleErr.message}`);
+      if (data) console.log(`${set.irId}  matched by title (its slug is someone else's)`);
+      post = data;
+    }
+
+    if (!post) { missing++; continue; }               // captured but never published
 
     // Hash first, so an unchanged frame is never uploaded and never counted.
     const files = [...set.files].sort((a, b) => a.n - b.n);

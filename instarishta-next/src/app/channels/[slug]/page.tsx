@@ -668,8 +668,9 @@ function PostModal({
           {/* Every part had `truncate`, so at 390px the row read
               "0 li… · 20 vie… · 2 Sept 2…" -- three clipped words instead of
               one dropped one. The counts are short and fixed, so they never
-              shrink; the date is the part that yields, and below 380px it
-              stands down altogether. */}
+              shrink; the date is the part that yields, and below 430px it
+              stands down altogether -- 380 was too generous: at 390 with a
+              three-digit view count it still clipped to "2 Sept 20…". */}
           <div className="flex items-baseline gap-2 min-w-0 text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
             {/* Was a bare "0" with no icon or label — unreadable as a like
                 count next to "3 views". */}
@@ -686,8 +687,8 @@ function PostModal({
                 return `${n} ${n === 1 ? 'view' : 'views'}`;
               })()}
             </span>
-            <span className="hidden min-[380px]:inline shrink-0">·</span>
-            <span className="hidden min-[380px]:inline truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <span className="hidden min-[430px]:inline shrink-0">·</span>
+            <span className="hidden min-[430px]:inline truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
               {fmt(post.created_at)}
             </span>
           </div>
