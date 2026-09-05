@@ -665,24 +665,31 @@ function PostModal({
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, transparent 100%)',
         }}>
-          <div className="flex items-center gap-2 min-w-0 text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          {/* Every part had `truncate`, so at 390px the row read
+              "0 li… · 20 vie… · 2 Sept 2…" -- three clipped words instead of
+              one dropped one. The counts are short and fixed, so they never
+              shrink; the date is the part that yields, and below 380px it
+              stands down altogether. */}
+          <div className="flex items-baseline gap-2 min-w-0 text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
             {/* Was a bare "0" with no icon or label — unreadable as a like
                 count next to "3 views". */}
-            <span className="font-semibold text-white truncate">
+            <span className="font-semibold text-white shrink-0">
               {(() => {
                 const n = (post.likes ?? 0) + (liked.has(post.id) ? 1 : 0);
                 return `${n} ${n === 1 ? 'like' : 'likes'}`;
               })()}
             </span>
-            <span>·</span>
-            <span className="truncate">
+            <span className="shrink-0">·</span>
+            <span className="shrink-0">
               {(() => {
                 const n = (post.views ?? 0) + 1;
                 return `${n} ${n === 1 ? 'view' : 'views'}`;
               })()}
             </span>
-            <span>·</span>
-            <span className="truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
+            <span className="hidden min-[380px]:inline shrink-0">·</span>
+            <span className="hidden min-[380px]:inline truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              {fmt(post.created_at)}
+            </span>
           </div>
 
           <div className="flex items-center gap-0.5 shrink-0">

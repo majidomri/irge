@@ -35,7 +35,6 @@ const opt = (n, d) => { const i = args.indexOf(n); if (i === -1) return d; const
 
 const COMMIT = flag('--commit');
 const FRAMES = path.resolve(opt('--frames', '.frames'));
-const BUCKET = opt('--bucket', 'ir-media');
 const ONLY = args.filter((a) => !a.startsWith('-'));   // optional IR ids
 
 function loadEnv(file) {
@@ -47,6 +46,12 @@ function loadEnv(file) {
 }
 loadEnv(path.join(process.cwd(), '.env.local'));
 
+// The same bucket publish-posts.mjs writes to, and read AFTER the env file is
+// loaded -- above it, SUPABASE_UPLOAD_BUCKET is not set yet and the default
+// silently wins, which is how this first ran against a bucket that does not
+// exist and failed with "Bucket not found".
+const BUCKET = opt('--bucket', process.env.SUPABASE_UPLOAD_BUCKET || 'uploads');
+
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!URL_ || !KEY) {
@@ -54,6 +59,33 @@ if (!URL_ || !KEY) {
   process.exit(1);
 }
 const db = createClient(URL_, KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+
+/**
+ * One flaky moment should not cost a 78-post run.
+ *
+ * Every call here is a network call, and a dropped connection surfaces as a
+ * bare `TypeError: fetch failed` from undici -- which killed the run on its
+ * first post and left the rest untouched. Transient failures are retried with
+ * a widening gap; a real error (a missing bucket, a rejected row) is not a
+ * fetch failure and still stops the run on the spot.
+ */
+async function withRetry(what, fn, tries = 4) {
+  for (let i = 1; ; i++) {
+    try {
+      const out = await fn();
+      if (out?.error && /fetch failed|network|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/i.test(out.error.message ?? '')) {
+        throw new Error(out.error.message);
+      }
+      return out;
+    } catch (err) {
+      const transient = /fetch failed|network|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket/i.test(String(err?.message ?? err));
+      if (!transient || i === tries) throw err;
+      const wait = 2000 * i;
+      console.log(`  ${what}: ${String(err.message ?? err)} — retrying in ${wait / 1000}s (${i}/${tries - 1})`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+}
 
 const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const objectName = (bytes, ext) => {
@@ -88,21 +120,21 @@ async function main() {
   let updated = 0, unchanged = 0, missing = 0;
 
   for (const set of sets) {
-    const { data: nano, error } = await db
+    const { data: nano, error } = await withRetry(set.irId, () => db
       .from('ir_nano_ids')
       .select('entity_id')
       .eq('entity_type', 'post')
       .eq('slug', set.irId)
-      .maybeSingle();
+      .maybeSingle());
     if (error) throw new Error(`${set.irId}: ${error.message}`);
 
     if (!nano) { missing++; continue; }               // captured but never published
 
-    const { data: post, error: postErr } = await db
+    const { data: post, error: postErr } = await withRetry(set.irId, () => db
       .from('ir_posts')
       .select('id, image, images')
       .eq('id', nano.entity_id)
-      .maybeSingle();
+      .maybeSingle());
     if (postErr) throw new Error(`${set.irId}: ${postErr.message}`);
     if (!post) { missing++; continue; }
 
@@ -133,16 +165,16 @@ async function main() {
     }
 
     for (const x of planned) {
-      const up = await db.storage
+      const up = await withRetry(`${set.irId} upload`, () => db.storage
         .from(BUCKET)
-        .upload(x.key, x.bytes, { contentType: MIME[x.ext] ?? 'image/jpeg', upsert: true });
+        .upload(x.key, x.bytes, { contentType: MIME[x.ext] ?? 'image/jpeg', upsert: true }));
       if (up.error) throw new Error(`Upload failed for ${set.irId}: ${up.error.message}`);
     }
 
-    const { error: updErr } = await db
+    const { error: updErr } = await withRetry(`${set.irId} update`, () => db
       .from('ir_posts')
       .update({ image: nextUrls[0], images: nextUrls })
-      .eq('id', post.id);
+      .eq('id', post.id));
     if (updErr) throw new Error(`${set.irId}: ${updErr.message}`);
 
     updated++;
