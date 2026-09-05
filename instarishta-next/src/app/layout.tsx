@@ -5,6 +5,7 @@ import SiteShell from '@/components/SiteShell';
 import PreloadResources from '@/components/PreloadResources';
 import ContentProtection from '@/components/ContentProtection';
 import { DevAnnotation } from '@/components/DevAnnotation';
+import { GoogleOneTap } from '@/components/GoogleOneTap';
 import LazyNastaliq from '@/components/LazyNastaliq';
 
 // Variable Inter (latin) — ~80 KB single file with all weights, smaller than
@@ -66,6 +67,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ContentProtection />
         <LazyNastaliq />
         <SiteShell>{children}</SiteShell>
+        {/* Renders nothing; prompts Google One Tap once for signed-out
+            visitors, and stays quiet on admin, payment and auth routes. */}
+        <GoogleOneTap />
         <DevAnnotation />
       </body>
     </html>

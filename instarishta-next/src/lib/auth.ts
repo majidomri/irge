@@ -27,7 +27,7 @@
  */
 import { betterAuth } from 'better-auth';
 import { APIError } from 'better-auth/api';
-import { magicLink, phoneNumber } from 'better-auth/plugins';
+import { magicLink, oneTap, phoneNumber } from 'better-auth/plugins';
 import { createHash, createHmac } from 'node:crypto';
 import { Pool } from 'pg';
 import { Resend } from 'resend';
@@ -215,6 +215,39 @@ export const auth = betterAuth({
 
   // ── Magic Link (email) ─────────────────────────────────────────────────────
   plugins: [
+    /**
+     * Google One Tap.
+     *
+     * Only mounted when Google is configured, because its callback verifies
+     * the ID token's `aud` against `socialProviders.google.clientId` and
+     * throws BAD_REQUEST without one -- an endpoint that can only fail is
+     * worse than an absent one.
+     *
+     * What it adds over the redirect flow already here: the browser posts a
+     * Google-signed ID token to /api/auth/one-tap/callback instead of sending
+     * the visitor away to accounts.google.com and back. The verification is
+     * the strict kind the Google codelab insists on -- signature against
+     * Google's JWKS, `iss` in {accounts.google.com, https://accounts.google.com},
+     * `aud` equal to our client ID, and an age limit standing in for `exp`.
+     * Nothing trusts a client-side decode.
+     *
+     * Signup stays open: a One Tap user who has never signed in here becomes
+     * an account, exactly as "Continue with Google" would make one. Linking to
+     * an existing email is already handled by `account.accountLinking`
+     * above -- Google is a trusted provider there, so One Tap on an address
+     * that signed up by magic link links rather than collides.
+     *
+     * Registered unconditionally, and it has to be: a conditional spread here
+     * (`...(GOOGLE_CONFIGURED ? [oneTap()] : [])`) widens this array out of
+     * its tuple type, and better-auth infers the session user FROM that tuple
+     * -- the phoneNumber plugin's `phoneNumber` and `phoneNumberVerified`
+     * silently vanished from the type across four API routes. With Google
+     * unconfigured the endpoint simply answers 400, and nothing calls it: the
+     * browser half is only registered when NEXT_PUBLIC_GOOGLE_CLIENT_ID is
+     * set.
+     */
+    oneTap(),
+
     magicLink({
       sendMagicLink: async ({ email, url }) => {
         if (!resend) {
