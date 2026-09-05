@@ -36,6 +36,15 @@ const POST_CATS = [
   { id: 'govt',     label: 'Govt',      icon: '🏛️', kw: ['ias','ips','ifs','government','civil service','military','army','navy','air force','police','upsc'] },
 ];
 
+/** The one chip look the feed's filter rows share. */
+function chipStyle(on: boolean) {
+  return {
+    background:  on ? '#00A86B' : 'rgba(255,255,255,0.08)',
+    color:       on ? '#0B0B0A' : 'rgba(255,255,255,0.7)',
+    borderColor: on ? '#00A86B' : 'rgba(255,255,255,0.12)',
+  };
+}
+
 function catOf(p: IPost) {
   const hay = ((p.title ?? '') + ' ' + (p.caption ?? '')).toLowerCase();
   for (const c of POST_CATS.slice(1)) {
@@ -767,6 +776,30 @@ export default function ChannelFeedPage() {
   const usedCats = useMemo(() => new Set(posts.map(catOf)), [posts]);
 
   /**
+   * Qualifications in this channel, most common first.
+   *
+   * Education rather than location, decided from the data rather than from
+   * taste: `state` is set on six of ninety-three posts (only the show
+   * profiles), because the ad importer files an extracted place under
+   * `country` or `city` and the post table has neither. Education is on most
+   * of them and clusters usefully -- B.com, MBA, Graduate, B.Tech -- so it is
+   * the facet that actually earns a row of chips today.
+   */
+  const educations = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of posts) {
+      const v = p.education;
+      if (typeof v !== 'string' || !v) continue;
+      counts.set(v, (counts.get(v) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .filter(([, n]) => n > 1)              // a one-off is noise, not a facet
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 10)
+      .map(([value, n]) => ({ value, n }));
+  }, [posts]);
+
+  /**
    * Which page the reader is actually looking at.
    *
    * Derived from the topmost tile on screen rather than from how many pages
@@ -815,8 +848,8 @@ export default function ChannelFeedPage() {
     <div style={{ background: '#0B0B0A', minHeight: '100vh' }}>
 
       {/* ── Channel hero ── */}
-      <div style={{ background: '#1E3932', color: '#fff' }} className="relative px-4 pb-6 pt-5">
-        <div className="flex items-center gap-3 mb-5">
+      <div style={{ background: '#1E3932', color: '#fff' }} className="relative px-4 pb-3 pt-3">
+        <div className="flex items-center gap-3 mb-3">
           <button
             onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/channels')}
             className="w-9 h-9 rounded-full flex items-center justify-center text-xl border-0 shrink-0"
@@ -827,33 +860,7 @@ export default function ChannelFeedPage() {
               <img src={channel.cover_image} alt="" className="w-full h-full object-cover" />
             </div>
           )}
-          {/* The channel's name used to sit here. It moved below, next to the
-              other channels, because a name is only useful beside the ones you
-              could switch to. This row is now purely where you are in the
-              feed. */}
-          <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto"
-            style={{ scrollbarWidth: 'none' }}>
-            {pageNumbers.map(n => {
-              const loaded = n <= page;
-              return (
-                <button
-                  key={n}
-                  onClick={() => goToPage(n)}
-                  aria-label={`Page ${n}`}
-                  aria-current={n === currentPage}
-                  className="shrink-0 rounded-md text-xs font-bold border transition-all"
-                  style={{
-                    minWidth: 28, height: 28,
-                    background: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.08)',
-                    color:      n === currentPage ? '#0B0B0A' : loaded ? '#fff' : 'rgba(255,255,255,0.45)',
-                    borderColor: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.14)',
-                  }}
-                >
-                  {n}
-                </button>
-              );
-            })}
-          </div>
+          <div className="flex-1" />
           <span className="text-xs font-semibold shrink-0 tabular-nums" style={{ color: 'rgba(255,255,255,0.55)' }}>
             <span style={{ color: '#fff' }}>{posts.length}</span>
             {total != null && ` / ${total}`} posts
@@ -882,11 +889,6 @@ export default function ChannelFeedPage() {
           style={{ background: '#00A86B', color: '#0B0B0A' }}>
           {channel?.name ?? 'Loading…'}
         </span>
-        {channel?.description && (
-          <span className="shrink-0 text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            {channel.description}
-          </span>
-        )}
         {siblings
           .filter(c => c.slug !== channel?.slug)
           .map(c => (
@@ -927,6 +929,76 @@ export default function ChannelFeedPage() {
         </div>
       )}
       </div>
+
+      {/* ── Education chips ──
+          The second facet beside profession. See `educations` for why this is
+          education and not location. */}
+      {educations.length > 0 && (
+        <div className="px-4 pb-3 flex gap-2 overflow-x-auto" style={{ background: '#0B0B0A', scrollbarWidth: 'none' }}>
+          <button
+            onClick={() => setFilters(f => ({ ...f, facets: { ...f.facets, education: '' } }))}
+            className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-all"
+            style={chipStyle(!filters.facets.education)}
+          >
+            🎓 Any study
+          </button>
+          {educations.map(e => {
+            const on = filters.facets.education === e.value;
+            return (
+              <button
+                key={e.value}
+                onClick={() => setFilters(f => ({
+                  ...f,
+                  facets: { ...f.facets, education: on ? '' : e.value },
+                }))}
+                className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-all"
+                style={chipStyle(on)}
+              >
+                {e.value}
+                <span className="opacity-60">{e.n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/*
+        The pager lives in the thumb arc, not the header.
+        Page numbers are navigation, and navigation at the top of a phone
+        screen needs a second hand. Fixed just above the site's bottom nav it
+        is reachable while scrolling with one thumb, which is how this feed is
+        actually read.
+      */}
+      {pageNumbers.length > 1 && (
+        <div className="fixed inset-x-0 z-[110] px-4 flex items-center gap-1.5 overflow-x-auto"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)',
+            paddingRight: 130,   // clear of the filter FAB
+            scrollbarWidth: 'none',
+          }}>
+          {pageNumbers.map(n => {
+            const loaded = n <= page;
+            return (
+              <button
+                key={n}
+                onClick={() => goToPage(n)}
+                aria-label={`Page ${n}`}
+                aria-current={n === currentPage}
+                className="shrink-0 rounded-lg text-xs font-bold border shadow-lg"
+                style={{
+                  minWidth: 34, height: 34,
+                  background: n === currentPage ? '#00A86B' : 'rgba(20,20,19,0.92)',
+                  color:      n === currentPage ? '#0B0B0A' : loaded ? '#fff' : 'rgba(255,255,255,0.45)',
+                  borderColor: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.14)',
+                  boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
+                }}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Biodata filters ── */}
       {posts.length > 0 && (

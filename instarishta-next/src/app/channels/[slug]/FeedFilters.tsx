@@ -157,15 +157,81 @@ export default function FeedFilters({
   // and four empty selects, so it stays out of the way.
   if (facets.length === 0) return null;
 
+  /** What is switched on right now, as removable chips. */
+  const active: { label: string; clear: () => void }[] = [];
+  if (value.q.trim()) {
+    active.push({ label: `"${value.q.trim()}"`, clear: () => onChange({ ...value, q: '' }) });
+  }
+  for (const [key, v] of Object.entries(value.facets)) {
+    if (!v) continue;
+    active.push({
+      label: label(v),
+      clear: () => onChange({ ...value, facets: { ...value.facets, [key]: '' } }),
+    });
+  }
+  if (value.urgentOnly) {
+    active.push({ label: 'Urgent', clear: () => onChange({ ...value, urgentOnly: false }) });
+  }
+  if (value.age[0] > 18 || value.age[1] < 60) {
+    active.push({
+      label: `${value.age[0]}–${value.age[1]} yrs`,
+      clear: () => onChange({ ...value, age: [18, 60] }),
+    });
+  }
+
   return (
-    <div style={{ background: '#0B0B0A' }} className="px-4 pb-3">
+    <>
+      {/* What is on, in the flow — the FAB says how many, this says which, and
+          each one comes off on its own. */}
+      {active.length > 0 && (
+        <div style={{ background: '#0B0B0A' }} className="px-4 pb-3 flex gap-2 overflow-x-auto items-center"
+          >
+          {active.map((a) => (
+            <button
+              key={a.label}
+              onClick={a.clear}
+              className="shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border"
+              style={{ background: 'rgba(0,168,107,0.16)', color: GREEN, borderColor: 'rgba(0,168,107,0.45)' }}
+            >
+              {a.label}
+              <span aria-hidden style={{ opacity: 0.7 }}>×</span>
+            </button>
+          ))}
+          <button
+            onClick={() => onChange({ ...EMPTY_FILTERS })}
+            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border"
+            style={{ background: 'transparent', color: 'rgba(255,255,255,0.7)', borderColor: LINE }}
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/*
+        The trigger is a FAB, not a row.
+        As an inline button it scrolled away with the feed, so changing a
+        filter meant scrolling back to the top first. Fixed in the bottom-right
+        thumb arc it is reachable one-handed at any scroll position, and it
+        sits above the site's bottom nav rather than over it.
+      */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold border"
-        style={{ background: n > 0 ? GREEN : 'rgba(255,255,255,0.08)', color: n > 0 ? '#0B0B0A' : '#fff', borderColor: n > 0 ? GREEN : LINE }}
+        aria-label={n > 0 ? `Filters, ${n} active` : 'Filters'}
+        className="fixed right-4 z-[120] flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold border shadow-lg"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)',
+          background: n > 0 ? GREEN : '#141413',
+          color: n > 0 ? '#0B0B0A' : '#fff',
+          borderColor: n > 0 ? GREEN : LINE,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+        }}
       >
         <SlidersIcon />
-        Show Filters{n > 0 ? ` · ${n}` : ''}
+        Filters
+        {n > 0 && (
+          <span className="rounded-full px-1.5 text-[11px] font-extrabold"
+            style={{ background: '#0B0B0A', color: GREEN }}>{n}</span>
+        )}
       </button>
 
       {open && (
@@ -287,7 +353,7 @@ export default function FeedFilters({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

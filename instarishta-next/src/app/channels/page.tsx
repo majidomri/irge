@@ -20,7 +20,33 @@ function categorize(ch: IChannel): string {
   return 'others';
 }
 
+/**
+ * A ring colour per channel.
+ *
+ * Every avatar was the same neutral circle, so the grid read as one texture
+ * and nothing was recognisable at a glance. The colour is derived from the
+ * channel's own slug rather than stored, so a channel added tomorrow gets a
+ * stable ring without anyone assigning one -- and the same channel keeps the
+ * same colour on every visit and every device.
+ */
+const RINGS: [string, string][] = [
+  ['#00A86B', '#00E08C'],  // green
+  ['#C0397A', '#F5A3C7'],  // rose
+  ['#2B6CB0', '#63B3ED'],  // blue
+  ['#B7791F', '#F6C453'],  // gold
+  ['#6B46C1', '#B794F4'],  // violet
+  ['#C05621', '#F6AD55'],  // amber
+  ['#2C7A7B', '#4FD1C5'],  // teal
+];
+
+function ringFor(slug: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  return RINGS[h % RINGS.length];
+}
+
 function ChannelCard({ ch }: { ch: IChannel }) {
+  const [a, b] = ringFor(ch.slug ?? ch.name ?? '');
   return (
     <Link
       href={`/channels/${ch.slug}`}
@@ -29,7 +55,16 @@ function ChannelCard({ ch }: { ch: IChannel }) {
       <div className="relative">
         <div
           className="w-[130px] h-[130px] rounded-full overflow-hidden transition-transform duration-200 group-hover:-translate-y-1"
-          style={{ background: '#F3F0EE', boxShadow: '0px 24px 48px rgba(0,0,0,0.08)' }}
+          style={{
+            background: '#F3F0EE',
+            boxShadow: '0px 24px 48px rgba(0,0,0,0.08)',
+            // The ring is the border, not an outline, so the image is inset
+            // inside it the way a story ring reads.
+            border: '4px solid transparent',
+            backgroundImage: `linear-gradient(#F3F0EE, #F3F0EE), linear-gradient(135deg, ${a}, ${b})`,
+            backgroundOrigin: 'border-box',
+            backgroundClip: 'content-box, border-box',
+          }}
         >
           {ch.cover_image
             ? <img src={ch.cover_image} alt={ch.name} className="w-full h-full object-cover" loading="lazy" />
@@ -38,11 +73,10 @@ function ChannelCard({ ch }: { ch: IChannel }) {
         </div>
         <div
           className="absolute bottom-0.5 -right-1.5 w-9 h-9 rounded-full bg-white flex items-center justify-center text-sm transition-transform duration-200 group-hover:scale-110"
-          style={{ boxShadow: '0px 4px 14px rgba(0,0,0,0.12)', color: '#141413' }}
+          style={{ boxShadow: '0px 4px 14px rgba(0,0,0,0.12)', color: a }}
         >→</div>
       </div>
       <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.04em] mb-1" style={{ color: '#696969' }}>Channel</p>
         <p className="text-sm font-bold leading-snug" style={{ color: '#141413' }}>{ch.name}</p>
         {ch.description && <p className="text-xs mt-0.5 leading-snug" style={{ color: '#696969' }}>{ch.description}</p>}
       </div>
@@ -87,7 +121,7 @@ export default function ChannelsPage() {
       {/* Page header */}
       <div className="max-w-[1280px] mx-auto px-6 pt-14 pb-6">
         <p className="text-xs font-bold uppercase tracking-[0.06em] mb-3" style={{ color: '#696969' }}>Discover</p>
-        <h1 className="text-[clamp(2rem,5vw,3rem)] font-extrabold tracking-[-0.03em]" style={{ color: '#141413' }}>Profile Channels</h1>
+        <h1 className="text-[clamp(2rem,5vw,3rem)] font-extrabold tracking-[-0.03em]" style={{ color: '#141413' }}>Channels / Groups</h1>
       </div>
 
       {/* Search + filters */}
@@ -97,7 +131,7 @@ export default function ChannelsPage() {
           value={query}
           onChange={e => setQuery(e.target.value.toLowerCase())}
           placeholder="Search channels…"
-          className="rounded-full px-5 py-2.5 text-sm font-medium border outline-none"
+          className="rounded px-5 py-2.5 text-sm font-medium border outline-none"
           style={{ borderColor: '#141413', background: '#fff', color: '#141413' }}
         />
         <div className="flex gap-2 flex-wrap">
