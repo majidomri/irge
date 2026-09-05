@@ -30,6 +30,23 @@ export async function getChannels() {
 }
 
 /**
+ * Every channel a reader can move to, cohorts included.
+ *
+ * `getChannels` leaves cohorts out because they would crowd the channels index
+ * by recency. The strip above a feed wants the opposite: cohorts ARE the other
+ * groups someone would swipe to, so they belong there. Ordered by name so the
+ * strip does not reshuffle itself as posts arrive.
+ */
+export async function getBrowsableChannels() {
+  const { data, error } = await supabase
+    .from('ir_channels')
+    .select('id, name, slug')
+    .order('name');
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
  * The profession cohorts, with their published member counts — "412 verified
  * doctors". Ordered by size so the strongest circle leads.
  */

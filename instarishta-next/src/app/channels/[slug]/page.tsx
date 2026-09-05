@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import {
   supabase,
-  getChannelBySlug, getPosts, countPosts,
+  getChannelBySlug, getBrowsableChannels, getPosts, countPosts,
   incrementViews, incrementLikes,
   subscribeChannel, unsubscribeChannel,
   POST_PAGE_SIZE,
@@ -643,6 +643,7 @@ export default function ChannelFeedPage() {
   const [page,     setPage]      = useState(0);
   const [done,     setDone]      = useState(false);
   const [total,    setTotal]     = useState<number | null>(null);
+  const [siblings, setSiblings]  = useState<{ id: string; name: string; slug: string }[]>([]);
   const [catFilter, setCatFilter] = useState('all');
   const [filters,  setFilters]   = useState<FeedFilterState>(EMPTY_FILTERS);
   const [newBadge, setNewBadge]  = useState(false);
@@ -677,6 +678,8 @@ export default function ChannelFeedPage() {
         if (!ch) { setError('Channel not found.'); setLoading(false); return; }
         setChannel(ch);
         countPosts(ch.id).then(setTotal).catch(() => {});
+        // Every channel, for the strip that lets you swipe from one to the next.
+        getBrowsableChannels().then(list => setSiblings((list ?? []) as typeof siblings)).catch(() => {});
         await loadPosts(ch, 0);
 
         realtimeRef.current = subscribeChannel(ch.id, (post) => {
@@ -694,6 +697,30 @@ export default function ChannelFeedPage() {
       if (realtimeRef.current) { unsubscribeChannel(realtimeRef.current); realtimeRef.current = null; }
     };
   }, [slug, loadPosts]);
+
+  /**
+   * Go to a page by number.
+   *
+   * The feed appends, so a later page cannot be fetched on its own -- reaching
+   * page five means loading one through five. That is what the numbers do:
+   * load forward until the page exists, then scroll to its first post.
+   */
+  const goToPage = useCallback(async (n: number) => {
+    if (!channel) return;
+    let pg = page;
+    while (pg < n && !done) {
+      const batch = await getPosts(channel.id, pg);
+      if (batch.length < POST_PAGE_SIZE) setDone(true);
+      setPosts(prev => [...prev, ...batch]);
+      pg += 1;
+      setPage(pg);
+      if (batch.length === 0) break;
+    }
+    requestAnimationFrame(() => {
+      document.getElementById(`post-${(n - 1) * POST_PAGE_SIZE}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [channel, page, done]);
 
   const loadMore = useCallback(() => {
     if (!channel || loading || done) return;
@@ -739,6 +766,43 @@ export default function ChannelFeedPage() {
 
   const usedCats = useMemo(() => new Set(posts.map(catOf)), [posts]);
 
+  /**
+   * Which page the reader is actually looking at.
+   *
+   * Derived from the topmost tile on screen rather than from how many pages
+   * have been fetched -- the loader runs ahead of the eye, so counting
+   * fetches would highlight a page the reader has not reached.
+   */
+  useEffect(() => {
+    if (!visiblePosts.length) return;
+    const visible = new Set<number>();
+    const obs = new IntersectionObserver(
+      entries => {
+        for (const e of entries) {
+          const i = Number((e.target as HTMLElement).dataset.postIndex);
+          if (Number.isNaN(i)) continue;
+          if (e.isIntersecting) visible.add(i); else visible.delete(i);
+        }
+        if (visible.size) {
+          setCurrentPage(Math.floor(Math.min(...visible) / POST_PAGE_SIZE) + 1);
+        }
+      },
+      { rootMargin: '-80px 0px -60% 0px' },
+    );
+    document.querySelectorAll('[data-post-index]').forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, [visiblePosts.length]);
+
+
+  // Pages the channel has, and which one the reader is looking at. `page` is
+  // how many have been fetched; `currentPage` follows the scroll position so
+  // the highlight tracks the feed rather than the loader.
+  const pageNumbers = useMemo(() => {
+    const n = total != null ? Math.ceil(total / POST_PAGE_SIZE) : Math.max(page, 1);
+    return Array.from({ length: Math.max(n, 1) }, (_, i) => i + 1);
+  }, [total, page]);
+  const [currentPage, setCurrentPage] = useState(1);
+
   if (error) return (
     <div className="text-center py-20 px-6">
       <span className="text-5xl block mb-4">⚠️</span>
@@ -763,17 +827,37 @@ export default function ChannelFeedPage() {
               <img src={channel.cover_image} alt="" className="w-full h-full object-cover" />
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-extrabold truncate">
-              <GradientText colors={['#00C87A', '#ffffff', '#00A86B', '#ffffff']} animationSpeed={6} className="font-extrabold">
-                {channel?.name ?? 'Loading…'}
-              </GradientText>
-            </h1>
-            {channel?.description && (
-              <p className="text-xs truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{channel.description}</p>
-            )}
+          {/* The channel's name used to sit here. It moved below, next to the
+              other channels, because a name is only useful beside the ones you
+              could switch to. This row is now purely where you are in the
+              feed. */}
+          <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto"
+            style={{ scrollbarWidth: 'none' }}>
+            {pageNumbers.map(n => {
+              const loaded = n <= page;
+              return (
+                <button
+                  key={n}
+                  onClick={() => goToPage(n)}
+                  aria-label={`Page ${n}`}
+                  aria-current={n === currentPage}
+                  className="shrink-0 rounded-md text-xs font-bold border transition-all"
+                  style={{
+                    minWidth: 28, height: 28,
+                    background: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.08)',
+                    color:      n === currentPage ? '#0B0B0A' : loaded ? '#fff' : 'rgba(255,255,255,0.45)',
+                    borderColor: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.14)',
+                  }}
+                >
+                  {n}
+                </button>
+              );
+            })}
           </div>
-          <span className="text-xs font-semibold shrink-0" style={{ color: 'rgba(255,255,255,0.55)' }}>{posts.length} posts</span>
+          <span className="text-xs font-semibold shrink-0 tabular-nums" style={{ color: 'rgba(255,255,255,0.55)' }}>
+            <span style={{ color: '#fff' }}>{posts.length}</span>
+            {total != null && ` / ${total}`} posts
+          </span>
         </div>
 
         {/* Stories tray + viewer (zuck.js) */}
@@ -783,9 +867,47 @@ export default function ChannelFeedPage() {
       {/* ── Featured profiles spotlight ── */}
       <FeaturedCarousel placement="channels" label="Spotlight Profiles" />
 
+      {/* ── Channels: where you are, and what you can swipe to ──
+          The name lives here rather than in the header so it sits beside its
+          siblings: one horizontal strip, current channel first and highlighted,
+          every other channel a chip away. Swiping the strip and tapping a chip
+          are the same gesture people already use on the category row below. */}
+      {/* Both rows share one sticky container. Sticking them separately at
+          top:0 made them land on top of each other the moment the feed
+          scrolled. */}
+      <div className="sticky top-0 z-40" style={{ background: '#0B0B0A' }}>
+      <div className="px-4 py-2.5 flex gap-2 overflow-x-auto items-center"
+        style={{ background: '#0B0B0A', scrollbarWidth: 'none' }}>
+        <span className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold"
+          style={{ background: '#00A86B', color: '#0B0B0A' }}>
+          {channel?.name ?? 'Loading…'}
+        </span>
+        {channel?.description && (
+          <span className="shrink-0 text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            {channel.description}
+          </span>
+        )}
+        {siblings
+          .filter(c => c.slug !== channel?.slug)
+          .map(c => (
+            <a
+              key={c.id}
+              href={`/channels/${c.slug}`}
+              className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border no-underline"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.75)',
+                borderColor: 'rgba(255,255,255,0.12)',
+              }}
+            >
+              {c.name} ›
+            </a>
+          ))}
+      </div>
+
       {/* ── Category filter chips ── */}
       {posts.length > 0 && (
-        <div className="sticky top-0 z-30 px-4 py-3 flex gap-2 overflow-x-auto" style={{ background: '#0B0B0A', boxShadow: '0 1px 0 rgba(255,255,255,0.08)', scrollbarWidth: 'none' }}>
+        <div className="px-4 pb-3 flex gap-2 overflow-x-auto" style={{ background: '#0B0B0A', boxShadow: '0 1px 0 rgba(255,255,255,0.08)', scrollbarWidth: 'none' }}>
           {POST_CATS.filter(c => c.id === 'all' || usedCats.has(c.id)).map(c => (
             <button
               key={c.id}
@@ -804,6 +926,7 @@ export default function ChannelFeedPage() {
           ))}
         </div>
       )}
+      </div>
 
       {/* ── Biodata filters ── */}
       {posts.length > 0 && (
@@ -840,7 +963,7 @@ export default function ChannelFeedPage() {
         `}</style>
         <ClickSpark sparkColor="#00A86B" sparkRadius={22} sparkCount={8} duration={450}>
         <div className="ir-post-grid grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-          {visiblePosts.map(post => {
+          {visiblePosts.map((post, i) => {
             const cover = post.thumb ?? post.image ?? null;
             const hasImage = !!cover;
             const hasAudio = !!post.audio_url;
@@ -863,6 +986,8 @@ export default function ChannelFeedPage() {
             return (
               <button
                 key={post.id}
+                id={`post-${i}`}
+                data-post-index={i}
                 onClick={() => openPost(post)}
                 className="relative overflow-hidden border-0 p-0 cursor-pointer block text-left rounded-2xl"
                 style={{ background: '#171715' }}
