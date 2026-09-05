@@ -964,7 +964,13 @@ export default function ChannelFeedPage() {
             >
               <span>{c.icon}</span>
               {c.label}
-              {c.id !== 'all' && <span className="opacity-60">{posts.filter(p => catOf(p) === c.id).length}</span>}
+              {/* A count over the loaded window is a wrong count: "B.com 2"
+                  became "B.com 10" as you scrolled. Shown only once the whole
+                  channel is in hand -- the chip still works before then, it
+                  just does not claim a number it cannot know. */}
+              {c.id !== 'all' && done && (
+                <span className="opacity-60">{posts.filter(p => catOf(p) === c.id).length}</span>
+              )}
             </button>
           ))}
         </div>
@@ -996,7 +1002,7 @@ export default function ChannelFeedPage() {
                 style={chipStyle(on)}
               >
                 {e.value}
-                <span className="opacity-60">{e.n}</span>
+                {done && <span className="opacity-60">{e.n}</span>}
               </button>
             );
           })}
@@ -1105,7 +1111,15 @@ export default function ChannelFeedPage() {
                 className="relative overflow-hidden border-0 p-0 cursor-pointer block text-left rounded-2xl"
                 style={{ background: '#171715' }}
               >
-                <div className="relative w-full overflow-hidden" style={{ aspectRatio: isFrame ? '9/16' : '3/4', background: hasImage ? '#0d0d0c' : hasAudio ? '#0d1e18' : '#1E3932' }}>
+                {/* 3:4, not the frame's own 9:16.
+                    A short ad leaves the bottom third of a 1080x1920 frame
+                    empty, and at 9:16 the tile faithfully reproduced that
+                    emptiness -- rows of cards that were half nothing. The
+                    thumbnail shows the top of the frame instead, which is
+                    where the lockup, the facts and the opening lines are. The
+                    published image is untouched: it stays a true 9:16 for the
+                    stories viewer and for sharing. */}
+                <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: hasImage ? '#0d0d0c' : hasAudio ? '#0d1e18' : '#1E3932' }}>
                   {cover ? (
                     /* Biodata images are tall documents (typically ~1:1.9), not
                        photos. object-cover on a 3/4 tile cropped 30-45% off
@@ -1133,6 +1147,9 @@ export default function ChannelFeedPage() {
                         className={`relative w-full h-full transition-transform duration-300 hover:scale-105 ${
                           isFrame ? 'object-cover' : 'object-contain'
                         }`}
+                        // Anchored to the top so the crop takes the empty
+                        // bottom, never the name.
+                        style={isFrame ? { objectPosition: 'top' } : undefined}
                         loading="lazy"
                       />
                     </>

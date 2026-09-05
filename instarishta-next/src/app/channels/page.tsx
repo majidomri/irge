@@ -131,7 +131,7 @@ export default function ChannelsPage() {
           value={query}
           onChange={e => setQuery(e.target.value.toLowerCase())}
           placeholder="Search channels…"
-          className="rounded px-5 py-2.5 text-sm font-medium border outline-none"
+          className="rounded px-5 py-2.5 text-sm font-medium border outline-none w-full"
           style={{ borderColor: '#141413', background: '#fff', color: '#141413' }}
         />
         <div className="flex gap-2 flex-wrap">

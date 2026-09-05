@@ -23,6 +23,17 @@ const COUNTRIES = new Set([
   'Qatar', 'KSA', 'Saudi', 'Bahrain', 'Kuwait', 'Oman',
 ]);
 
+/**
+ * One spelling per country.
+ *
+ * The ads write both "US" and "USA", and both "KSA" and "Saudi". Left alone
+ * they become separate filter chips that each hold half the matches, which
+ * reads as two different places.
+ */
+const CANONICAL: Record<string, string> = {
+  US: 'USA', EU: 'Europe', KSA: 'Saudi',
+};
+
 /** "5.7" / "5'7" / "5-7" → centimetres. Feet and inches, as the ads write it. */
 function toCm(raw: string): number | undefined {
   const m = raw.match(/^(\d)[.'\-]?(\d{1,2})?$/);
@@ -69,7 +80,7 @@ export function adToValues(ad: AdLike): BiodataValues {
 
   const loc = get('Location');
   if (loc) {
-    if (COUNTRIES.has(loc)) v.country = loc;
+    if (COUNTRIES.has(loc)) v.country = CANONICAL[loc] ?? loc;
     else v.city = loc;
   }
 

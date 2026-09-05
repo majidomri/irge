@@ -50,7 +50,9 @@ const FACETS: { key: keyof IPost; label: string }[] = [
   { key: 'gender', label: 'Bride / Groom' },
   { key: 'marital', label: 'Marital status' },
   { key: 'community', label: 'Community' },
+  { key: 'country', label: 'Country' },
   { key: 'state', label: 'State' },
+  { key: 'city', label: 'City' },
   { key: 'education', label: 'Education' },
 ];
 

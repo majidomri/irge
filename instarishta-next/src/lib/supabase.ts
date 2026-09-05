@@ -267,6 +267,8 @@ export interface IPost {
   education?: string | null;
   marital?: string | null;
   state?: string | null;
+  city?: string | null;
+  country?: string | null;
   is_urgent?: boolean | null;
 }
 
