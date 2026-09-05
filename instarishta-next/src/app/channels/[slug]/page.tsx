@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { Fragment, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import {
@@ -736,30 +736,6 @@ export default function ChannelFeedPage() {
     };
   }, [slug, loadPosts]);
 
-  /**
-   * Go to a page by number.
-   *
-   * The feed appends, so a later page cannot be fetched on its own -- reaching
-   * page five means loading one through five. That is what the numbers do:
-   * load forward until the page exists, then scroll to its first post.
-   */
-  const goToPage = useCallback(async (n: number) => {
-    if (!channel) return;
-    let pg = page;
-    while (pg < n && !done) {
-      const batch = await getPosts(channel.id, pg);
-      if (batch.length < POST_PAGE_SIZE) setDone(true);
-      setPosts(prev => [...prev, ...batch]);
-      pg += 1;
-      setPage(pg);
-      if (batch.length === 0) break;
-    }
-    requestAnimationFrame(() => {
-      document.getElementById(`post-${(n - 1) * POST_PAGE_SIZE}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [channel, page, done]);
-
   const filtering = catFilter !== 'all' || activeCount(filters) > 0;
 
   /**
@@ -845,43 +821,6 @@ export default function ChannelFeedPage() {
   }, [posts]);
 
   /**
-   * Which page the reader is actually looking at.
-   *
-   * Derived from the topmost tile on screen rather than from how many pages
-   * have been fetched -- the loader runs ahead of the eye, so counting
-   * fetches would highlight a page the reader has not reached.
-   */
-  useEffect(() => {
-    if (!visiblePosts.length) return;
-    const visible = new Set<number>();
-    const obs = new IntersectionObserver(
-      entries => {
-        for (const e of entries) {
-          const i = Number((e.target as HTMLElement).dataset.postIndex);
-          if (Number.isNaN(i)) continue;
-          if (e.isIntersecting) visible.add(i); else visible.delete(i);
-        }
-        if (visible.size) {
-          setCurrentPage(Math.floor(Math.min(...visible) / POST_PAGE_SIZE) + 1);
-        }
-      },
-      { rootMargin: '-80px 0px -60% 0px' },
-    );
-    document.querySelectorAll('[data-post-index]').forEach(el => obs.observe(el));
-    return () => obs.disconnect();
-  }, [visiblePosts.length]);
-
-
-  // Pages the channel has, and which one the reader is looking at. `page` is
-  // how many have been fetched; `currentPage` follows the scroll position so
-  // the highlight tracks the feed rather than the loader.
-  const pageNumbers = useMemo(() => {
-    const n = total != null ? Math.ceil(total / POST_PAGE_SIZE) : Math.max(page, 1);
-    return Array.from({ length: Math.max(n, 1) }, (_, i) => i + 1);
-  }, [total, page]);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  /**
    * The three navigation controls, written once and placed twice.
    *
    * A phone puts them in a dock in the thumb arc; a desktop has no thumb arc
@@ -913,27 +852,6 @@ export default function ChannelFeedPage() {
     </>
   );
 
-  const pagerChips = pageNumbers.map(n => {
-    const loaded = n <= page;
-    return (
-      <button
-        key={n}
-        onClick={() => goToPage(n)}
-        aria-label={`Page ${n}`}
-        aria-current={n === currentPage}
-        className="shrink-0 rounded-lg text-xs font-bold border"
-        style={{
-          minWidth: 32, height: 32,
-          background: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.06)',
-          color:      n === currentPage ? '#0B0B0A' : loaded ? '#fff' : 'rgba(255,255,255,0.45)',
-          borderColor: n === currentPage ? '#00A86B' : 'rgba(255,255,255,0.14)',
-        }}
-      >
-        {n}
-      </button>
-    );
-  });
-
   const nFilters = activeCount(filters);
   const filterButton = (
     <button
@@ -941,7 +859,9 @@ export default function ChannelFeedPage() {
       aria-label={nFilters > 0 ? `Filters, ${nFilters} active` : 'Filters'}
       className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 h-8 text-xs font-bold border"
       style={{
-        background: nFilters > 0 ? '#00A86B' : 'rgba(255,255,255,0.06)',
+        /* Opaque, not a 6% white wash: the channel strip scrolls underneath
+           this button and a translucent one let the chips show through it. */
+        background: nFilters > 0 ? '#00A86B' : '#22221f',
         color:      nFilters > 0 ? '#0B0B0A' : '#fff',
         borderColor: nFilters > 0 ? '#00A86B' : 'rgba(255,255,255,0.14)',
       }}
@@ -1001,9 +921,6 @@ export default function ChannelFeedPage() {
           style={{ scrollbarWidth: 'none' }}>
           {channelChips}
         </div>
-        {pageNumbers.length > 1 && !filtering && (
-          <div className="flex items-center gap-1.5 shrink-0">{pagerChips}</div>
-        )}
         {posts.length > 0 && filterButton}
       </div>
 
@@ -1103,15 +1020,11 @@ export default function ChannelFeedPage() {
           transition: 'transform 0.25s ease',
         } as React.CSSProperties}>
 
-        <div className="px-4 flex gap-2 overflow-x-auto items-center"
-          style={{ scrollbarWidth: 'none' }}>
-          {channelChips}
-        </div>
-
-        <div className="px-4 flex items-center gap-1.5 overflow-x-auto"
-          style={{ scrollbarWidth: 'none' }}>
-          {pageNumbers.length > 1 && !filtering && pagerChips}
-          <div className="flex-1" />
+        <div className="px-4 flex items-center gap-2">
+          <div className="flex gap-2 overflow-x-auto items-center flex-1 min-w-0"
+            style={{ scrollbarWidth: 'none' }}>
+            {channelChips}
+          </div>
           {posts.length > 0 && filterButton}
         </div>
       </div>
@@ -1174,11 +1087,37 @@ export default function ChannelFeedPage() {
               0,
               [...new Set([post.image, ...(Array.isArray(post.images) ? post.images : [])].filter(Boolean))].length - 1,
             );
+            /**
+             * The page break, drawn in the feed rather than kept in a tray.
+             *
+             * A row of numbers above the nav told you a page existed but not
+             * where you were in one; a rule you scroll past says both, at the
+             * moment it matters, and costs no chrome. It spans the whole grid
+             * row -- `1 / -1` -- so the tiles keep their columns.
+             *
+             * Not while filtering: matches are drawn from the whole channel,
+             * so they have no pages to be divided into.
+             */
+            const startsPage = !filtering && i % POST_PAGE_SIZE === 0;
+            const pageNo = Math.floor(i / POST_PAGE_SIZE) + 1;
+            const onThisPage = Math.min(POST_PAGE_SIZE, visiblePosts.length - i);
+
             return (
+              <Fragment key={post.id}>
+              {startsPage && (
+                <div style={{ gridColumn: '1 / -1' }}
+                  className={`flex items-baseline gap-2.5 ${i === 0 ? 'pb-1' : 'pt-5 pb-1'}`}>
+                  <span className="text-sm font-bold shrink-0" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                    Page {pageNo}
+                  </span>
+                  <span className="text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    {onThisPage} profile{onThisPage === 1 ? '' : 's'}
+                  </span>
+                  <span className="flex-1" style={{ height: 1, background: 'rgba(255,255,255,0.14)' }} />
+                </div>
+              )}
               <button
-                key={post.id}
                 id={`post-${i}`}
-                data-post-index={i}
                 onClick={() => openPost(post)}
                 className="relative overflow-hidden border-0 p-0 cursor-pointer block text-left rounded-2xl"
                 style={{ background: '#171715' }}
@@ -1292,6 +1231,7 @@ export default function ChannelFeedPage() {
                   </div>
                 )}
               </button>
+              </Fragment>
             );
           })}
         </div>
