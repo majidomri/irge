@@ -18,6 +18,7 @@ import FeedFilters, {
   activeCount, applyFeedFilters, EMPTY_FILTERS, type FeedFilterState,
 } from './FeedFilters';
 import ZuckStories from '@/components/ZuckStories';
+import { useChromeAutoHide } from '@/lib/hooks/useChromeAutoHide';
 import {
   LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
 } from '@/components/StoryIcons';
@@ -658,6 +659,9 @@ export default function ChannelFeedPage() {
   // on a phone and in the top bar on a desktop, and the panel has to open
   // from both.
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // The bottom nav tucks itself away as you scroll down. The dock stands on
+  // it, so it has to leave with it -- see the dock's transform below.
+  const chromeHidden = useChromeAutoHide();
   const [newBadge, setNewBadge]  = useState(false);
 
   const [modalPost,  setModalPost]  = useState<IPost | null>(null);
@@ -1078,13 +1082,25 @@ export default function ChannelFeedPage() {
         the feed showing through the gaps and through the hole the FAB made
         -- tiles sliding past between the controls.
       */}
-      <div className="md:hidden fixed inset-x-0 z-[110] flex flex-col gap-2 py-2.5"
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-[45] flex flex-col gap-2 pt-2.5"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
+          /* Anchored to the floor, not floated 56px above it, with the nav's
+             own height as padding. The surface therefore runs all the way
+             down behind the nav instead of leaving a band of feed under
+             itself -- which is what showed through the moment the nav tucked
+             away, and again during the 0.25s it takes to do that.
+
+             z-45 keeps it above the feed but under the nav (z-50), which
+             paints on top of the padding rather than being buried by it. */
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
           background: 'rgba(10,20,15,0.97)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderTop: '1px solid rgba(255,255,255,0.08)',
+          /* And it leaves with the nav, on the same curve, so the two never
+             come apart mid-scroll. */
+          transform: chromeHidden ? 'translateY(110%)' : 'translateY(0)',
+          transition: 'transform 0.25s ease',
         } as React.CSSProperties}>
 
         <div className="px-4 flex gap-2 overflow-x-auto items-center"
