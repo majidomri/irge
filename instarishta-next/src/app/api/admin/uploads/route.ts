@@ -14,10 +14,18 @@
  * The bucket must exist and be public; its host is already allowlisted for
  * next/image in next.config.ts.
  *
+ * Every file is normalised on the way in (see lib/image-optimize.ts): EXIF
+ * orientation applied and the rest of the metadata dropped, capped at 1920 on
+ * the long edge, and re-encoded to whichever of AVIF / WebP / JPEG comes out
+ * smallest. What arrives here is an admin's phone export -- 4000px and
+ * several MB, with GPS in its EXIF -- and that is not what should live in the
+ * bucket forever.
+ *
  * Node runtime — the Supabase storage client needs it.
  */
 import { NextResponse } from 'next/server';
 import { withAdmin } from '@/lib/admin-route';
+import { optimizeUpload } from '@/lib/image-optimize';
 
 export const runtime = 'nodejs';
 
@@ -43,7 +51,7 @@ async function objectName(bytes: ArrayBuffer, mime: string): Promise<string> {
   const hex = Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
-  const ext = mime === 'image/jpeg' ? 'jpg' : mime.split('/')[1];
+  const ext = mime === 'image/jpeg' ? 'jpg' : mime.split('/')[1];   // avif | webp | png | jpg
   // Shard by the first two hex chars — flat buckets with tens of thousands of
   // objects are painful to browse in the Supabase dashboard.
   return `imports/${hex.slice(0, 2)}/${hex}.${ext}`;
@@ -63,11 +71,22 @@ export const POST = withAdmin(async (req, { db }) => {
     return NextResponse.json({ error: 'File too large (max 8MB)' }, { status: 400 });
   }
 
-  const bytes = await file.arrayBuffer();
-  const path  = await objectName(bytes, file.type);
+  const raw = Buffer.from(await file.arrayBuffer());
+  const image = await optimizeUpload(raw, file.type);
 
-  const { error } = await db.storage.from(BUCKET).upload(path, bytes, {
-    contentType: file.type,
+  // Addressed by the bytes we STORE, not the bytes we were given: two admins
+  // exporting the same photo at different sizes should converge on one
+  // object, and re-uploading an identical file must still be a no-op.
+  const path = await objectName(
+    image.bytes.buffer.slice(
+      image.bytes.byteOffset,
+      image.bytes.byteOffset + image.bytes.byteLength,
+    ) as ArrayBuffer,
+    image.mime,
+  );
+
+  const { error } = await db.storage.from(BUCKET).upload(path, image.bytes, {
+    contentType: image.mime,
     // Same bytes → same path, so a repeat upload is a no-op overwrite rather
     // than a "Duplicate" error that would fail an otherwise-fine import.
     upsert: true,
@@ -80,5 +99,15 @@ export const POST = withAdmin(async (req, { db }) => {
   }
 
   const { data } = db.storage.from(BUCKET).getPublicUrl(path);
-  return NextResponse.json({ url: data.publicUrl, path });
+  return NextResponse.json({
+    url: data.publicUrl,
+    path,
+    // The importer shows this, so an admin can see what the upload cost.
+    width: image.width,
+    height: image.height,
+    bytes: image.bytes.byteLength,
+    originalBytes: image.originalBytes,
+    savedPct: image.savedPct,
+    type: image.mime,
+  });
 });
