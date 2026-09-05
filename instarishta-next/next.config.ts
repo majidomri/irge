@@ -113,6 +113,48 @@ const nextConfig: NextConfig = {
         headers: SECURITY_HEADERS,
       },
       {
+        /**
+         * The traffic-advice file must be served as this exact type or the
+         * prefetch proxy ignores it. It opts this origin in to cross-site
+         * prefetching from search results, so the first page a visitor sees
+         * can already be in their browser before they click.
+         */
+        source: '/.well-known/traffic-advice',
+        headers: [{ key: 'Content-Type', value: 'application/trafficadvice+json' }],
+      },
+      {
+        /**
+         * Public pages, cacheable and — the reason this entry exists —
+         * bfcache-eligible.
+         *
+         * A dynamically rendered route gets `no-store` from Next by default,
+         * and Chrome refuses to put a `no-store` page in the back/forward
+         * cache at all. Lighthouse flagged exactly that on the channel feed.
+         * None of these pages render anything per-user on the server: the
+         * navbar and session are client components, so the HTML is the same
+         * for everyone and is safe to cache.
+         *
+         * 60 seconds with a long stale-while-revalidate: a channel gains
+         * posts in bursts, and the feed subscribes to realtime inserts once
+         * it hydrates, so a reader on a slightly stale document still sees
+         * new posts arrive without reloading.
+         */
+        source: '/:path(channels|live|p|s|post)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=600' },
+        ],
+      },
+      {
+        // The same rule for everything below those prefixes. Two entries and
+        // not one, because `/:rest*` does not match the bare prefix -- with
+        // only the nested form, /live kept its no-store and stayed out of
+        // bfcache while /live/anything did not.
+        source: '/:path(channels|live|p|s|post)/:rest*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=600' },
+        ],
+      },
+      {
         // Remix-style HTTP caching for the dynamic /profiles route. The page
         // is server-filtered per searchParams, but the underlying data updates
         // only every ~30 min (ISR revalidate). Letting a CDN cache for that
