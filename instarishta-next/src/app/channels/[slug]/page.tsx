@@ -553,23 +553,23 @@ function PostModal({
             thing it was describing. */}
       </div>
 
-      {/* ── Bottom bar ── */}
-      {/* In flow, not floating.
-          These icons used to sit ON the image, which put every tap in two
-          places at once: the button, and the frame's own right-edge "next"
-          zone. Giving the row its own 20px band means the image ends above
-          it and a tap on an icon can only be a tap on that icon. */}
-      <div className="relative z-20 shrink-0"
+      {/* ── Bottom bar ──
+          The story viewer's bar, to the pixel: 64px tall, px-4, a gradient
+          scrim instead of a slab, and no rule across the top. The 20px band
+          it replaces was 89px of chrome for a 48px row of buttons.
+
+          The one thing it does not copy is the position. Xavio's bar floats
+          over the story; this one stays in flow, so the biodata ends above
+          the icons rather than running under them. Its height is set by the
+          48px buttons plus 8px either side, which is as compact as a
+          Material tap target allows. */}
+      <div className="relative z-20 shrink-0 flex items-center justify-between gap-3 px-4"
         style={{
-          padding: 20,
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          background: 'rgba(0,0,0,0.55)',
+          minHeight: 64,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, transparent 100%)',
         }}>
-        {/* Same shape as the story viewer's bar (see StoryIcons.tsx): meta
-            on the left, icon-only action cluster on the right. */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <div className="flex items-center gap-2 min-w-0 text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
             {/* Was a bare "0" with no icon or label — unreadable as a like
                 count next to "3 views". */}
             <span className="font-semibold text-white truncate">
@@ -586,7 +586,7 @@ function PostModal({
               })()}
             </span>
             <span>·</span>
-            <span className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
+            <span className="truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{fmt(post.created_at)}</span>
           </div>
 
           <div className="flex items-center gap-0.5 shrink-0">
@@ -606,7 +606,6 @@ function PostModal({
               <ShareIcon size={26} />
             </StoryActionButton>
           </div>
-        </div>
       </div>
 
       {/* stageWidth matches the modal column's maxWidth below, so the drawer
