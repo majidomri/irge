@@ -972,21 +972,18 @@ export default function ChannelFeedPage() {
       {educations.length > 0 && (
         <div className="px-4 pb-3 flex gap-2 overflow-x-auto" style={{ background: '#0B0B0A', scrollbarWidth: 'none' }}>
           <button
-            onClick={() => setFilters(f => ({ ...f, facets: { ...f.facets, education: '' } }))}
+            onClick={() => setFilters(f => ({ ...f, eduRaw: '' }))}
             className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-all"
-            style={chipStyle(!filters.facets.education)}
+            style={chipStyle(!filters.eduRaw)}
           >
             🎓 Any study
           </button>
           {educations.map(e => {
-            const on = filters.facets.education === e.value;
+            const on = filters.eduRaw === e.value;
             return (
               <button
                 key={e.value}
-                onClick={() => setFilters(f => ({
-                  ...f,
-                  facets: { ...f.facets, education: on ? '' : e.value },
-                }))}
+                onClick={() => setFilters(f => ({ ...f, eduRaw: on ? '' : e.value }))}
                 className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-all"
                 style={chipStyle(on)}
               >

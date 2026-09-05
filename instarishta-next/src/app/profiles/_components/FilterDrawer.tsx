@@ -11,7 +11,7 @@ import {
 interface DrawerProps {
   open: boolean; onClose: () => void; onClear: () => void;
   stats: { total: number; male: number; female: number; urgent: number };
-  contactLimit: number;
+  contactLimit?: number;
   idFilter: string; setIdFilter: (v: string) => void;
   gender: string; setGender: (v: string) => void;
   ageMin: number; setAgeMin: (v: number) => void;
@@ -21,7 +21,17 @@ interface DrawerProps {
   education: string; setEducation: (v: string) => void;
   marital: string; setMarital: (v: string) => void;
   sort: string; setSort: (v: string) => void;
-  remaining: number; resetLabel: string; isAnon: boolean;
+  /**
+   * The credit line. Optional because the channel feed reuses this drawer and
+   * has no contact credits to spend -- omit it and the strip is not rendered.
+   */
+  remaining?: number; resetLabel?: string; isAnon?: boolean;
+  /**
+   * A bottom sheet on a phone either way. `right-on-desktop` also docks it to
+   * the right edge from md up, full height, which is what the channel feed
+   * wants of it on a mouse-driven screen.
+   */
+  side?: 'bottom' | 'right-on-desktop';
 }
 
 function DualRangeSlider({ valueMin, valueMax, onMin, onMax }: {
@@ -74,22 +84,44 @@ export default function FilterDrawer(props: DrawerProps) {
     ageMin, setAgeMin, ageMax, setAgeMax,
     state, setState, community, setCommunity,
     education, setEducation, marital, setMarital,
-    sort, setSort, remaining, resetLabel } = props;
+    sort, setSort, remaining, resetLabel, side = 'bottom' } = props;
+  const docksRight = side === 'right-on-desktop';
 
   const STAT_COLORS = ['#141413', '#006241', '#C0397A', '#CF4500'];
 
   return (
     <>
       {open && <div className="fixed inset-0 z-90" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose} />}
-      <div className="fixed inset-x-0 bottom-0 z-100 transition-transform duration-300"
+      <div
+        className={`ir-fd fixed inset-x-0 bottom-0 z-100 transition-transform duration-300 ${
+          docksRight ? 'ir-fd-r md:inset-y-0 md:left-auto md:right-0 md:w-[420px]' : ''
+        }`}
         style={{
-          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          // The axis is a media query away, so the offset is a variable the
+          // CSS below picks up rather than a transform written here. Shape and
+          // height live in that stylesheet too: written inline they would
+          // outrank the media query and the desktop dock would keep the
+          // sheet's rounded top and its 88vh.
+          ['--ir-fd-off' as string]: open ? '0%' : '100%',
           background: '#fff',
-          borderRadius: '20px 20px 0 0',
-          boxShadow: '0 -4px 32px rgba(0,0,0,0.15)',
-          maxHeight: '88vh',
           overflowY: 'auto',
-        }}>
+        } as React.CSSProperties}>
+        <style>{`
+          .ir-fd {
+            transform: translateY(var(--ir-fd-off));
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+            max-height: 88vh;
+          }
+          @media (min-width: 768px) {
+            .ir-fd-r {
+              transform: translateX(var(--ir-fd-off));
+              max-height: none; height: 100%;
+              border-radius: 0;
+              box-shadow: -4px 0 32px rgba(0,0,0,0.15);
+            }
+          }
+        `}</style>
         <div className="flex justify-center pt-2.5 pb-1 sticky top-0 bg-white z-10">
           <div className="w-8 h-1 rounded-full" style={{ background: '#D1CDC7' }} />
         </div>
@@ -117,6 +149,7 @@ export default function FilterDrawer(props: DrawerProps) {
             ))}
           </div>
 
+          {remaining != null && (
           <div className="flex items-center justify-between mb-3 rounded-lg px-2.5 py-1.5"
             style={{ background: remaining <= 3 ? '#FFF3EE' : '#F7F5F3' }}>
             <span className="text-[11px] font-medium" style={{ color: remaining <= 3 ? '#CF4500' : '#696969' }}>
@@ -124,6 +157,7 @@ export default function FilterDrawer(props: DrawerProps) {
             </span>
             {resetLabel && <span className="text-[10px]" style={{ color: '#A0A0A0' }}>resets {resetLabel}</span>}
           </div>
+          )}
 
           <div className="mb-3">
             <div className="flex items-center justify-between mb-0.5">
