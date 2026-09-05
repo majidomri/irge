@@ -237,14 +237,34 @@ export default function FeedFilters({
       </button>
 
       {open && (
+        /*
+          One panel, two shapes.
+
+          On a phone it stays the centred card this was ported as — thumbs
+          reach the middle of the screen better than an edge. From `md` up it
+          becomes a drawer sliding in from the right and running the full
+          height: a mouse has no thumb arc, and a persistent side panel is
+          where a filter column belongs on a desktop feed. 420px is wide
+          enough for the two-column Stats card and the full-width selects to
+          keep their hit areas without the dialog feeling cramped.
+        */
         <div
-          className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:items-stretch md:justify-end md:p-0"
           style={{ background: 'rgba(0,0,0,0.7)' }}
           onClick={() => setOpen(false)}
         >
+          <style>{`
+            .ir-filter-panel { animation: ir-filter-pop .18s ease-out; }
+            @keyframes ir-filter-pop { from { opacity: 0; transform: translateY(12px); } }
+            @media (min-width: 768px) {
+              .ir-filter-panel { animation: ir-filter-slide .22s ease-out; }
+              @keyframes ir-filter-slide { from { transform: translateX(100%); } }
+            }
+            @media (prefers-reduced-motion: reduce) { .ir-filter-panel { animation: none; } }
+          `}</style>
           <div
-            className="w-full rounded-2xl overflow-hidden"
-            style={{ maxWidth: 384, background: '#141413', border: `1px solid ${LINE}` }}
+            className="ir-filter-panel w-full max-w-sm rounded-2xl overflow-hidden md:max-w-none md:w-[420px] md:h-full md:rounded-none"
+            style={{ background: '#141413', border: `1px solid ${LINE}` }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 pt-6 pb-2">
@@ -259,7 +279,9 @@ export default function FeedFilters({
               </button>
             </div>
 
-            <div className="overflow-y-auto" style={{ maxHeight: '70vh' }}>
+            {/* As a card this scrolls to 70vh; as a drawer it owns the column,
+                so it takes everything the header leaves. */}
+            <div className="overflow-y-auto max-h-[70vh] md:max-h-none md:h-[calc(100%-68px)]">
               <div className="p-6 flex flex-col gap-6">
                 {/* ── Stats ── */}
                 <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}` }}>

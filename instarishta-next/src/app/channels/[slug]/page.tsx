@@ -885,69 +885,26 @@ export default function ChannelFeedPage() {
   return (
     <div style={{ background: '#0B0B0A', minHeight: '100vh' }}>
 
-      {/* ── Channel hero ── */}
-      <div style={{ background: '#1E3932', color: '#fff' }} className="relative px-4 pb-3 pt-3">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/channels')}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-xl border-0 shrink-0"
-            style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}
-          >‹</button>
-          {channel?.cover_image && (
-            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0" style={{ border: '2px solid rgba(255,255,255,0.3)' }}>
-              <img src={channel.cover_image} alt="" className="w-full h-full object-cover" />
-            </div>
-          )}
-          <div className="flex-1" />
-          {/* Under a filter this counts matches, not how far the loader got --
-              "93 / 93 posts" over five visible cards was the feed describing
-              its own fetching rather than the screen. */}
-          <span className="text-xs font-semibold shrink-0 tabular-nums" style={{ color: 'rgba(255,255,255,0.55)' }}>
-            <span style={{ color: '#fff' }}>{filtering ? visiblePosts.length : posts.length}</span>
-            {total != null && ` / ${total}`} {filtering ? 'matching' : 'posts'}
-          </span>
+      {/* ── Stories tray + viewer (zuck.js) ──
+          The green hero that used to hold this is gone, and with it the
+          back button, the channel avatar and the "48 / 93 posts" progress
+          counter: a band of chrome above the fold that said how much had
+          been fetched rather than showing anything to read. Navigation back
+          out of a channel lives in the channel strip in the bottom dock and
+          in the site's own bottom nav, both within thumb reach; the stories
+          keep their place at the top of the feed, on the page's own ground. */}
+      {channel && (
+        <div className="px-4 pt-3">
+          <ZuckStories channelId={channel.id} />
         </div>
-
-        {/* Stories tray + viewer (zuck.js) */}
-        {channel && <ZuckStories channelId={channel.id} />}
-      </div>
+      )}
 
       {/* ── Featured profiles spotlight ── */}
       <FeaturedCarousel placement="channels" label="Spotlight Profiles" />
 
-      {/* ── Channels: where you are, and what you can swipe to ──
-          The name lives here rather than in the header so it sits beside its
-          siblings: one horizontal strip, current channel first and highlighted,
-          every other channel a chip away. Swiping the strip and tapping a chip
-          are the same gesture people already use on the category row below. */}
-      {/* Both rows share one sticky container. Sticking them separately at
-          top:0 made them land on top of each other the moment the feed
-          scrolled. */}
+      {/* The channel strip that used to sit here now lives in the bottom dock,
+          within thumb reach — see the dock below. */}
       <div className="sticky top-0 z-40" style={{ background: '#0B0B0A' }}>
-      <div className="px-4 py-2.5 flex gap-2 overflow-x-auto items-center"
-        style={{ background: '#0B0B0A', scrollbarWidth: 'none' }}>
-        <span className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold"
-          style={{ background: '#00A86B', color: '#0B0B0A' }}>
-          {channel?.name ?? 'Loading…'}
-        </span>
-        {siblings
-          .filter(c => c.slug !== channel?.slug)
-          .map(c => (
-            <a
-              key={c.id}
-              href={`/channels/${c.slug}`}
-              className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border no-underline"
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                color: 'rgba(255,255,255,0.75)',
-                borderColor: 'rgba(255,255,255,0.12)',
-              }}
-            >
-              {c.name} ›
-            </a>
-          ))}
-      </div>
-
       {/* ── Category filter chips ── */}
       {posts.length > 0 && (
         <div className="px-4 pb-3 flex gap-2 overflow-x-auto" style={{ background: '#0B0B0A', boxShadow: '0 1px 0 rgba(255,255,255,0.08)', scrollbarWidth: 'none' }}>
@@ -1010,16 +967,57 @@ export default function ChannelFeedPage() {
       )}
 
       {/*
-        The pager lives in the thumb arc, not the header.
-        Page numbers are navigation, and navigation at the top of a phone
-        screen needs a second hand. Fixed just above the site's bottom nav it
-        is reachable while scrolling with one thumb, which is how this feed is
-        actually read.
+        ── Bottom dock: everything you navigate with, inside the thumb arc ──
+
+        Channels, pages and the filter FAB are all navigation, and navigation
+        at the top of a phone screen needs a second hand. They sit together
+        just above the site's bottom nav instead: the channel strip on top
+        (swipe it sideways to reach the next group, tap to go), the pager
+        under it, and the filter FAB — rendered by FeedFilters — pinned to the
+        right of that same row, which is what the 130px of right padding
+        keeps clear.
+
+        The dock itself takes no pointer events, so the gaps between the rows
+        stay part of the feed and the tiles behind it are still tappable; only
+        the rows themselves are live.
       */}
-      {pageNumbers.length > 1 && !filtering && (
-        <div className="fixed inset-x-0 z-[110] px-4 flex items-center gap-1.5 overflow-x-auto"
+      <div className="fixed inset-x-0 z-[110] flex flex-col gap-1.5 pointer-events-none"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)',
+          background: 'linear-gradient(to top, rgba(11,11,10,0.92) 30%, transparent 100%)',
+          paddingTop: 24,
+        }}>
+
+        {/* Channels: where you are, and what you can swipe to. Current channel
+            first and highlighted, every other channel a chip away. */}
+        <div className="px-4 flex gap-2 overflow-x-auto items-center pointer-events-auto"
+          style={{ scrollbarWidth: 'none', paddingRight: 130 }}>
+          <span className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold shadow-lg"
+            style={{ background: '#00A86B', color: '#0B0B0A', boxShadow: '0 6px 18px rgba(0,0,0,0.45)' }}>
+            {channel?.name ?? 'Loading…'}
+          </span>
+          {siblings
+            .filter(c => c.slug !== channel?.slug)
+            .map(c => (
+              <a
+                key={c.id}
+                href={`/channels/${c.slug}`}
+                className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border no-underline shadow-lg"
+                style={{
+                  background: 'rgba(20,20,19,0.92)',
+                  color: 'rgba(255,255,255,0.8)',
+                  borderColor: 'rgba(255,255,255,0.14)',
+                  boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
+                }}
+              >
+                {c.name} ›
+              </a>
+            ))}
+        </div>
+
+        {pageNumbers.length > 1 && !filtering && (
+        <div className="px-4 flex items-center gap-1.5 overflow-x-auto pointer-events-auto"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)',
             paddingRight: 130,   // clear of the filter FAB
             scrollbarWidth: 'none',
           }}>
@@ -1045,7 +1043,8 @@ export default function ChannelFeedPage() {
             );
           })}
         </div>
-      )}
+        )}
+      </div>
 
       {/* ── Biodata filters ── */}
       {posts.length > 0 && (
@@ -1238,12 +1237,10 @@ export default function ChannelFeedPage() {
         <div ref={sentinelRef} style={{ height: 1 }} />
       </div>
 
-      {/* Load more / done */}
-      {done && posts.length > 0 && (
-        <p className="text-center text-xs py-6 pb-20" style={{ color: 'rgba(255,255,255,0.35)' }}>
-          All {posts.length} posts loaded
-        </p>
-      )}
+      {/* Runway under the last row, so the bottom dock never covers a tile.
+          The "All 93 posts loaded" line that used to end the feed was the
+          same loader-progress count as the header's, and went with it. */}
+      <div aria-hidden style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 180px)' }} />
 
       {/* ── Post modal ── */}
       {modalPost && (
