@@ -3,7 +3,13 @@ import { getDb } from './db';
 // Reuse the singleton browser client — prevents "multiple GoTrueClient instances" warning
 export const supabase = getDb();
 
-export const POST_PAGE_SIZE = 9;
+/**
+ * 24, not 9. Nine filled barely two rows of a five-column desktop grid, so the
+ * first screen looked like the whole channel -- and the post viewer, which can
+ * only page through what is loaded, capped at "1 / 9" on a channel holding
+ * eighty-seven.
+ */
+export const POST_PAGE_SIZE = 24;
 
 // ── Channels ─────────────────────────────────────────────────────────────────
 
@@ -120,6 +126,16 @@ export async function getProfilesCount(search?: string): Promise<number> {
 }
 
 // ── Posts ─────────────────────────────────────────────────────────────────────
+
+/** How many posts the channel holds, for the viewer's counter. */
+export async function countPosts(channelId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('ir_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('channel_id', channelId);
+  if (error) throw error;
+  return count ?? 0;
+}
 
 export async function getPosts(channelId: string, page: number) {
   const from = page * POST_PAGE_SIZE;

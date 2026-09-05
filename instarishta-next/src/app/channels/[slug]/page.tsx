@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import {
   supabase,
-  getChannelBySlug, getPosts,
+  getChannelBySlug, getPosts, countPosts,
   incrementViews, incrementLikes,
   subscribeChannel, unsubscribeChannel,
   POST_PAGE_SIZE,
@@ -203,12 +203,16 @@ function AudioPlayer({ url, title, caption, onPlayAttempt }: {
 // ── Post modal ────────────────────────────────────────────────────────────────
 
 function PostModal({
-  post, allPosts, liked, onClose, onLike, onNavigate, onPlayAttempt,
+  post, allPosts, liked, onClose, onLike, onNavigate, onPlayAttempt, total, onNeedMore,
 }: {
   post: IPost; allPosts: IPost[];
   liked: Set<string>; onClose: () => void;
   onLike: (id: string) => void; onNavigate: (p: IPost) => void;
   onPlayAttempt?: () => Promise<boolean>;
+  /** How many posts the channel actually holds, not how many are loaded. */
+  total?: number;
+  /** Ask the feed for the next page; the viewer runs off the end without it. */
+  onNeedMore?: () => void;
 }) {
   // Deduped: `image` is the cover and `images` is the carousel, and whether
   // the cover is also the first carousel entry depends on who wrote the row.
@@ -261,6 +265,16 @@ function PostModal({
   const goNext = useCallback(() => {
     if (postIdx < allPosts.length - 1) onNavigate(allPosts[postIdx + 1]);
   }, [postIdx, allPosts, onNavigate]);
+
+  /**
+   * The viewer can only page through posts the feed has loaded, and the feed
+   * loads on scroll -- so opening the first post and pressing next stopped at
+   * the end of page one, on a channel with far more. Ask for the next page as
+   * the end comes into view rather than when it is reached.
+   */
+  useEffect(() => {
+    if (onNeedMore && postIdx >= allPosts.length - 3) onNeedMore();
+  }, [postIdx, allPosts.length, onNeedMore]);
 
   /**
    * Keyboard navigation. The modal had none — not even Escape — so on desktop
@@ -419,7 +433,7 @@ function PostModal({
           style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}>‹</button>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
           style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)' }}>
-          {postIdx + 1} / {allPosts.length}
+          {postIdx + 1} / {total ?? allPosts.length}
         </span>
         {imgs.length > 1 && (
           <span className="ml-auto text-xs px-2.5 py-1 rounded-full"
@@ -628,6 +642,7 @@ export default function ChannelFeedPage() {
   const [error,    setError]     = useState('');
   const [page,     setPage]      = useState(0);
   const [done,     setDone]      = useState(false);
+  const [total,    setTotal]     = useState<number | null>(null);
   const [catFilter, setCatFilter] = useState('all');
   const [filters,  setFilters]   = useState<FeedFilterState>(EMPTY_FILTERS);
   const [newBadge, setNewBadge]  = useState(false);
@@ -661,6 +676,7 @@ export default function ChannelFeedPage() {
         const ch = await getChannelBySlug(slug);
         if (!ch) { setError('Channel not found.'); setLoading(false); return; }
         setChannel(ch);
+        countPosts(ch.id).then(setTotal).catch(() => {});
         await loadPosts(ch, 0);
 
         realtimeRef.current = subscribeChannel(ch.id, (post) => {
@@ -678,6 +694,11 @@ export default function ChannelFeedPage() {
       if (realtimeRef.current) { unsubscribeChannel(realtimeRef.current); realtimeRef.current = null; }
     };
   }, [slug, loadPosts]);
+
+  const loadMore = useCallback(() => {
+    if (!channel || loading || done) return;
+    void loadPosts(channel, page);
+  }, [channel, loading, done, page, loadPosts]);
 
   // Infinite scroll
   useEffect(() => {
@@ -979,6 +1000,8 @@ export default function ChannelFeedPage() {
           onLike={doLike}
           onNavigate={p => { setModalPost(p); incrementViews(p.id); }}
           onPlayAttempt={handlePlayAttempt}
+          total={total ?? undefined}
+          onNeedMore={loadMore}
         />
       )}
 
