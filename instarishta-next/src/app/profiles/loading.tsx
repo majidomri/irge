@@ -7,7 +7,7 @@ export default function ProfilesLoading() {
       {/* Hero shell — pixel-matched to ProfilesClient hero */}
       <div style={{ background: '#1E3932', color: '#fff' }} className="px-4 sm:px-6 pt-4 pb-4">
         <div className="max-w-7xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.08em] mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>Browse</p>
+          <p className="text-xs font-bold uppercase tracking-[0.08em] mb-1" style={{ color: 'rgba(255,255,255,0.62)' }}>Browse</p>
           <div className="h-8 w-56 rounded-lg mb-4 animate-pulse" style={{ background: 'rgba(255,255,255,0.12)' }} />
           <div className="hidden md:flex gap-3 flex-wrap items-center mb-3">
             <div className="h-10 flex-1 min-w-0 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.08)' }} />
