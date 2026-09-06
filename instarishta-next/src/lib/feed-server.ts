@@ -19,6 +19,8 @@
  * reach for higher privileges than the page needs.
  */
 import { createClient } from '@supabase/supabase-js';
+import { cache } from 'react';
+
 import { POST_PAGE_SIZE } from './feed-constants';
 // `import type` is erased at compile time, so this does NOT pull lib/supabase
 // (and its browser client) into the server bundle.
@@ -47,8 +49,15 @@ export interface FeedBootstrap {
  * fetching for itself, exactly as it did before. So this returns empties
  * rather than throwing — a slow Supabase should cost the LCP win, not the
  * feed.
+ *
+ * Wrapped in React's cache() because /channels/[slug] calls it twice for the
+ * same render — once in generateMetadata for the title and description, once
+ * in the page for the feed itself. Each call is four Supabase queries (the
+ * channel, then posts, count and siblings in parallel), so without the
+ * memo every channel render paid for eight. cache() dedupes within a single
+ * request, which is the same reason lib/slug-resolve.ts wraps resolveSlug.
  */
-export async function getChannelFeed(slug: string): Promise<FeedBootstrap> {
+export const getChannelFeed = cache(async (slug: string): Promise<FeedBootstrap> => {
   const client = db();
 
   const { data: channel } = await client
@@ -82,4 +91,4 @@ export async function getChannelFeed(slug: string): Promise<FeedBootstrap> {
     total: countRes.count ?? 0,
     siblings: (siblingsRes.data ?? []) as { id: string; name: string; slug: string }[],
   };
-}
+});
