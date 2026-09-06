@@ -20,6 +20,9 @@ import { sendMessage, esc } from '@/lib/telegram';
 
 export const runtime = 'nodejs';
 
+/** Orders listed individually before the message says "and N more". */
+const LIST_CAP = 25;
+
 interface SweepResult {
   expired:     number;
   revoked:     number;
@@ -76,10 +79,16 @@ async function notify(
     ``,
     `Nobody confirmed ${result.revoked === 1 ? 'it' : 'them'} within ${grace}h, so the credits were taken back.`,
     ``,
-    ...orders.map(o =>
+    // Capped for the same reason as the Inngest sweep: Telegram refuses a
+    // message over 4096 characters outright, and an uncapped list of ~110-char
+    // lines crosses that at about thirty-five revocations.
+    ...orders.slice(0, LIST_CAP).map(o =>
       `• <code>₹${formatAmount(o.amount_paise)}</code> — ${esc(describeOrder(o.plan_id).label)}\n`
       + `  <code>${esc(o.email)}</code> · order <code>${esc(o.id)}</code>`,
     ),
+    orders.length > LIST_CAP
+      ? `<i>… and ${orders.length - LIST_CAP} more. Full list in /nizam.</i>`
+      : '',
     ``,
     `<b>Check the ledger for these amounts.</b> If any of them did arrive, the member`,
     `paid and lost their credits — re-grant in /nizam and apologise.`,

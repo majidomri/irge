@@ -28,6 +28,33 @@ export function threadId(): string | undefined {
   return process.env.TELEGRAM_MESSAGE_THREAD_ID?.trim() || undefined;
 }
 
+/**
+ * Telegram rejects a sendMessage over 4096 characters outright — a 400 for the
+ * whole message, not a truncated one.
+ *
+ * That is worse than it sounds here. The orders sweep lists one line per
+ * revoked order with no cap, at roughly 110 characters each, so a sweep that
+ * revoked more than about thirty-five would produce a message Telegram
+ * refuses. The bigger the incident, the more certain the silence — and the
+ * point of that notification is that somebody lost credits and a human has to
+ * look. Nothing guarded this.
+ *
+ * Cutting on a line boundary matters because parse_mode is HTML: slicing
+ * mid-tag would produce a different 400 for the same reason. Every caller
+ * builds its message as complete lines, so the last newline below the budget
+ * is always a safe seam.
+ */
+const MAX_MESSAGE = 4096;
+const TRUNCATION_NOTE = '\n\n<i>… list truncated. Full detail in /nizam.</i>';
+
+export function clampMessage(text: string): string {
+  if (text.length <= MAX_MESSAGE) return text;
+
+  const budget = MAX_MESSAGE - TRUNCATION_NOTE.length;
+  const seam = text.lastIndexOf('\n', budget);
+  return text.slice(0, seam > 0 ? seam : budget) + TRUNCATION_NOTE;
+}
+
 /** HTML-escape — parse_mode is HTML on every message we send. */
 export function esc(v: unknown): string {
   return String(v ?? '')
@@ -70,7 +97,7 @@ export async function sendMessage(
   if (!chat) return null;
   const payload: Record<string, unknown> = {
     chat_id: chat,
-    text,
+    text: clampMessage(text),
     parse_mode: 'HTML',
     disable_web_page_preview: true,
   };
@@ -95,7 +122,7 @@ export async function editMessageText(
   await call('editMessageText', {
     chat_id: chatId,
     message_id: messageId,
-    text,
+    text: clampMessage(text),
     parse_mode: 'HTML',
     disable_web_page_preview: true,
     reply_markup: { inline_keyboard: [] },

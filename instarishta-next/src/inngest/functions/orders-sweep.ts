@@ -35,6 +35,18 @@ interface SweepResult {
 /** Matches the route's default; the sweep clamps anything unreasonable. */
 const GRACE_HOURS = 24;
 
+/**
+ * Orders listed individually before the message says "and N more".
+ *
+ * Telegram refuses a message over 4096 characters — a 400 for the whole thing,
+ * not a truncated one — and each order line here is about 110. So a sweep that
+ * revoked more than roughly thirty-five produced no notification at all, with
+ * the failure most likely exactly when the sweep was largest. lib/telegram now
+ * clamps as a safety net; this cap is what keeps the message readable, because
+ * a clamped list ends mid-sentence and a counted one does not.
+ */
+const LIST_CAP = 25;
+
 export const ordersSweep = inngest.createFunction(
   {
     id: 'orders-sweep',
@@ -115,10 +127,13 @@ export const ordersSweep = inngest.createFunction(
         ``,
         `Nobody confirmed ${result.revoked === 1 ? 'it' : 'them'} within ${GRACE_HOURS}h, so the credits were taken back.`,
         ``,
-        ...orders.map(o =>
+        ...orders.slice(0, LIST_CAP).map(o =>
           `• <code>₹${formatAmount(o.amount_paise)}</code> — ${esc(describeOrder(o.plan_id).label)}\n`
           + `  <code>${esc(o.email)}</code> · order <code>${esc(o.id)}</code>`,
         ),
+        orders.length > LIST_CAP
+          ? `<i>… and ${orders.length - LIST_CAP} more. Full list in /nizam.</i>`
+          : '',
         ``,
         `<b>Check the ledger for these amounts.</b> If any of them did arrive, the member`,
         `paid and lost their credits — re-grant in /nizam and apologise.`,
