@@ -43,7 +43,7 @@ function TestimonialCard({ bg, color, initials, name, city, quote }: {
         <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: color }}>{initials}</div>
         <div>
           <div className="text-[0.82rem] font-bold text-[rgba(0,0,0,0.87)]">{name}</div>
-          <div className="text-[0.72rem] text-[rgba(0,0,0,0.52)]">{city}</div>
+          <div className="text-[0.72rem] text-[rgba(0,0,0,0.6)]">{city}</div>
         </div>
         <div className="ml-auto text-[0.65rem] text-[#006241] font-bold bg-[rgba(0,98,65,.06)] rounded-full px-2 py-0.5 border border-[rgba(0,98,65,.15)] whitespace-nowrap">✓ Verified</div>
       </div>
@@ -130,12 +130,12 @@ export default function HomePage() {
         <div className="max-w-[1280px] mx-auto px-8 py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-[2]">
           {/* Left */}
           <div>
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[0.78rem] font-medium uppercase tracking-[0.06em] text-white/80 mb-3">
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[0.78rem] font-medium uppercase tracking-[0.06em] text-white/90 mb-3">
               <span className="w-[6px] h-[6px] rounded-full bg-[#00C87A] animate-pulse" />
               🌙 Muslim Matrimony Platform
             </div>
 
-            <div className="font-arab text-[1.5rem] text-[#cba258] tracking-[0.04em] mt-1 mb-2">
+            <div className="font-arab text-[1.5rem] text-[#F5E6C8] tracking-[0.04em] mt-1 mb-2">
               بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ
             </div>
 
@@ -166,7 +166,7 @@ export default function HomePage() {
                 </svg>
                 Post Your Profile
               </Link>
-              <Link href="/pricing" className="inline-flex items-center gap-1.5 text-[rgba(255,255,255,0.65)] text-[0.82rem] font-medium hover:text-white transition-colors">
+              <Link href="/pricing" className="inline-flex items-center gap-1.5 text-[rgba(255,255,255,0.75)] text-[0.82rem] font-medium hover:text-white transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 View Plans &amp; Pricing
               </Link>
@@ -283,7 +283,7 @@ export default function HomePage() {
                 <div key={item.title} className="flex items-start gap-4">
                   <div className="w-9 h-9 rounded-[8px] bg-white/10 border border-white/20 flex items-center justify-center text-base flex-shrink-0">{item.emoji}</div>
                   <div>
-                    <h4 className="text-white text-[0.95rem] font-bold mb-1">{item.title}</h4>
+                    <h3 className="text-white text-[0.95rem] font-bold mb-1">{item.title}</h3>
                     <p className="text-[rgba(255,255,255,0.70)] text-[0.83rem] leading-[1.5]">{item.desc}</p>
                   </div>
                 </div>
@@ -300,19 +300,19 @@ export default function HomePage() {
             ].map((c) => (
               <div key={c.title} className="rounded-[12px] p-6 bg-white/5 border border-white/10 transition-transform duration-300 hover:-translate-y-1 hover:bg-white/10">
                 <div className="text-[1.75rem] mb-3">{c.emoji}</div>
-                <h4 className="text-white text-[0.95rem] font-bold mb-1">{c.title}</h4>
+                <h3 className="text-white text-[0.95rem] font-bold mb-1">{c.title}</h3>
                 <p className="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">{c.desc}</p>
-                <div className="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[#00C87A] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">{c.badge}</div>
+                <div className="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[#3FE39B] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">{c.badge}</div>
               </div>
             ))}
             <div className="col-span-2 rounded-[12px] p-6 bg-white/5 border border-white/10 transition-transform duration-300 hover:-translate-y-1 hover:bg-white/10">
               <div className="text-[1.75rem] mb-3">🤲</div>
-              <h4 className="text-white text-[0.95rem] font-bold mb-1">Built with Islamic Values — Free to Browse</h4>
+              <h3 className="text-white text-[0.95rem] font-bold mb-1">Built with Islamic Values — Free to Browse</h3>
               <p className="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">
                 No subscription trap. Browse all verified profiles completely free. Post your profile through our safe,
                 private submission process. Because finding your halal match shouldn't have a paywall.
               </p>
-              <div className="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[#00C87A] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">Free to Browse</div>
+              <div className="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[#3FE39B] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">Free to Browse</div>
             </div>
           </div>
         </div>
@@ -493,13 +493,13 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-[#00754A]" aria-labelledby="cta-heading">
         <div className="relative z-[2] py-28 px-8">
           <div className="max-w-[900px] mx-auto text-center">
-            <div className="font-arab text-[2rem] text-[#cba258] mb-4" aria-label="And We created you in pairs">
+            <div className="font-arab text-[2rem] text-[#F5E6C8] mb-4" aria-label="And We created you in pairs">
               وَخَلَقْنَاكُمْ أَزْوَاجًا
             </div>
             <h2 id="cta-heading" className="text-white text-[clamp(2rem,5vw,2.25rem)] font-bold tracking-[-0.02em] leading-[1.22] mb-5">
               Your Halal Match Is Waiting for You.
             </h2>
-            <p className="text-[rgba(255,255,255,0.70)] text-[1rem] max-w-[520px] mx-auto leading-[1.5] mb-10">
+            <p className="text-[rgba(255,255,255,0.85)] text-[1rem] max-w-[520px] mx-auto leading-[1.5] mb-10">
               Join hundreds of Muslim families who found verified, serious marriage proposals on InstaRishta.
               Begin your nikah journey today — free, private, and family-approved.
             </p>

@@ -41,10 +41,10 @@ export default function Footer() {
 
         {/* Bottom row */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-6">
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
             © {new Date().getFullYear()} InstaRishta. All rights reserved.
           </p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
             Built for the Muslim Ummah · Family-first matchmaking
           </p>
         </div>

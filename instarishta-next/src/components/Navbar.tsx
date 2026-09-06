@@ -168,7 +168,7 @@ export default function Navbar() {
               <li key={link.href} className="group relative">
                 <Link
                   href={link.href}
-                  className="text-white/60 hover:text-white text-[0.875rem] font-medium no-underline transition-colors duration-200"
+                  className="text-white/70 hover:text-white text-[0.875rem] font-medium no-underline transition-colors duration-200"
                 >
                   {link.label}
                 </Link>
