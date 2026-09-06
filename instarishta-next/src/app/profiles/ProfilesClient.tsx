@@ -8,6 +8,7 @@ import FeaturedCarousel from '@/components/FeaturedCarousel';
 import { useContactCredits } from '@/lib/hooks/useContactCredits';
 import { useInterests } from '@/lib/hooks/useInterests';
 import { afterNextPaint } from '@/lib/scheduling';
+import { track } from '@/lib/track';
 import {
   type Profile,
   type DeckProfile,
@@ -37,7 +38,7 @@ export type { Profile } from './_shared';
 
 // ── AudioBtn ──────────────────────────────────────────────────────────────────
 
-function AudioBtn({ url }: { url?: string }) {
+function AudioBtn({ url, profileId }: { url?: string; profileId?: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
   const [progress, setProgress] = useState(0);
@@ -53,6 +54,8 @@ function AudioBtn({ url }: { url?: string }) {
   const toggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (!audioRef.current) {
+      // Recorded on first play only: a pause and resume is one listen.
+      if (profileId) track('profile', profileId, 'listen');
       const a = new Audio(url);
       audioRef.current = a;
       a.onloadstart = () => setState('loading');
@@ -69,7 +72,7 @@ function AudioBtn({ url }: { url?: string }) {
       rafRef.current = requestAnimationFrame(tick);
       setState('playing');
     }
-  }, [state, url, tick]);
+  }, [state, url, tick, profileId]);
 
   useEffect(() => () => {
     audioRef.current?.pause();
@@ -415,7 +418,7 @@ const ProfileCard = memo(function ProfileCard({
             Get Credits
           </button>
         )}
-        <AudioBtn url={profile.audio_url} />
+        <AudioBtn url={profile.audio_url} profileId={profile.id ? String(profile.id) : undefined} />
         {/* Interest — private, costs no contact credit. */}
         <button
           onClick={e => { e.stopPropagation(); if (!interestSent) onInterest(profile); }}
@@ -707,6 +710,7 @@ export default function ProfilesClient({
     const outcome = await consume();     // spends one contact credit
     if (outcome === 'phone_required') { setPhoneGate(true); return; }
     if (outcome !== 'ok')             { setPaymentModal(true); return; }
+    if (p.id) track('profile', String(p.id), 'contact');
     setContact(p);
   }, [isAnon, consume, phoneLocked]);
 

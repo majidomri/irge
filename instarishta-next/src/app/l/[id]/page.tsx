@@ -18,6 +18,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { TrackView } from '@/components/TrackView';
 import { SITE_URL } from '@/config/site';
 import { getProfiles } from '@/lib/data';
 import { hiddenSet } from '@/lib/moderation';
@@ -106,6 +107,8 @@ export default async function ListingPage({ params }: Params) {
 
   return (
     <main style={{ minHeight: '100vh', background: '#FAFAF9' }}>
+      {/* Counts the visit and, via the Referer, where it came from. */}
+      {listing.id != null && <TrackView entityType="profile" entityId={listing.id} />}
       {/* Structured data, so an answer engine reads fields rather than prose. */}
       <script
         type="application/ld+json"
