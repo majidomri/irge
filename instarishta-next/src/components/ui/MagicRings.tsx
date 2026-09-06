@@ -1,7 +1,12 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
-const vertexShader = `void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+// ogl's Triangle supplies a vec2 `position` that already covers the viewport,
+// so this is a pass-through. three injected projectionMatrix/modelViewMatrix
+// and a vec3 position; neither is needed for a fullscreen shader, and the
+// fragment shader below reads gl_FragCoord and uResolution rather than a varying.
+const vertexShader = `attribute vec2 position;
+void main() { gl_Position = vec4(position, 0.0, 1.0); }`;
 const fragmentShader = `
 precision highp float;
 uniform float uTime, uAttenuation, uLineThickness;
@@ -119,44 +124,61 @@ export default function MagicRings({
     let frameId: number;
     let cleanupFn: (() => void) | undefined;
 
-    import('three').then(THREE => {
+    /**
+     * ogl, not three.
+     *
+     * This is a fullscreen shader quad — one program, one triangle, no scene
+     * graph — and three.js charged 714 KB for it in a lazily-loaded chunk.
+     * ogl does the same job in a fraction of that and was already a dependency,
+     * driving the identical pattern in EvilEye. The import stays dynamic: the
+     * rings only ever appear while a voice note is playing, so nobody who does
+     * not press play should download a WebGL library at all.
+     */
+    import('ogl').then(({ Renderer, Program, Mesh, Triangle, Color }) => {
       if (cancelled) return;
-      let renderer: InstanceType<typeof THREE.WebGLRenderer>;
+
+      let renderer: InstanceType<typeof Renderer>;
       try {
-        renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
       } catch { return; }
 
-      renderer.setClearColor(0x000000, 0);
-      mount.appendChild(renderer.domElement);
+      const gl = renderer.gl;
+      gl.clearColor(0, 0, 0, 0);
+      mount.appendChild(gl.canvas);
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0.1, 10);
-      camera.position.z = 1;
-
+      // ogl reads each uniform's real GLSL type from the compiled program, so
+      // plain numbers and arrays are enough — no Vector2/Color wrappers.
       const uniforms = {
         uTime: { value: 0 }, uAttenuation: { value: 0 },
-        uResolution: { value: new THREE.Vector2() },
-        uColor: { value: new THREE.Color() }, uColorTwo: { value: new THREE.Color() },
+        uResolution: { value: [0, 0] },
+        uColor: { value: new Color(propsRef.current!.color) },
+        uColorTwo: { value: new Color(propsRef.current!.colorTwo) },
         uLineThickness: { value: 0 }, uBaseRadius: { value: 0 },
         uRadiusStep: { value: 0 }, uScaleRate: { value: 0 },
         uRingCount: { value: 0 }, uOpacity: { value: 1 },
         uNoiseAmount: { value: 0 }, uRotation: { value: 0 },
         uRingGap: { value: 1.6 }, uFadeIn: { value: 0.5 }, uFadeOut: { value: 0.75 },
-        uMouse: { value: new THREE.Vector2() },
+        uMouse: { value: [0, 0] },
         uMouseInfluence: { value: 0 }, uHoverAmount: { value: 0 },
         uHoverScale: { value: 1 }, uParallax: { value: 0 }, uBurst: { value: 0 },
       };
 
-      const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms, transparent: true });
-      const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
-      scene.add(quad);
+      const program = new Program(gl, {
+        vertex: vertexShader,
+        fragment: fragmentShader,
+        uniforms,
+        transparent: true,
+      });
+      const mesh = new Mesh(gl, { geometry: new Triangle(gl), program });
 
       const resize = () => {
         const w = mount.clientWidth, h = mount.clientHeight;
         const dpr = Math.min(window.devicePixelRatio, 2);
+        renderer.dpr = dpr;
         renderer.setSize(w, h);
-        renderer.setPixelRatio(dpr);
-        uniforms.uResolution.value.set(w * dpr, h * dpr);
+        // The shader divides gl_FragCoord by this, so it must be the drawing
+        // buffer size rather than the CSS size.
+        uniforms.uResolution.value = [gl.canvas.width, gl.canvas.height];
       };
       resize();
       window.addEventListener('resize', resize);
@@ -201,13 +223,13 @@ export default function MagicRings({
         uniforms.uRingGap.value = p.ringGap;
         uniforms.uFadeIn.value = p.fadeIn;
         uniforms.uFadeOut.value = p.fadeOut;
-        uniforms.uMouse.value.set(smoothMouseRef.current[0], smoothMouseRef.current[1]);
+        uniforms.uMouse.value = [smoothMouseRef.current[0], smoothMouseRef.current[1]];
         uniforms.uMouseInfluence.value = p.followMouse ? p.mouseInfluence : 0;
         uniforms.uHoverAmount.value = hoverAmountRef.current;
         uniforms.uHoverScale.value = p.hoverScale;
         uniforms.uParallax.value = p.parallax;
         uniforms.uBurst.value = p.clickBurst ? burstRef.current : 0;
-        renderer.render(scene, camera);
+        renderer.render({ scene: mesh });
       };
       frameId = requestAnimationFrame(animate);
 
@@ -219,9 +241,11 @@ export default function MagicRings({
         mount.removeEventListener('mouseenter', onMouseEnter);
         mount.removeEventListener('mouseleave', onMouseLeave);
         mount.removeEventListener('click', onClick);
-        if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
-        renderer.dispose();
-        material.dispose();
+        if (mount.contains(gl.canvas)) mount.removeChild(gl.canvas);
+        // ogl has no dispose(); dropping the context is what frees the GPU
+        // resources, and it matters here because this mounts and unmounts
+        // every time a voice note starts and stops.
+        gl.getExtension('WEBGL_lose_context')?.loseContext();
       };
     });
 
