@@ -310,7 +310,7 @@ export default function HomePage() {
               <h3 className="text-white text-[0.95rem] font-bold mb-1">Built with Islamic Values — Free to Browse</h3>
               <p className="text-[rgba(255,255,255,0.70)] text-[0.8rem] leading-[1.5]">
                 No subscription trap. Browse all verified profiles completely free. Post your profile through our safe,
-                private submission process. Because finding your halal match shouldn't have a paywall.
+                private submission process. Because finding your halal match shouldn&rsquo;t have a paywall.
               </p>
               <div className="inline-block mt-3 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold tracking-[0.05em] text-[#3FE39B] bg-[rgba(34,200,122,.15)] border border-[rgba(34,200,122,.25)] uppercase">Free to Browse</div>
             </div>

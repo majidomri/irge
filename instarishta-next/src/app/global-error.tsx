@@ -72,6 +72,10 @@ export default function GlobalError({
             >
               Try again
             </button>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+                This renders when the root layout has failed. next/link needs
+                the router that may be the thing that broke; a plain anchor
+                does a full document load, which is the recovery we want. */}
             <a
               href="/"
               style={{

@@ -159,7 +159,13 @@ export default async function PostView({ slug }: { slug: string }) {
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
             {images.map((img, i) => (
               <div key={i} style={{ flexShrink: 0, width: 80, height: 80, borderRadius: 10, overflow: 'hidden', border: '1px solid #F0ECE8' }}>
-                <Image src={img} alt={`Photo ${i + 1}`} width={80} height={80} style={{ objectFit: 'cover' }} />
+                <Image
+                  src={img}
+                  alt={`${(post.title ?? 'Rishta listing') as string} — image ${i + 1} of ${images.length}`}
+                  width={80}
+                  height={80}
+                  style={{ objectFit: 'cover' }}
+                />
               </div>
             ))}
           </div>

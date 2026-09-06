@@ -578,7 +578,16 @@ function PostModal({
                     AVIF where the browser takes it. `object-contain` keeps
                     the whole biodata visible; the optimizer only changes the
                     bytes, never the framing. */}
-                <Image src={url} alt={`Photo ${i + 1}`}
+                <Image
+                  src={url}
+                  // "Photo 2" describes nothing. These are frames of one
+                  // listing, so the listing's own title is the description,
+                  // and the position only matters when there is more than one.
+                  alt={
+                    imgs.length > 1
+                      ? `${post.title ?? 'Rishta listing'} — image ${i + 1} of ${imgs.length}`
+                      : (post.title ?? 'Rishta listing')
+                  }
                   fill
                   sizes="100vw"
                   className="object-contain select-none"

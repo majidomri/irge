@@ -233,7 +233,7 @@ export default function BiodataModal({ profile, authored, onClose }: {
               for it to add: an ad that yields no structured fields still
               produces an About section carrying the complete original text. */}
           {/* The post image, nothing else. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           {/* Keyed on `id`, not `_num`: _num is the row's position in the
               currently filtered list and shifts the moment anyone filters, so
               an image keyed on it would follow the wrong profile. */}

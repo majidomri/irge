@@ -229,7 +229,7 @@ export default function MagicRings({
       cancelled = true;
       if (cleanupFn) cleanupFn();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   return (
     <div

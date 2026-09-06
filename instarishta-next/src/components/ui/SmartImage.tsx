@@ -48,6 +48,11 @@ export default function SmartImage({
   noPlaceholder = false,
   priority,
   loading,
+  // Destructured rather than left in ...props so it is visible at each <Image>
+  // below. Spread alone hides it from jsx-a11y, which then cannot tell a
+  // described image from an undescribed one — and the whole point of that rule
+  // is that the distinction is easy to lose.
+  alt,
   ...props
 }: Props) {
   // A priority image must not wait for an observer, and neither must one the
@@ -63,12 +68,11 @@ export default function SmartImage({
     const node = holder.current;
     if (!node) return;
 
-    // No IntersectionObserver (or a very old browser): load it rather than
-    // leave a permanent placeholder.
-    if (typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
-      return;
-    }
+    // No IntersectionObserver. Leave `visible` false: that path renders
+    // loading="lazy", so the browser's own lazy loading takes over and the
+    // image still arrives. Calling setState here instead would force a render
+    // for no gain, which is what react-hooks/set-state-in-effect is about.
+    if (typeof IntersectionObserver === 'undefined') return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -89,7 +93,7 @@ export default function SmartImage({
     : { placeholder: 'blur' as const, blurDataURL: blurDataURL ?? BLUR_DATA_URL };
 
   if (immediate) {
-    return <Image {...props} {...placeholderProps} priority={priority} loading={loading} />;
+    return <Image {...props} alt={alt} {...placeholderProps} priority={priority} loading={loading} />;
   }
 
   // `display: contents` keeps the wrapper out of layout, so a `fill` image
@@ -97,9 +101,9 @@ export default function SmartImage({
   return (
     <div ref={holder} style={{ display: 'contents' }}>
       {visible ? (
-        <Image {...props} {...placeholderProps} loading="eager" />
+        <Image {...props} alt={alt} {...placeholderProps} loading="eager" />
       ) : (
-        <Image {...props} {...placeholderProps} loading="lazy" />
+        <Image {...props} alt={alt} {...placeholderProps} loading="lazy" />
       )}
     </div>
   );
