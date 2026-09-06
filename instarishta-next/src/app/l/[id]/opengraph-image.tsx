@@ -35,6 +35,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
   const role =
     listing?.gender === 'female' ? 'Bride' : listing?.gender === 'male' ? 'Groom' : 'Rishta';
+  const footer = `instarishta.me${listing?.id ? `/l/${listing.id}` : ''}`;
+  const headline = `${role}${listing?.age ? `, ${listing.age}` : ''}`;
   const facts = [
     listing?.age ? `${listing.age} years` : null,
     listing?.education || null,
@@ -71,9 +73,11 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           </div>
         </div>
 
+        {/* One child, not two. Satori requires an explicit display on any div
+            with more than one child node, and `{role}{age}` is two — which
+            made this route 500 rather than render. */}
         <div style={{ marginTop: 24, fontSize: 84, fontWeight: 700, letterSpacing: '-0.03em' }}>
-          {role}
-          {listing?.age ? `, ${listing.age}` : ''}
+          {headline}
         </div>
 
         {facts && (
@@ -85,7 +89,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 'auto' }}>
           <div style={{ height: 3, width: 72, background: GOLD }} />
           <div style={{ fontSize: 26, color: GOLD }}>
-            instarishta.me{listing?.id ? `/l/${listing.id}` : ''}
+            {footer}
           </div>
         </div>
       </div>
