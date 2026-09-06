@@ -24,10 +24,35 @@ const DESKTOP_LINKS = [
  * `/?signin=1&next=https://evil.tld` would carry the user off-site from a link
  * that looks like ours. `//host` is rejected too — it is an absolute URL
  * wearing the costume of a path.
+ *
+ * This matters more here than the usual open-redirect case. The value also
+ * becomes AuthModal's `redirectTo`, and from there `window.location.assign`
+ * after a magic link. better-auth checks its own `callbackURL` against
+ * trustedOrigins, but that check cannot help when our own code does the
+ * navigating — so the validation has to be right at this end.
  */
 function safeNext(raw: string | null): string | undefined {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return undefined;
-  return raw;
+  if (!raw) return undefined;
+
+  // Resolved with the same parser the browser navigates with, rather than
+  // matched by prefix. The prefix version — startsWith('/') and not '//' —
+  // let three payloads through, because the URL spec folds a backslash into a
+  // forward slash for http(s) and strips tabs before parsing:
+  //
+  //   /\evil.com     →  https://evil.com
+  //   /\/evil.com    →  https://evil.com
+  //   /<tab>/evil.com →  https://evil.com
+  //
+  // Each starts with '/' and none starts with '//', so each passed. Asking
+  // URL() where the value actually lands closes the whole class at once,
+  // including forms nobody has thought of yet.
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin) return undefined;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
