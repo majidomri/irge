@@ -8,6 +8,7 @@ import { DevAnnotation } from '@/components/DevAnnotation';
 import { GoogleOneTap } from '@/components/GoogleOneTap';
 import { SpeculationRules } from '@/components/SpeculationRules';
 import LazyNastaliq from '@/components/LazyNastaliq';
+import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 
 // Variable Inter (latin) — ~80 KB single file with all weights, smaller than
 // shipping multiple non-variable cuts and lets next/font auto-preload it.
@@ -53,7 +54,12 @@ export const metadata: Metadata = {
     images: [{ url: '/logo.svg', width: 512, height: 512, alt: 'InstaRishta' }],
   },
   verification: {
-    google: 'fe-DSxzYfbTmx1W4Mid5V-GEOz2s-QdQEOaBIERNpuI',
+    // Two Search Console properties are verified against this origin; both
+    // tags have to stay in the head or the older one loses verification.
+    google: [
+      'fe-DSxzYfbTmx1W4Mid5V-GEOz2s-QdQEOaBIERNpuI',
+      'd9uyXoGcUWeI62JAiuwUG2f9Z5FkwuBE_JsAd7hJMzU',
+    ],
   },
 };
 
@@ -66,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <PreloadResources />
         <ContentProtection />
+        <ServiceWorkerRegistration />
         <LazyNastaliq />
         {/* Prefetches the next page on hover; see the component for what it
             deliberately never speculates on. */}

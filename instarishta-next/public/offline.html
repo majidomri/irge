@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're offline — InstaRishta</title>
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#04081b">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <!--
+    Inline styles and script on purpose: this page is shown when the network is
+    gone, so it cannot depend on a stylesheet or bundle that may not be cached.
+  -->
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center;
+      justify-content: center; padding: 24px; background: #04081b; color: #e8eefc;
+      font-family: system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      width: 100%; max-width: 30rem; padding: 40px 32px; text-align: center;
+      border: 1px solid rgba(232,238,252,.14); border-radius: 18px; background: #0c1730;
+    }
+    .mark {
+      width: 56px; height: 56px; margin: 0 auto 20px; display: grid;
+      place-items: center; border-radius: 50%; background: rgba(47,191,135,.14); color: #2fbf87;
+    }
+    h1 { margin: 0 0 10px; font-size: 1.5rem; line-height: 1.25; letter-spacing: -.01em; }
+    p { margin: 0 0 8px; color: #b6c2dc; line-height: 1.6; }
+    .actions { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    button, .link {
+      appearance: none; display: inline-block; padding: 11px 22px; border-radius: 999px;
+      border: 1px solid rgba(232,238,252,.14); background: transparent; color: #e8eefc;
+      font: inherit; font-size: .9375rem; text-decoration: none; cursor: pointer;
+    }
+    button { border-color: transparent; background: #2fbf87; color: #04081b; font-weight: 600; }
+    button:hover { opacity: .9; }
+    .link:hover { border-color: #2fbf87; color: #2fbf87; }
+    .status { margin-top: 16px; min-height: 1.25rem; font-size: .8125rem; color: #8595b4; }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <div class="mark" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round">
+        <path d="M1 1l22 22" />
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9" />
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+        <path d="M12 20h.01" />
+      </svg>
+    </div>
+
+    <h1>You&rsquo;re offline</h1>
+    <p>InstaRishta can&rsquo;t reach the network right now.</p>
+    <p>Pages you&rsquo;ve already opened are still available &mdash; new rishtas need a connection.</p>
+
+    <div class="actions">
+      <button type="button" id="retry">Try again</button>
+      <a class="link" href="/">Go to home</a>
+    </div>
+
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <script>
+    (function () {
+      var status = document.getElementById('status');
+
+      document.getElementById('retry').addEventListener('click', function () {
+        if (navigator.onLine) {
+          location.reload();
+        } else {
+          status.textContent = 'Still offline. Check your connection and try again.';
+        }
+      });
+
+      window.addEventListener('online', function () {
+        status.textContent = 'Back online — reloading…';
+        location.reload();
+      });
+    })();
+  </script>
+</body>
+
+</html>
