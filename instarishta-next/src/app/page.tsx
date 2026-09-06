@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import StarBorder from '@/components/ui/StarBorder';
 const Masonry = dynamic(() => import('@/components/ui/Masonry'), { ssr: false });
 import FeaturedCarousel from '@/components/FeaturedCarousel';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import { isOptimizable } from '@/lib/img';
 
 type Channel = { slug: string; name: string; description: string | null; cover_image: string | null };

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getChannels, type IChannel } from '@/lib/supabase';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import { isOptimizable } from '@/lib/img';
 
 const CATEGORIES = [

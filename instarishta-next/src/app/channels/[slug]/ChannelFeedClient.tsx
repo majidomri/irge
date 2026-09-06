@@ -1,7 +1,7 @@
 'use client';
 import { Fragment, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import {
   supabase,
   getPosts,
@@ -1334,6 +1334,7 @@ export default function ChannelFeedClient({
                           // it is scaled 110% and blurred to nothing, so it can
                           // be fetched at the smallest size that exists.
                           sizes="80px"
+                          noPlaceholder
                           className="object-cover scale-110 blur-xl opacity-40"
                           unoptimized={!isOptimizable(cover)}
                         />

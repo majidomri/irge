@@ -1,6 +1,6 @@
 import { createClient }     from '@supabase/supabase-js';
 import { notFound, redirect } from 'next/navigation';
-import Image                  from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import ShareButton            from '@/components/ShareButton';
 import ViewTracker            from '@/components/ViewTracker';
 

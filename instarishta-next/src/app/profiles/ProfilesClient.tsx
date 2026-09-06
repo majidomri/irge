@@ -787,7 +787,7 @@ export default function ProfilesClient({
                 onChange={e => setAgeMin(Math.min(Math.max(+e.target.value || 18, 18), ageMax - 1))}
                 aria-label="Minimum age"
                 className="w-10 bg-transparent text-sm text-white outline-none text-center" />
-              <span style={{ color: 'rgba(255,255,255,0.6)' }}>–</span>
+              <span style={{ color: 'rgba(255,255,255,0.75)' }}>–</span>
               <input type="number" min={18} max={60} value={ageMax}
                 onChange={e => setAgeMax(Math.max(Math.min(+e.target.value || 60, 60), ageMin + 1))}
                 aria-label="Maximum age"

@@ -1,6 +1,6 @@
 import { resolveSlug, serverDb } from '@/lib/slug-resolve';
 import { notFound }      from 'next/navigation';
-import Image             from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import ShareButton       from '@/components/ShareButton';
 import ViewTracker       from '@/components/ViewTracker';
 import CommentSection    from '@/components/CommentSection';

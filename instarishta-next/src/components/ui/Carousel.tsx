@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { motion, PanInfo, useMotionValue, useTransform } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import { isOptimizable } from '@/lib/img';
 
 export interface CarouselItem {
