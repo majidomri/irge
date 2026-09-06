@@ -212,6 +212,38 @@ const ProfileCard = memo(function ProfileCard({
   const interestSent = interestStatus !== null;
   const interestAccepted = interestStatus === 'accepted' || interestStatus === 'connected';
   const cardRef         = useRef<HTMLDivElement>(null);
+  /**
+   * One impression per card per page.
+   *
+   * Inside ProfileCard rather than at each of the three render sites, so the
+   * feed, the deck and the single-listing view all count the same way. The
+   * observer disconnects on the first intersection — a card scrolled past
+   * twice is one impression, and lib/track deduplicates across the page
+   * anyway. 50% for 400ms rather than a pixel: a card that flicks past during
+   * a fast scroll was not seen by anybody.
+   */
+  useEffect(() => {
+    const el = cardRef.current;
+    const id = profile.id;
+    if (!el || id == null) return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        timer = setTimeout(() => {
+          track('profile', String(id), 'impression');
+          observer.disconnect();
+        }, 400);
+      } else if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    }, { threshold: 0.5 });
+
+    observer.observe(el);
+    return () => { if (timer) clearTimeout(timer); observer.disconnect(); };
+  }, [profile.id]);
+
   const [expanded, setExpanded] = useState(false);
   const [limitToast,   setLimitToast]   = useState(false);
   const downloadingRef  = useRef(false);
@@ -296,6 +328,7 @@ const ProfileCard = memo(function ProfileCard({
     longTimerRef.current = setTimeout(() => {
       longFiredRef.current = true;
       if (navigator.vibrate) navigator.vibrate(18);
+      if (profile.id != null) track('profile', String(profile.id), 'click');
       onBiodata(profile);
     }, 600);
   };
@@ -459,7 +492,7 @@ const ProfileCard = memo(function ProfileCard({
           behind a gesture. The gestures still work; this is the way in. */}
       <div data-no-capture className="px-4 pb-2.5 flex justify-between items-center gap-2">
         <button
-          onClick={e => { e.stopPropagation(); onBiodata(profile); }}
+          onClick={e => { e.stopPropagation(); if (profile.id != null) track('profile', String(profile.id), 'click'); onBiodata(profile); }}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold"
           style={{ background: '#EEF6F0', color: '#006241', border: '1px solid #CFE6D8' }}
         >

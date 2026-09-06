@@ -1,4 +1,11 @@
 'use client';
+
+import dynamic from 'next/dynamic';
+
+const AnalyticsTab = dynamic(
+  () => import('./AnalyticsTab').then((m) => m.AnalyticsTab),
+  { ssr: false },
+);
 import BiodataTab from './BiodataTab';
 import ImportTab from './ImportTab';
 import SecurityTab from './SecurityTab';
@@ -83,9 +90,10 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata' | 'security';
+type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata' | 'security' | 'analytics';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'analytics', label: 'Analytics', icon: '📈' },
   { key: 'channels', label: 'Channels', icon: '📺' },
   { key: 'posts',    label: 'Posts',    icon: '📝' },
   { key: 'import',   label: 'Import',   icon: '📥' },
@@ -339,6 +347,9 @@ export default function NizamClient({
         )}
         {tab === 'security' && (
           <SecurityTab toast={showToast} />
+        )}
+        {tab === 'analytics' && (
+          <AnalyticsTab toast={showToast} />
         )}
         {tab === 'comments' && (
           <CommentsTab toast={showToast} />
