@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+
+import { reportClientError } from '@/lib/report-error';
 
 /**
  * The route-level error boundary.
@@ -27,6 +30,18 @@ export default function RouteError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Report once per error. Without this a client-side render failure showed
+  // the visitor this screen and left no trace anywhere — the digest below is
+  // only present when the throw started on the server.
+  useEffect(() => {
+    reportClientError({
+      message: error.message,
+      digest: error.digest,
+      boundary: 'route',
+      stack: error.stack,
+    });
+  }, [error]);
+
   return (
     <div
       className="flex flex-col items-center justify-center px-4 text-center"

@@ -496,7 +496,7 @@ function ChannelsTab({
           <div key={c.id} className="rounded-xl px-4 py-3 flex items-center gap-3"
             style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
             {c.cover_image && (
-              <img src={c.cover_image} alt="" className="w-10 h-10 rounded-lg object-cover" />
+              <img src={c.cover_image} alt="" className="w-10 h-10 rounded-lg object-cover" loading="lazy" decoding="async" />
             )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm">
@@ -614,7 +614,7 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
             <div key={p.id} className="rounded-xl px-4 py-3 flex items-start gap-3"
               style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
               {p.image && (
-                <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" loading="lazy" decoding="async" />
               )}
               <div className="flex-1 min-w-0">
                 {p.needs_redaction && (
@@ -712,7 +712,7 @@ function StoriesTab({ channels, toast }: { channels: Channel[]; toast: (m: strin
         {stories.map(s => (
           <div key={s.id} className="relative rounded-xl overflow-hidden aspect-[9/16]"
             style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
-            <img src={s.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <img src={s.image} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" />
             <button onClick={() => remove(s.id)}
               className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs"
               style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>×</button>
@@ -801,7 +801,7 @@ function FeaturedTab({ toast }: { toast: (m: string) => void }) {
           <div key={it.id} className="rounded-xl px-4 py-3 flex items-center gap-3"
             style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
             {it.image_url && (
-              <img src={it.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+              <img src={it.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" loading="lazy" decoding="async" />
             )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm">{it.title}</p>

@@ -263,7 +263,7 @@ export default function Navbar() {
               >
                 {user.image
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={user.image} alt="" className="w-full h-full object-cover" />
+                  ? <img src={user.image} alt="" className="w-full h-full object-cover" decoding="async" />
                   : (user.name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? '?')}
               </Link>
             </div>

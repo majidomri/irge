@@ -258,7 +258,7 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
           <div className="flex items-center gap-2.5 min-w-0">
             {activeStory?.photo && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={activeStory.photo} alt="" className="h-9 w-9 rounded-lg object-cover shrink-0" />
+              <img src={activeStory.photo} alt="" className="h-9 w-9 rounded-lg object-cover shrink-0" loading="lazy" decoding="async" />
             )}
             <span className="text-white text-[15px] font-semibold truncate max-w-[36vw]">
               {activeStory?.name}

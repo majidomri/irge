@@ -209,7 +209,7 @@ export default function AccountPage() {
             style={{ background: '#00754A', color: '#fff' }}>
             {user.image
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={user.image} alt="" className="w-full h-full object-cover" />
+              ? <img src={user.image} alt="" className="w-full h-full object-cover" decoding="async" />
               : (displayName?.[0]?.toUpperCase() ?? '?')}
           </div>
           <div className="min-w-0">

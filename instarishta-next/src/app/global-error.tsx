@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 /**
  * The last error boundary.
  *
@@ -10,9 +12,10 @@
  * layout entirely when that happens, which is why it has to render its own
  * <html> and <body>.
  *
- * It ships to every route and runs when the app is already broken, so it has
- * no imports, no shared components and inline styles: anything it depended on
- * could be the thing that failed.
+ * It ships to every route and runs when the app is already broken, so it uses
+ * inline styles and pulls in nothing of ours: any shared module it depended on
+ * could be the thing that failed. The one import is useEffect, which is React
+ * itself — already running, or this component would not be rendering.
  */
 export default function GlobalError({
   error,
@@ -21,6 +24,33 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Inlined rather than importing lib/report-error, for the same reason the
+  // rest of this file has no imports: the root layout has already failed, and
+  // a shared module could be what failed. useEffect is React itself, which is
+  // running regardless — this component is rendering.
+  useEffect(() => {
+    try {
+      const body = JSON.stringify({
+        message: error.message,
+        digest: error.digest,
+        boundary: 'global',
+        stack: error.stack,
+        path: window.location.pathname,
+      });
+      const blob = new Blob([body], { type: 'application/json' });
+      if (!navigator.sendBeacon?.('/api/errors', blob)) {
+        void fetch('/api/errors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {
+      // Reporting must never be the second failure on this screen.
+    }
+  }, [error]);
+
   return (
     <html lang="en">
       <body

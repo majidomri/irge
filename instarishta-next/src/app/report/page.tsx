@@ -5,6 +5,7 @@ import ReportPageClient from './ReportPageClient';
 export const metadata: Metadata = {
   title:       'Report Misuse or Abuse — InstaRishta',
   description: 'Report a fake profile, harassment, scam, or any other misuse on InstaRishta. Reviewed by our safety team.',
+  alternates: { canonical: '/report' },
 };
 
 export default function ReportPage() {
