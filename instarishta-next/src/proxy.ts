@@ -148,6 +148,11 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
   // could lock the instance out of the list it needs.
   if (pathname === '/api/firewall') return NextResponse.next();
 
+  // Inngest calls this endpoint itself, verifies its own requests with a
+  // signing key, and can burst well past the API budget when replaying a
+  // function. Rate-limiting it would throttle our own job runner.
+  if (pathname === '/api/inngest') return NextResponse.next();
+
   const ip = clientIp(req.headers);
 
   // Keep the admin-managed denylist warm. Not awaited: the first request after
