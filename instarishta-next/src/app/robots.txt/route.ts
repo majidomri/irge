@@ -5,13 +5,16 @@
  * Next models — and Content-Signal is not one of them. Same rules as before,
  * plus the signal line.
  *
- * Google indexing is allowed; every other automated crawler is not, including
- * the AI training crawlers.
+ * Search crawlers and answer engines are allowed, as are the link-preview
+ * fetchers that render a shared URL in a chat. AI training crawlers are not,
+ * which is the other half of the Content-Signal at the top of the file.
  */
+
+import { SITE_URL } from '@/config/site';
 
 export const dynamic = 'force-static';
 
-/** Google's indexing crawlers — the only agents allowed to fetch the site. */
+/** Search crawlers allowed to index the site. */
 const ALLOWED = [
   'Googlebot',
   'Googlebot-Image',
@@ -21,6 +24,37 @@ const ALLOWED = [
   'APIs-Google',
   'Mediapartners-Google',
   'Google-InspectionTool',
+  // Bing indexes for Bing, DuckDuckGo and Microsoft Copilot, so leaving it to
+  // the catch-all cost all three at once — including one of the answer engines
+  // this file is otherwise trying to invite.
+  'Bingbot',
+  'DuckDuckBot',
+];
+
+/**
+ * Link-preview fetchers.
+ *
+ * These are not crawlers. They fetch exactly one URL that a person has just
+ * pasted into a chat, to render its title and image, and they index nothing.
+ *
+ * They were falling through to `User-agent: * / Disallow: /`, and all of them
+ * honour that. Rishtas here spread by WhatsApp forward — that is the premise
+ * of /api/share-card, which exists to render a card for precisely this moment
+ * — so the site was blocking the one fetch its own distribution depends on.
+ *
+ * Applebot is deliberately absent: it is in DISALLOWED by an earlier decision
+ * about Apple's crawlers, and this is not the place to reverse that.
+ */
+const LINK_PREVIEW = [
+  'WhatsApp',
+  'facebookexternalhit',
+  'Twitterbot',
+  'LinkedInBot',
+  'Slackbot',
+  'Slackbot-LinkExpanding',
+  'TelegramBot',
+  'Discordbot',
+  'SkypeUriPreview',
 ];
 
 /**
@@ -98,10 +132,15 @@ function body(): string {
     '# Content usage preferences — https://contentsignals.org/',
     `Content-Signal: ${CONTENT_SIGNAL}`,
     '',
-    '# Google (indexing allowed)',
+    '# Search engines (indexing allowed)',
   ];
 
   for (const agent of ALLOWED) {
+    lines.push(`User-agent: ${agent}`, 'Allow: /', '');
+  }
+
+  lines.push('# Link previews — one URL a person shared, not a crawl');
+  for (const agent of LINK_PREVIEW) {
     lines.push(`User-agent: ${agent}`, 'Allow: /', '');
   }
 
@@ -120,7 +159,7 @@ function body(): string {
     'User-agent: *',
     'Disallow: /',
     '',
-    'Sitemap: https://www.instarishta.me/sitemap.xml',
+    `Sitemap: ${SITE_URL}/sitemap.xml`,
     '',
   );
 
