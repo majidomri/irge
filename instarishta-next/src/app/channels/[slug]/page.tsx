@@ -65,6 +65,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: `${channel.name} · InstaRishta`,
     description: channel.description
       ?? `${total} rishta profiles in ${channel.name} on InstaRishta.`,
+    // Same reason as /p/[slug]: shared links carry campaign parameters, and
+    // each variant is a separate URL to a crawler without this.
+    alternates: { canonical: `/channels/${slug}` },
   };
 }
 

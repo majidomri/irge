@@ -173,3 +173,29 @@ export function isDenied(ip: string): boolean {
   }
   return false;
 }
+
+/**
+ * Headers the proxy sets for API route handlers, so each one does not
+ * re-derive the same facts from raw headers.
+ *
+ * Prefixed and stripped on the way in. A client can send any header it likes,
+ * including these, so inbound copies are removed before ours are written —
+ * otherwise a request could forge the IP and geo that end up in the firewall
+ * log and the rate-limit key.
+ */
+export const FORWARDED = {
+  ip:     'x-ir-ip',
+  geo:    'x-ir-geo',
+  device: 'x-ir-device',
+  requestId: 'x-ir-request-id',
+} as const;
+
+/**
+ * A short id for correlating a response with its log lines.
+ *
+ * Not a UUID: this only has to be unique enough to grep for within a window
+ * of logs, and it travels in a header on every API response.
+ */
+export function newRequestId(): string {
+  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+}

@@ -85,6 +85,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description: isPost
       ? 'View this matrimony post on InstaRishta.'
       : 'View this matrimony profile on InstaRishta.',
+    /**
+     * Share links arrive carrying campaign parameters — ?utm_source=whatsapp,
+     * ?fbclid=... — and each is a distinct URL to a crawler, so one profile
+     * becomes a dozen near-duplicate pages competing with each other.
+     *
+     * A canonical is the right answer rather than stripping the parameters at
+     * the edge: a redirect would cost a round trip on the first visit and
+     * throw away the referral information, while this consolidates the
+     * ranking signals and leaves the URL people actually shared intact.
+     * metadataBase in the root layout makes the relative path absolute.
+     */
+    alternates: { canonical: `/p/${slug}` },
   };
 }
 

@@ -28,9 +28,11 @@ import {
 import {
   clientIp,
   deviceClass,
+  FORWARDED,
   geoFrom,
   geoLabel,
   isDenied,
+  newRequestId,
   refreshDenyList,
 } from '@/lib/request-context';
 import { BUDGETS, rateLimit } from '@/lib/rate-limit';
@@ -201,11 +203,37 @@ export function proxy(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // ── Request headers for API handlers ──────────────────────────────────────
+  // Only for /api/: those routes are dynamic anyway, so passing per-request
+  // facts to them costs no caching. Doing the same on page routes would be
+  // the trap this file has hit twice — a page that reads a per-visitor header
+  // is a page that cannot be shared from the CDN.
+  if (isAPI) {
+    const requestHeaders = new Headers(req.headers);
+
+    // Strip any inbound copies first. A client can send these itself, and a
+    // forged x-ir-ip would land in the firewall log and the rate-limit key.
+    for (const name of Object.values(FORWARDED)) requestHeaders.delete(name);
+
+    const requestId = newRequestId();
+    requestHeaders.set(FORWARDED.ip, ip);
+    requestHeaders.set(FORWARDED.geo, geoLabel(geoFrom(req.headers)));
+    requestHeaders.set(FORWARDED.device, device);
+    requestHeaders.set(FORWARDED.requestId, requestId);
+
+    const apiRes = NextResponse.next({ request: { headers: requestHeaders } });
+
+    // Echoed back so a report of "this call failed" can be found in the logs
+    // without asking anyone for a timestamp.
+    apiRes.headers.set(FORWARDED.requestId, requestId);
+    return apiRes;
+  }
+
   const res = NextResponse.next();
 
   // Every public page can answer in two representations now, so shared caches
   // must key on Accept even when this request wanted HTML.
-  if (!isAPI && MARKDOWN_PATHS.test(pathname)) {
+  if (MARKDOWN_PATHS.test(pathname)) {
     res.headers.set('Vary', 'Accept');
   }
 
