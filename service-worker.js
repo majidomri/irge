@@ -1,8 +1,11 @@
-const CACHE_NAME = "instarishta-v31";
+const CACHE_NAME = "instarishta-v32";
+
+// Served when a navigation can be satisfied by neither network nor cache.
+const OFFLINE_URL = "./offline.html";
 const CORE_ASSETS = [
   "./",
   "./index.html",
-  "./4.html",
+  "./offline.html",
   "./about-instarishta.html",
   "./what-is-instarishta.html",
   "./how-instarishta-works.html",
@@ -47,15 +50,26 @@ function isCacheableRequest(request, url) {
   return url.origin === self.location.origin;
 }
 
-async function cachePutSafe(request, response) {
-  if (!response || !response.ok) return;
+function cachePutSafe(request, response) {
+  if (!response || !response.ok) return Promise.resolve();
 
+  // The clone has to be taken synchronously. These responses are also handed
+  // back to the page, and once the page starts reading the body a later
+  // clone() throws -- so awaiting caches.open() first meant the write was
+  // silently skipped for every response we actually served.
+  let copy;
   try {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(request, response.clone());
+    copy = response.clone();
   } catch {
-    // Ignore cache write failures (unsupported scheme/quota/opaque edge cases).
+    return Promise.resolve();
   }
+
+  return caches
+    .open(CACHE_NAME)
+    .then((cache) => cache.put(request, copy))
+    .catch(() => {
+      // Ignore cache write failures (unsupported scheme/quota/opaque edge cases).
+    });
 }
 
 self.addEventListener("install", (event) => {
@@ -69,6 +83,16 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  // Lets the browser start a navigation's network request in parallel with
+  // service worker startup, rather than after it.
+  event.waitUntil(
+    (async () => {
+      if (self.registration.navigationPreload) {
+        await self.registration.navigationPreload.enable();
+      }
+    })()
+  );
+
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
       keys
@@ -102,21 +126,31 @@ self.addEventListener("fetch", (event) => {
 
   if (isNavigationRequest) {
     event.respondWith(
-      fetch(request, { cache: "no-store" })
-        .then((response) => {
+      (async () => {
+        try {
+          const preloaded = await event.preloadResponse;
+          if (preloaded) {
+            event.waitUntil(cachePutSafe(request, preloaded));
+            return preloaded;
+          }
+
+          const response = await fetch(request, { cache: "no-store" });
           event.waitUntil(cachePutSafe(request, response));
           return response;
-        })
-        .catch(async () => {
+        } catch {
+          // This page if we have it, then the offline page.
           const cached = await caches.match(request);
           if (cached) return cached;
-          const cachedIndex = await caches.match("./index.html");
-          if (cachedIndex) return cachedIndex;
+
+          const offline = await caches.match(OFFLINE_URL);
+          if (offline) return offline;
+
           return new Response("Offline", {
             status: 503,
             headers: { "Content-Type": "text/plain; charset=utf-8" },
           });
-        })
+        }
+      })()
     );
     return;
   }

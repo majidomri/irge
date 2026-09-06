@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're offline — InstaRishta</title>
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="theme-color" content="#04081b">
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+    <!--
+      Everything here is inline on purpose. This page is what the service
+      worker serves when the network is gone, so it cannot depend on a
+      stylesheet, a font file or a script that may not be in the cache.
+    -->
+    <style>
+      :root {
+        --bg: #F3F0EE;
+        --surface: #ffffff;
+        --text: #0f172a;
+        --text-soft: #334155;
+        --muted: #64748b;
+        --accent: #006241;
+        --border: rgba(15, 23, 42, .12);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #04081b;
+          --surface: #0c1730;
+          --text: #e8eefc;
+          --text-soft: #b6c2dc;
+          --muted: #8595b4;
+          --accent: #2fbf87;
+          --border: rgba(232, 238, 252, .14);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 30rem;
+        padding: 40px 32px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface);
+        text-align: center;
+      }
+
+      .mark {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 20px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 1.5rem;
+        line-height: 1.25;
+        letter-spacing: -.01em;
+      }
+
+      p {
+        margin: 0 0 8px;
+        color: var(--text-soft);
+        line-height: 1.6;
+      }
+
+      .hint {
+        margin-top: 18px;
+        font-size: .8125rem;
+        color: var(--muted);
+      }
+
+      .actions {
+        margin-top: 26px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      button, .link {
+        appearance: none;
+        display: inline-block;
+        padding: 11px 22px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: .9375rem;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      button {
+        border-color: transparent;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+      }
+
+      button:hover { opacity: .9; }
+      .link:hover { border-color: var(--accent); color: var(--accent); }
+
+      .status {
+        margin-top: 16px;
+        min-height: 1.25rem;
+        font-size: .8125rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="card">
+      <div class="mark" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round">
+          <path d="M1 1l22 22" />
+          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+          <path d="M10.71 5.05A16 16 0 0 1 22.58 9" />
+          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+          <path d="M12 20h.01" />
+        </svg>
+      </div>
+
+      <h1>You&rsquo;re offline</h1>
+      <p>InstaRishta can&rsquo;t reach the network right now.</p>
+      <p>Pages you&rsquo;ve already opened are still available &mdash; new profiles need a connection.</p>
+
+      <div class="actions">
+        <button type="button" id="retry">Try again</button>
+        <a class="link" href="./index.html">Go to home</a>
+      </div>
+
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <p class="hint">This page was saved to your device on an earlier visit.</p>
+    </main>
+
+    <script>
+      (function () {
+        var status = document.getElementById('status');
+        var retry = document.getElementById('retry');
+
+        function reload() { location.reload(); }
+
+        retry.addEventListener('click', function () {
+          if (navigator.onLine) {
+            reload();
+          } else {
+            status.textContent = 'Still offline. Check your connection and try again.';
+          }
+        });
+
+        // Reload by itself the moment the connection comes back.
+        window.addEventListener('online', function () {
+          status.textContent = 'Back online — reloading…';
+          reload();
+        });
+      })();
+    </script>
+  </body>
+
+</html>
