@@ -46,6 +46,14 @@ const SAFE_MODE = process.env.FIREWALL_SAFE_MODE === '1';
 // better-auth session AND for the user's email being on ADMIN_EMAILS.
 const ADMIN_ROUTE = /^\/nizam(\/.*)?$/;
 
+// Signed-in-only member pages. Same cookie check as the admin gate, for the
+// same reason plus one more: these are client components that gated
+// themselves with `if (!isPending && !user) router.replace(...)`, which
+// only runs after the whole page has shipped, hydrated and resolved a
+// session over the network. A signed-out visitor was downloading the
+// account bundle in full before being bounced off it.
+const MEMBER_ROUTE = /^\/account(\/.*)?$/;
+
 /**
  * Write a security event, without making the visitor wait for it.
  *
@@ -316,13 +324,18 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
     }
   }
 
-  // ── [AUTH] /nizam admin gate ─────────────────────────────────────────────────
+  // ── [AUTH] signed-in gate: /nizam and /account ───────────────────────────────
   // Fast path: check that the better-auth session cookie exists at all. The
   // full session-load + ADMIN_EMAILS check happens inside the /nizam page +
-  // /api/admin/* routes (where we already have access to lib/auth's getSession).
-  // That keeps middleware off the Postgres path while still bouncing
-  // unauthenticated visitors before they see the dashboard shell.
-  if (ADMIN_ROUTE.test(pathname)) {
+  // /api/admin/* routes (where we already have access to lib/auth's getSession),
+  // and every /account API route checks its own session. That keeps middleware
+  // off the Postgres path while still bouncing unauthenticated visitors before
+  // they download a page they cannot use.
+  //
+  // A cookie is presence, not proof — someone can forge one and reach the page
+  // shell. Nothing is protected by this check alone: the shell holds no data,
+  // and every endpoint behind it verifies the session properly.
+  if (ADMIN_ROUTE.test(pathname) || MEMBER_ROUTE.test(pathname)) {
     const cookies = req.headers.get('cookie') ?? '';
     const hasSessionCookie =
       /better-auth\.session_token=|__Secure-better-auth\.session_token=/.test(cookies);
