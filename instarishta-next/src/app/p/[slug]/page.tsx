@@ -14,11 +14,53 @@
  * Stories keep their own /s/[slug] route: a story is a different surface with
  * a different lifetime, not a variant of this page.
  */
-import { resolveSlug } from '@/lib/slug-resolve';
+import { resolveSlug, serverDb } from '@/lib/slug-resolve';
 import { notFound }     from 'next/navigation';
 import type { Metadata } from 'next';
 import ProfileView      from './ProfileView';
 import PostView         from './PostView';
+
+/**
+ * Pre-render every share page, and keep them fresh with ISR.
+ *
+ * Rendered on demand, this route cost several Supabase round trips before
+ * anything reached the browser, and Next marks a dynamically rendered page
+ * `no-store` — which also kept it out of the back/forward cache. Pre-rendering
+ * turns the request into a static file read.
+ *
+ * There are ~120 of these, not the 5,000 the experiment this is adapted from
+ * used, so the build cost is seconds rather than minutes. The counters shown
+ * on the page go stale for up to `revalidate`, which is the trade: an
+ * approximate view count against a page that arrives immediately.
+ */
+export const revalidate = 600;
+
+/**
+ * A slug created after the last build still renders — it is generated on the
+ * first request and cached from then on, so publishing does not wait for a
+ * deploy.
+ */
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  // The article's own advice: skip this in development so `next dev` does not
+  // pay for a full listing on every start.
+  if (process.env.NODE_ENV === 'development') return [];
+
+  const { data, error } = await serverDb()
+    .from('ir_nano_ids')
+    .select('slug')
+    .in('entity_type', ['profile', 'post'])
+    .limit(5000);
+
+  // A failure here must not fail the build: with no params every page simply
+  // renders on demand, which is exactly the behaviour we had before.
+  if (error || !data) return [];
+
+  return data
+    .filter((row) => typeof row.slug === 'string' && row.slug)
+    .map((row) => ({ slug: row.slug as string }));
+}
 
 /**
  * Which kind of thing does this slug point at?

@@ -12,6 +12,7 @@
  * ChannelFeedClient still owns every piece of behaviour it did before,
  * continuing from page 1.
  */
+import { serverDb } from '@/lib/slug-resolve';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getChannelFeed } from '@/lib/feed-server';
@@ -27,6 +28,32 @@ import ChannelFeedClient from './ChannelFeedClient';
  * the live subscription does not already provide.
  */
 export const revalidate = 60;
+
+/**
+ * Pre-render the channels that exist, so the first visit to one is a file read
+ * rather than a query. There are seven; the build cost is negligible, and a
+ * channel created later still renders on demand and caches from then on.
+ */
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  if (process.env.NODE_ENV === 'development') return [];
+
+  // ir_channels.slug — this route matches the channel's own slug, not a nano
+  // id. Prerendering nano ids baked a 404 into every channel page.
+  const { data, error } = await serverDb()
+    .from('ir_channels')
+    .select('slug')
+    .limit(1000);
+
+  // Never fail the build over this; without params every channel just renders
+  // on demand, which is what happened before.
+  if (error || !data) return [];
+
+  return data
+    .filter((row) => typeof row.slug === 'string' && row.slug)
+    .map((row) => ({ slug: row.slug as string }));
+}
 
 type Params = { params: Promise<{ slug: string }> };
 

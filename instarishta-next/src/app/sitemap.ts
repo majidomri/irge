@@ -30,12 +30,17 @@ const STATIC_ROUTES: Array<[string, MetadataRoute.Sitemap[number]['changeFrequen
   ['/refund-policy', 'yearly', 0.3],
 ];
 
-/** entity_type -> route prefix. Anything else is not a public page. */
-const ROUTE_FOR: Record<string, string> = {
-  profile: '/p',
-  post: '/post',
-  channel: '/channels',
-};
+/**
+ * Share slugs that resolve under /p.
+ *
+ * Posts belong here too: /post/[slug] is only a 308 to /p/[slug], kept alive
+ * for links already out in the world. Listing those pointed 96 of the
+ * sitemap's 136 URLs at redirects and spent crawl budget getting nowhere.
+ *
+ * Channels are deliberately absent. /channels/[slug] matches ir_channels.slug,
+ * not a nano id, so the seven channel URLs this used to emit were 404s.
+ */
+const SHARE_TYPES = ['profile', 'post'];
 
 async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,24 +52,39 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data, error } = await db
-      .from('ir_nano_ids')
-      .select('slug, entity_type, created_at')
-      .in('entity_type', Object.keys(ROUTE_FOR))
-      .limit(20000);
+    const [shares, channels] = await Promise.all([
+      db.from('ir_nano_ids')
+        .select('slug, created_at')
+        .in('entity_type', SHARE_TYPES)
+        .limit(20000),
+      db.from('ir_channels')
+        .select('slug, created_at')
+        .limit(1000),
+    ]);
 
-    if (error || !data) return [];
+    const entries: MetadataRoute.Sitemap = [];
 
-    return data.flatMap((row) => {
-      const prefix = ROUTE_FOR[row.entity_type as string];
-      if (!prefix || !row.slug) return [];
-      return [{
-        url: `${SITE_URL}${prefix}/${row.slug}`,
+    for (const row of shares.data ?? []) {
+      if (!row.slug) continue;
+      entries.push({
+        url: `${SITE_URL}/p/${row.slug}`,
         lastModified: row.created_at ? new Date(row.created_at as string) : undefined,
-        changeFrequency: 'weekly' as const,
+        changeFrequency: 'weekly',
         priority: 0.6,
-      }];
-    });
+      });
+    }
+
+    for (const row of channels.data ?? []) {
+      if (!row.slug) continue;
+      entries.push({
+        url: `${SITE_URL}/channels/${row.slug}`,
+        lastModified: row.created_at ? new Date(row.created_at as string) : undefined,
+        changeFrequency: 'daily',
+        priority: 0.8,
+      });
+    }
+
+    return entries;
   } catch {
     return [];
   }
