@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prebuild": "node scripts/clear-dev-types.mjs"
+    "prebuild": "node scripts/clear-dev-types.mjs",
+    "bundle-budget": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
