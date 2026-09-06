@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import type { Profile } from '@/types/profile';
+import { redactContacts } from '@/lib/redact';
 
 /**
  * WebMCP — exposes this page's actions to an agent running in the browser.
@@ -36,13 +37,13 @@ function text(value: string) {
   return { content: [{ type: 'text' as const, text: value }] };
 }
 
-/** Strips anything phone-shaped, matching the markdown views. */
-function withoutContacts(body: string): string {
-  return body
-    .replace(/(?:\+?\d[\d\s().-]{5,}\d)/g, (m) =>
-      m.replace(/\D/g, '').length >= 7 ? '[contact removed]' : m)
-    .trim();
-}
+/**
+ * This used to be a second, weaker copy of the markdown view's scrubber. It
+ * only caught long digit runs, so "whatsapp: 9876" reached an agent through
+ * this tool intact while the same listing was redacted for a crawler reading
+ * markdown — and neither copy caught an email address. One implementation now.
+ */
+const withoutContacts = redactContacts;
 
 function summarise(p: Profile, index: number): string {
   const facts = [

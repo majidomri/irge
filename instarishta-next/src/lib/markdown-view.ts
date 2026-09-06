@@ -15,30 +15,17 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { getProfiles } from '@/lib/data';
+import { redactContacts } from '@/lib/redact';
 import type { Profile } from '@/types/profile';
 
 const SITE = 'https://www.instarishta.me';
 
 /**
- * Free-text listing bodies are written by families and regularly carry a
- * number inline, so dropping the `phone` and `whatsapp` fields is not on its
- * own enough — the body has to be scrubbed too.
- *
- * Deliberately blunt. A false positive costs a redacted digit in a sentence
- * about someone's height; a false negative publishes a phone number.
+ * Re-exported so existing callers keep a single import. The implementation
+ * moved to lib/redact once a second, weaker copy of it turned up in
+ * WebMcpTools — see that file for what drifted.
  */
-export function redactContacts(text: string): string {
-  return text
-    // Any run of 7+ digits, however it is spaced or punctuated.
-    .replace(/(?:\+?\d[\d\s().-]{5,}\d)/g, (m) =>
-      (m.replace(/\D/g, '').length >= 7 ? '[contact removed]' : m))
-    // Digits spelled around a keyword: "whatsapp - nine eight ..." is rare
-    // enough to ignore, but "call 98xx" with few digits is not.
-    .replace(/\b(?:whatsapp|whats app|call|contact|phone|mobile|num(?:ber)?)\b\s*[:\-–]?\s*\S{0,4}\d[\d\s().-]*/gi,
-      '[contact removed]')
-    .replace(/\[contact removed\](?:\s*\[contact removed\])+/g, '[contact removed]')
-    .trim();
-}
+export { redactContacts };
 
 function fence(text: string): string {
   // Keep listing prose out of markdown's way; it contains stray #, * and _.
