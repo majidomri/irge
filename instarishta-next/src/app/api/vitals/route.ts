@@ -9,16 +9,23 @@
  * would be a log line nobody reads, in exchange for a failed request in the
  * visitor's network panel.
  *
- * Reports land in the platform logs rather than a table. That is deliberate
- * for a first pass: it answers "did the INP work help" without a migration,
- * and it stores nothing tied to a person. If this becomes something you want
- * to chart over time, that is the point to give it a table.
+ * Reports go to the platform logs *and* to ir_web_vitals. The logs answer
+ * "what is happening right now" while someone is watching; the table answers
+ * "what was the p75 last week, and did that deploy move it", which a log tail
+ * cannot. Lighthouse measures one machine on one network — this is the field
+ * half, and the half that decides whether the work mattered.
+ *
+ * The insert is fire-and-forget and its failure is swallowed. A beacon is
+ * sent as the page goes away and the response is never read, so a database
+ * problem must not turn into a slow request on the way out.
  *
  * No PII: the payload carries a pathname, timings, and an element description
  * built from authored attributes (data-vitals, role, aria-label) — never
  * profile content, never a query string.
  */
 import { NextResponse } from 'next/server';
+
+import { serviceClient } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,9 +49,32 @@ export async function POST(request: Request) {
 
     const url = typeof payload.url === 'string' ? payload.url.slice(0, 200) : '(unknown)';
 
-    for (const metric of payload.metrics.slice(0, 20)) {
+    const metrics = payload.metrics.slice(0, 20) as Array<Record<string, unknown>>;
+
+    for (const metric of metrics) {
       // One line per metric so log search can filter on the name.
-      console.log('[web-vitals]', JSON.stringify({ url, ...(metric as object) }));
+      console.log('[web-vitals]', JSON.stringify({ url, ...metric }));
+    }
+
+    const rows = metrics
+      .filter((m) => typeof m.name === 'string' && Number.isFinite(Number(m.value)))
+      .map((m) => ({
+        name: String(m.name).slice(0, 20),
+        value: Number(m.value),
+        rating: typeof m.rating === 'string' ? m.rating.slice(0, 20) : null,
+        path: url,
+        target: typeof m.target === 'string' ? m.target.slice(0, 200) : null,
+        load_state: typeof m.loadState === 'string' ? m.loadState.slice(0, 40) : null,
+      }));
+
+    if (rows.length) {
+      // Not awaited: see the note above about beacons.
+      void serviceClient()
+        .from('ir_web_vitals')
+        .insert(rows)
+        .then(({ error }) => {
+          if (error) console.error('[web-vitals] insert failed:', error.message);
+        });
     }
   } catch {
     // Malformed body. Still 204 — see above.
