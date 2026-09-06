@@ -10,6 +10,7 @@ import {
   POST_PAGE_SIZE,
   type IChannel, type IPost,
 } from '@/lib/supabase';
+import { afterNextPaint } from '@/lib/scheduling';
 import GradientText from '@/components/ui/GradientText';
 import TextType from '@/components/ui/TextType';
 import ClickSpark from '@/components/ui/ClickSpark';
@@ -917,7 +918,16 @@ export default function ChannelFeedClient({
     setLiked(s);
   }, []);
 
-  const openPost = (p: IPost) => { setModalPost(p); incrementViews(p.id); };
+  /**
+   * Open the post, then count the view.
+   *
+   * The count is bookkeeping nobody is waiting to see, so it runs after the
+   * frame that shows the modal rather than inside the click that asked for it.
+   */
+  const openPost = (p: IPost) => {
+    setModalPost(p);
+    afterNextPaint(() => incrementViews(p.id));
+  };
 
   const doLike = (id: string) => {
     if (liked.has(id)) return;
@@ -934,6 +944,22 @@ export default function ChannelFeedClient({
   }, [posts, catFilter, filters]);
 
   const usedCats = useMemo(() => new Set(posts.map(catOf)), [posts]);
+
+  /**
+   * Per-category counts, in one pass.
+   *
+   * These used to be computed inside the chip loop, so every render walked the
+   * whole post list once per category. Opening a post re-renders this feed, so
+   * that cost landed inside interactions rather than beside them.
+   */
+  const catCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const post of posts) {
+      const cat = catOf(post);
+      counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    }
+    return counts;
+  }, [posts]);
 
   /**
    * Qualifications in this channel, most common first.
@@ -1097,7 +1123,7 @@ export default function ChannelFeedClient({
                   channel is in hand -- the chip still works before then, it
                   just does not claim a number it cannot know. */}
               {c.id !== 'all' && done && (
-                <span className="opacity-60">{posts.filter(p => catOf(p) === c.id).length}</span>
+                <span className="opacity-60">{catCounts.get(c.id) ?? 0}</span>
               )}
             </button>
           ))}
@@ -1435,7 +1461,7 @@ export default function ChannelFeedClient({
           liked={liked}
           onClose={() => setModalPost(null)}
           onLike={doLike}
-          onNavigate={p => { setModalPost(p); incrementViews(p.id); }}
+          onNavigate={p => { setModalPost(p); afterNextPaint(() => incrementViews(p.id)); }}
           onPlayAttempt={handlePlayAttempt}
           total={total ?? undefined}
           onNeedMore={loadMore}

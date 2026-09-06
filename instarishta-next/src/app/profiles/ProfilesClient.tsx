@@ -7,6 +7,7 @@ import CountUp from '@/components/ui/CountUp';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 import { useContactCredits } from '@/lib/hooks/useContactCredits';
 import { useInterests } from '@/lib/hooks/useInterests';
+import { afterNextPaint } from '@/lib/scheduling';
 import {
   type Profile,
   type DeckProfile,
@@ -146,6 +147,8 @@ const ProfileCard = memo(function ProfileCard({
   const [expanded, setExpanded] = useState(false);
   const [limitToast,   setLimitToast]   = useState(false);
   const downloadingRef  = useRef(false);
+  // The ref guards re-entry; the state is what the person can see.
+  const [downloading, setDownloading] = useState(false);
 
   const lastTapRef      = useRef(0);
   const longTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -165,23 +168,44 @@ const ProfileCard = memo(function ProfileCard({
     longTimerRef.current = null;
   }, []);
 
-  const handleDownload = useCallback(async () => {
+  /**
+   * Render the card to a PNG and hand it over.
+   *
+   * `toPng` walks the subtree, inlines its styles and rasterises at 2x — tens
+   * to hundreds of milliseconds on the main thread, and it used to run inside
+   * the click. That put the whole export inside the interaction: nothing
+   * painted until it finished, so the button appeared dead and the tap scored
+   * its full cost as INP.
+   *
+   * Now the pending state paints first and the export starts after that frame.
+   * The work is the same; the person just isn't waiting on a frozen button.
+   */
+  const handleDownload = useCallback(() => {
     if (!cardRef.current || downloadingRef.current) return;
     downloadingRef.current = true;
+    setDownloading(true);
     if (navigator.vibrate) navigator.vibrate(10);
-    try {
-      const { toPng } = await import('html-to-image');
-      const dataUrl = await toPng(cardRef.current, {
-        backgroundColor: '#fff',
-        pixelRatio: 2,
-        filter: node => !(node instanceof Element && node.hasAttribute('data-no-capture')),
-      });
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `instarishta-${profile._num}.png`;
-      a.click();
-    } catch {}
-    downloadingRef.current = false;
+
+    afterNextPaint(async () => {
+      try {
+        const { toPng } = await import('html-to-image');
+        if (!cardRef.current) return;
+
+        const dataUrl = await toPng(cardRef.current, {
+          backgroundColor: '#fff',
+          pixelRatio: 2,
+          filter: node => !(node instanceof Element && node.hasAttribute('data-no-capture')),
+        });
+
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `instarishta-${profile._num}.png`;
+        a.click();
+      } catch {}
+
+      downloadingRef.current = false;
+      setDownloading(false);
+    });
   }, [profile._num]);
 
   const handleContact = useCallback((e: React.MouseEvent) => {
@@ -243,6 +267,15 @@ const ProfileCard = memo(function ProfileCard({
         <div data-no-capture className="absolute inset-x-0 top-0 z-10 py-2 text-center text-xs font-semibold"
           style={{ background: '#CF4500', color: '#fff', borderRadius: '20px 20px 0 0' }}>
           No credits left · Upgrade your plan
+        </div>
+      )}
+
+      {/* Paints before the export starts, so the card is visibly busy rather
+          than unresponsive. data-no-capture keeps it out of the PNG. */}
+      {downloading && (
+        <div data-no-capture className="absolute inset-x-0 top-0 z-10 py-2 text-center text-xs font-semibold"
+          style={{ background: '#00A86B', color: '#fff', borderRadius: '20px 20px 0 0' }}>
+          Saving card…
         </div>
       )}
 
