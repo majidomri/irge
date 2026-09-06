@@ -53,7 +53,9 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: 'InstaRishta',
     type: 'website',
-    images: [{ url: '/logo.svg', width: 512, height: 512, alt: 'InstaRishta' }],
+    // No `images` here on purpose: opengraph-image.tsx generates the PNG
+    // and an explicit entry would override it — which is how this ended up
+    // advertising an SVG that no platform will render.
   },
   verification: {
     // Two Search Console properties are verified against this origin; both
