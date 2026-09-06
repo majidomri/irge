@@ -1,4 +1,5 @@
 import ProfilesClient from './ProfilesClient';
+import { WebMcpTools } from '@/components/WebMcpTools';
 import { getProfiles, getFeatured, getBiodata } from '@/lib/data';
 import { applyFilters, parseFilterParams, isUrgent, type Profile } from './_shared';
 
@@ -34,12 +35,16 @@ export default async function ProfilesPage({
   };
 
   return (
-    <ProfilesClient
+    <>
+      {/* Exposes search over the same listings this page rendered. */}
+      <WebMcpTools profiles={filtered} />
+      <ProfilesClient
       profiles={filtered}
       stats={stats}
       filters={filters}
       initialFeatured={featured}
       authoredBiodata={biodata}
-    />
+      />
+    </>
   );
 }
