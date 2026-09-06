@@ -40,12 +40,18 @@ type Props = Omit<ImageProps, 'placeholder' | 'blurDataURL'> & {
   blurDataURL?: string;
   /** Opt out of the placeholder for images that are themselves decoration. */
   noPlaceholder?: boolean;
+  /**
+   * What to show when the image cannot be loaded. Defaults to a quiet tile in
+   * the app's own surface colour.
+   */
+  fallback?: React.ReactNode;
 };
 
 export default function SmartImage({
   offset = 400,
   blurDataURL,
   noPlaceholder = false,
+  fallback,
   priority,
   loading,
   // Destructured rather than left in ...props so it is visible at each <Image>
@@ -60,7 +66,19 @@ export default function SmartImage({
   const immediate = Boolean(priority) || loading === 'eager' || offset <= 0;
 
   const [visible, setVisible] = useState(immediate);
+  /**
+   * A URL that 404s or a host that stops serving leaves the browser drawing
+   * its own broken-image glyph, which on a listing grid reads as the site
+   * being broken. Feed images are third-party uploads whose URLs outlive
+   * nothing in particular, so this is a when, not an if.
+   */
+  const [failed, setFailed] = useState(false);
   const holder = useRef<HTMLDivElement | null>(null);
+
+  // A new src deserves a fresh attempt — the previous failure was about the
+  // previous image.
+  const src = props.src;
+  useEffect(() => { setFailed(false); }, [src]);
 
   useEffect(() => {
     if (immediate || visible) return;
@@ -92,8 +110,43 @@ export default function SmartImage({
     ? {}
     : { placeholder: 'blur' as const, blurDataURL: blurDataURL ?? BLUR_DATA_URL };
 
+  const onError = () => setFailed(true);
+
+  if (failed) {
+    if (fallback) return <>{fallback}</>;
+
+    /**
+     * The default: the blur tint at full size, with the alt text still
+     * available to assistive tech. `fill` images are absolutely positioned by
+     * their parent, so the fallback has to be too or it collapses.
+     */
+    return (
+      <span
+        role="img"
+        aria-label={typeof alt === 'string' && alt ? alt : 'Image unavailable'}
+        style={{
+          position: props.fill ? 'absolute' : 'relative',
+          inset: props.fill ? 0 : undefined,
+          display: 'block',
+          width: props.fill ? undefined : props.width,
+          height: props.fill ? undefined : props.height,
+          background: '#EFEDEA',
+        }}
+      />
+    );
+  }
+
   if (immediate) {
-    return <Image {...props} alt={alt} {...placeholderProps} priority={priority} loading={loading} />;
+    return (
+      <Image
+        {...props}
+        alt={alt}
+        {...placeholderProps}
+        priority={priority}
+        loading={loading}
+        onError={onError}
+      />
+    );
   }
 
   // `display: contents` keeps the wrapper out of layout, so a `fill` image
@@ -101,9 +154,9 @@ export default function SmartImage({
   return (
     <div ref={holder} style={{ display: 'contents' }}>
       {visible ? (
-        <Image {...props} alt={alt} {...placeholderProps} loading="eager" />
+        <Image {...props} alt={alt} {...placeholderProps} loading="eager" onError={onError} />
       ) : (
-        <Image {...props} alt={alt} {...placeholderProps} loading="lazy" />
+        <Image {...props} alt={alt} {...placeholderProps} loading="lazy" onError={onError} />
       )}
     </div>
   );
