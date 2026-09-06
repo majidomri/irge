@@ -93,11 +93,31 @@ export function GoogleOneTap() {
       cancelIdleCallback?: (h: number) => void;
     };
     const idle = typeof w.requestIdleCallback === 'function';
-    const id = idle
-      ? w.requestIdleCallback!(start, { timeout: 4000 })
-      : window.setTimeout(start, 2500);
+    let id: number | undefined;
+
+    const schedule = () => {
+      id = idle
+        ? w.requestIdleCallback!(start, { timeout: 4000 })
+        : window.setTimeout(start, 2500);
+    };
+
+    /**
+     * Speculation rules prerender profile pages, and a prerendered page runs
+     * its effects while it is still hidden. One Tap counts a prompt it
+     * "showed" there against its own cooldown, so the visitor would lose the
+     * prompt on the visit that actually matters. Wait for activation.
+     */
+    const doc = document as Document & { prerendering?: boolean };
+    if (doc.prerendering) {
+      doc.addEventListener('prerenderingchange', schedule, { once: true });
+    } else {
+      schedule();
+    }
 
     return () => {
+      doc.removeEventListener('prerenderingchange', schedule);
+      if (id === undefined) return;
+
       // Cancel with the same mechanism that scheduled it, or navigating away
       // mid-wait leaves a prompt queued for a page that is gone.
       if (idle) w.cancelIdleCallback?.(id);
