@@ -1,208 +1,142 @@
-const CACHE_NAME = "instarishta-v32";
+/**
+ * InstaRishta service worker, built on Workbox.
+ *
+ * The Workbox runtime is imported from our own origin (ci/build-sw.mjs copies
+ * it into workbox/), never a CDN -- a service worker that needs the network to
+ * boot is no use to someone who has none.
+ *
+ * Strategies deliberately differ from the Workbox "page cache" recipe, which
+ * puts navigations behind CacheFirst. Profiles and listings change here, so a
+ * navigation goes to the network first and falls back to the cache; only the
+ * things that are safe to serve stale are served stale.
+ */
+importScripts("./workbox/workbox-sw.js");
 
-// Served when a navigation can be satisfied by neither network nor cache.
+workbox.setConfig({ modulePathPrefix: "./workbox/" });
+
+const { precacheAndRoute, matchPrecache } = workbox.precaching;
+const { registerRoute, setCatchHandler } = workbox.routing;
+const { NetworkFirst, StaleWhileRevalidate } = workbox.strategies;
+const { CacheableResponsePlugin } = workbox.cacheableResponse;
+const { ExpirationPlugin } = workbox.expiration;
+const { clientsClaim } = workbox.core;
+
 const OFFLINE_URL = "./offline.html";
-const CORE_ASSETS = [
-  "./",
-  "./index.html",
-  "./offline.html",
-  "./about-instarishta.html",
-  "./what-is-instarishta.html",
-  "./how-instarishta-works.html",
-  "./muslim-marriage-guide.html",
-  "./muslim-matrimony-hyderabad.html",
-  "./muslim-matrimony-delhi.html",
-  "./muslim-matrimony-mumbai.html",
-  "./muslim-matrimony-bangalore.html",
-  "./post-your-ad.html",
-  "./robots.txt",
-  "./sitemap.xml",
-  "./llms.txt",
-  "./styles/instarishta.css",
-  "./src/output.css",
-  "./js/app/main.js",
-  "./js/app/config.js",
-  "./js/app/state.js",
-  "./js/app/utils.js",
-  "./js/app/modules/filter-engine.js",
-  "./js/app/modules/theme-controller.js",
-  "./js/app/modules/typing-controller.js",
-  "./js/app/modules/drawer-controller.js",
-  "./js/app/modules/renderer.js",
-  "./js/app/services/storage-service.js",
-  "./js/app/services/activity-logger.js",
-  "./js/app/services/contact-service.js",
-  "./js/app/services/data-service.js",
-  "./js/app/services/voice-preview-service.js",
-  "./js/app/workers/filter-worker.js",
-  "./manifest.webmanifest",
-  "./assets/icon.svg",
-  "./assets/voice/sample-voice-a.wav",
-  "./assets/voice/sample-voice-b.wav",
-  "./assets/voice/sample-voice-c.wav",
-];
 
-const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
+self.skipWaiting();
+clientsClaim();
 
-function isCacheableRequest(request, url) {
-  if (request.method !== "GET") return false;
-  if (!SUPPORTED_PROTOCOLS.has(url.protocol)) return false;
-  return url.origin === self.location.origin;
+/**
+ * Build-time manifest: one entry per precached file, each with a revision hash.
+ * `|| []` keeps this file runnable straight from the repo root in `npm run dev`,
+ * where nothing has injected a manifest yet.
+ */
+precacheAndRoute(self.__WB_MANIFEST || []);
+
+/** Same-origin GETs only; everything else falls through to the network. */
+function sameOriginGet({ request, url }) {
+  return request.method === "GET" && url.origin === self.location.origin;
 }
 
-function cachePutSafe(request, response) {
-  if (!response || !response.ok) return Promise.resolve();
+/**
+ * Navigations: network first. A fresh page when we can get one, the last copy
+ * we saw when we cannot.
+ */
+registerRoute(
+  ({ request, url }) =>
+    sameOriginGet({ request, url }) &&
+    (request.mode === "navigate" || request.destination === "document"),
+  new NetworkFirst({
+    cacheName: "page-cache",
+    networkTimeoutSeconds: 10,
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 7 * 24 * 60 * 60,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
 
-  // The clone has to be taken synchronously. These responses are also handed
-  // back to the page, and once the page starts reading the body a later
-  // clone() throws -- so awaiting caches.open() first meant the write was
-  // silently skipped for every response we actually served.
-  let copy;
-  try {
-    copy = response.clone();
-  } catch {
-    return Promise.resolve();
-  }
+/**
+ * Profile data: network first as well, and never served stale for long -- a
+ * listing that has been withdrawn should not keep appearing.
+ */
+registerRoute(
+  ({ request, url }) =>
+    sameOriginGet({ request, url }) && url.pathname.endsWith("jsdata.json"),
+  new NetworkFirst({
+    cacheName: "data-cache",
+    networkTimeoutSeconds: 8,
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 8,
+        maxAgeSeconds: 24 * 60 * 60,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
 
-  return caches
-    .open(CACHE_NAME)
-    .then((cache) => cache.put(request, copy))
-    .catch(() => {
-      // Ignore cache write failures (unsupported scheme/quota/opaque edge cases).
+/**
+ * Scripts, styles and workers that the precache manifest did not cover
+ * (anything added at runtime): serve from cache, refresh in the background.
+ */
+registerRoute(
+  ({ request, url }) =>
+    sameOriginGet({ request, url }) &&
+    ["style", "script", "worker"].includes(request.destination),
+  new StaleWhileRevalidate({
+    cacheName: "asset-cache",
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 80,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
+
+/**
+ * Images and the voice samples. Capped by count as well as age, because this
+ * is the cache that grows without anyone noticing.
+ */
+registerRoute(
+  ({ request, url }) =>
+    sameOriginGet({ request, url }) &&
+    ["image", "audio", "font"].includes(request.destination),
+  new StaleWhileRevalidate({
+    cacheName: "media-cache",
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 120,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
+
+/**
+ * Last resort. A navigation that neither the network nor any cache could
+ * satisfy gets our own offline page instead of the browser's error screen.
+ */
+setCatchHandler(async ({ request }) => {
+  if (request.mode === "navigate" || request.destination === "document") {
+    const offline = await matchPrecache(OFFLINE_URL);
+    if (offline) return offline;
+
+    return new Response("Offline", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
-}
+  }
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      // Best-effort warm cache: one missing asset should not block SW activation.
-      await Promise.allSettled(CORE_ASSETS.map((asset) => cache.add(asset)));
-    })
-  );
-  self.skipWaiting();
+  return Response.error();
 });
-
-self.addEventListener("activate", (event) => {
-  // Lets the browser start a navigation's network request in parallel with
-  // service worker startup, rather than after it.
-  event.waitUntil(
-    (async () => {
-      if (self.registration.navigationPreload) {
-        await self.registration.navigationPreload.enable();
-      }
-    })()
-  );
-
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys
-        .filter((key) => key !== CACHE_NAME)
-        .map((key) => caches.delete(key))
-    ))
-  );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  let url;
-
-  try {
-    url = new URL(request.url);
-  } catch {
-    return;
-  }
-
-  if (!isCacheableRequest(request, url)) return;
-
-  const isNavigationRequest =
-    request.mode === "navigate" ||
-    request.destination === "document" ||
-    url.pathname.endsWith(".html");
-  const isData = url.pathname.endsWith("/jsdata.json")
-    || url.pathname.endsWith("jsdata.json");
-  const isScriptLike = request.destination === "script"
-    || request.destination === "worker";
-
-  if (isNavigationRequest) {
-    event.respondWith(
-      (async () => {
-        try {
-          const preloaded = await event.preloadResponse;
-          if (preloaded) {
-            event.waitUntil(cachePutSafe(request, preloaded));
-            return preloaded;
-          }
-
-          const response = await fetch(request, { cache: "no-store" });
-          event.waitUntil(cachePutSafe(request, response));
-          return response;
-        } catch {
-          // This page if we have it, then the offline page.
-          const cached = await caches.match(request);
-          if (cached) return cached;
-
-          const offline = await caches.match(OFFLINE_URL);
-          if (offline) return offline;
-
-          return new Response("Offline", {
-            status: 503,
-            headers: { "Content-Type": "text/plain; charset=utf-8" },
-          });
-        }
-      })()
-    );
-    return;
-  }
-
-  if (isData) {
-    event.respondWith(
-      fetch(request, { cache: "no-store" })
-        .then((response) => {
-          event.waitUntil(cachePutSafe(request, response));
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match(request);
-          if (cached) return cached;
-          throw new Error("Network unavailable");
-        })
-    );
-    return;
-  }
-
-  if (isScriptLike) {
-    event.respondWith(
-      fetch(request, { cache: "no-store" })
-        .then((response) => {
-          event.waitUntil(cachePutSafe(request, response));
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match(request);
-          if (cached) return cached;
-          throw new Error("Script unavailable");
-        })
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) {
-        event.waitUntil(
-          fetch(request)
-            .then((response) => cachePutSafe(request, response))
-            .catch(() => {})
-        );
-        return cached;
-      }
-
-      return fetch(request).then((response) => {
-        event.waitUntil(cachePutSafe(request, response));
-        return response;
-      });
-    })
-  );
-});
-
