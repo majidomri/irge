@@ -23,7 +23,7 @@
  * built from authored attributes (data-vitals, role, aria-label) — never
  * profile content, never a query string.
  */
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 
 import { serviceClient } from '@/lib/credits';
 
@@ -68,13 +68,23 @@ export async function POST(request: Request) {
       }));
 
     if (rows.length) {
-      // Not awaited: see the note above about beacons.
-      void serviceClient()
-        .from('ir_web_vitals')
-        .insert(rows)
-        .then(({ error }) => {
-          if (error) console.error('[web-vitals] insert failed:', error.message);
-        });
+      /**
+       * after(), not a floating promise.
+       *
+       * This was `void insert(...).then(...)`, which is the exact mistake
+       * proxy.ts documents a few files away: the handler returns 204, the
+       * serverless invocation is free to freeze, and the insert dies
+       * mid-flight. That is why security events were landing nowhere until
+       * recordEvent was moved onto event.waitUntil.
+       *
+       * after() is the App Router's version of the same guarantee — the work
+       * is registered against the invocation, so the response still goes out
+       * immediately but the runtime waits for the write.
+       */
+      after(async () => {
+        const { error } = await serviceClient().from('ir_web_vitals').insert(rows);
+        if (error) console.error('[web-vitals] insert failed:', error.message);
+      });
     }
   } catch {
     // Malformed body. Still 204 — see above.

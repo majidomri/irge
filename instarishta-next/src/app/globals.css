@@ -220,12 +220,17 @@ img {
 /* ---------------------------------------------------------------------------
    Reduced motion.
 
-   Nothing here honoured `prefers-reduced-motion` before, and this site moves a
+   No CSS here honoured `prefers-reduced-motion` before, and this site moves a
    lot: a ticker looping every 28s forever, float, star-movement top and
    bottom, reveal, spin, the typing caret, and 21 pulsing skeletons. For a
    visitor with a vestibular disorder that is not decoration, it is a reason to
    close the tab. Lighthouse scores accessibility 100 and says nothing about
    it, because no automated audit can.
+
+   One place did already respect it, and the commit that added this block said
+   "nothing" did, which was wrong: lib/hooks/useChromeAutoHide.ts has always
+   checked the query before tucking the chrome away. It was missed because the
+   search that looked for it covered .css and .tsx and not .ts.
 
    The exclusion is deliberate. `animate-pulse` is an opacity fade with no
    movement — it is what tells someone the skeleton is still loading rather
