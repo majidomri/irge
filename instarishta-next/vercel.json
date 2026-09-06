@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/cohort-counts",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/renewals",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/orders",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/profiles-refresh",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

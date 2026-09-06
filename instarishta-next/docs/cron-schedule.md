@@ -1,9 +1,20 @@
-# Cron schedule (not yet enabled)
+# Cron schedule
 
-The four routes under `/api/cron` are written and working, but nothing
-schedules them. `vercel.json` was added and then removed deliberately: these
-run for real on the first firing, and two of them have consequences worth
-seeing once by hand before they happen unattended.
+All four routes under `/api/cron` are scheduled in `vercel.json`, once per day
+each. They were tested by hand first — see below for what each one does and
+what "tested" actually proved.
+
+## Plan
+
+Cron jobs are included in every Vercel plan, Hobby included; there is nothing
+premium about them. The one Hobby restriction is frequency: **once per day per
+job**, and anything more frequent *fails at deployment* with "Hobby accounts
+are limited to daily cron jobs". Timing is also only accurate to the hour on
+Hobby, so `0 5 * * *` fires somewhere between 05:00 and 05:59 UTC.
+
+Every schedule here is daily, so it deploys on any plan. If you move to Pro
+and want `orders` hourly again, `0 * * * *` becomes legal — but read the note
+about its untested branch first.
 
 ## What each one does when it runs
 
@@ -39,22 +50,29 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" \
   "https://www.instarishta.me/api/cron/orders?grace=720"
 ```
 
-## Restoring the schedule
+## Current schedule
 
-Put this back at `instarishta-next/vercel.json` once the routes have been
-exercised:
+| UTC | Route |
+|---|---|
+| 02:00 | `cohort-counts` |
+| 03:30 | `renewals` |
+| 05:00 | `orders` |
+| 06:00 | `profiles-refresh` |
 
-```json
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    { "path": "/api/cron/renewals",        "schedule": "30 3 * * *" },
-    { "path": "/api/cron/orders",          "schedule": "0 * * * *" },
-    { "path": "/api/cron/cohort-counts",   "schedule": "0 2 * * *" },
-    { "path": "/api/cron/profiles-refresh", "schedule": "0 */6 * * *" }
-  ]
-}
-```
+Spread across the morning rather than stacked on one minute, so a slow run
+never overlaps the next job. On Hobby each fires within the hour that follows.
 
-Check the plan first. Vercel Hobby allows two cron jobs at daily granularity;
-the hourly `orders` entry and the four-job count both need Pro.
+## What the hand-tests actually proved
+
+All four returned 200 against production, which confirms auth via
+`CRON_SECRET`, database access and response shape.
+
+`profiles-refresh` and `cohort-counts` did real work and are fully exercised —
+500 profiles refreshed, and cohort counts reconciled (they wrote zeros, which
+is the truth: no profile carries a `profession_key` yet).
+
+`orders` and `renewals` returned `revoked: 0` and `expiring: 0` because there
+was nothing for them to act on. Their consequential branches — revoking
+credits, composing the Telegram digest — have still never executed. Both fail
+safe on empty input, which is what a first scheduled run will meet, but the
+first time either does something real is worth watching.
