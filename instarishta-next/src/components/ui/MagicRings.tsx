@@ -120,6 +120,17 @@ export default function MagicRings({
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+
+    // A continuously animating fullscreen shader is exactly what
+    // prefers-reduced-motion is asking about, and CSS cannot reach a WebGL
+    // render loop — the media query in globals.css stops every animation on
+    // the page except this one. Returning before the dynamic import also
+    // means the ogl chunk is never fetched for these visitors.
+    if (typeof window !== 'undefined'
+        && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
     let cancelled = false;
     let frameId: number;
     let cleanupFn: (() => void) | undefined;

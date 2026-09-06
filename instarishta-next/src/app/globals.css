@@ -216,3 +216,31 @@ img {
   from { opacity: 1; }
   to   { opacity: 0; }
 }
+
+/* ---------------------------------------------------------------------------
+   Reduced motion.
+
+   Nothing here honoured `prefers-reduced-motion` before, and this site moves a
+   lot: a ticker looping every 28s forever, float, star-movement top and
+   bottom, reveal, spin, the typing caret, and 21 pulsing skeletons. For a
+   visitor with a vestibular disorder that is not decoration, it is a reason to
+   close the tab. Lighthouse scores accessibility 100 and says nothing about
+   it, because no automated audit can.
+
+   The exclusion is deliberate. `animate-pulse` is an opacity fade with no
+   movement — it is what tells someone the skeleton is still loading rather
+   than broken, and fading does not trigger the vestibular response that
+   motion does. Taking it away would remove information and prevent nothing.
+
+   WebGL is not reachable from CSS: MagicRings guards itself in JS.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-pulse),
+  *:not(.animate-pulse)::before,
+  *:not(.animate-pulse)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
