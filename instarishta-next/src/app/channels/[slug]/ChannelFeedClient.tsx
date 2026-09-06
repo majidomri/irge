@@ -1,6 +1,7 @@
 'use client';
 import { Fragment, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import Image from '@/components/ui/SmartImage';
 import {
   supabase,
@@ -1072,7 +1073,7 @@ export default function ChannelFeedClient({
     <div className="text-center py-20 px-6">
       <span className="text-5xl block mb-4">⚠️</span>
       <p className="text-base font-medium mb-4" style={{ color: '#696969' }}>{error}</p>
-      <a href="/channels" className="rounded-full px-5 py-2.5 text-sm font-bold" style={{ background: '#006241', color: '#fff' }}>← Channels</a>
+      <Link href="/channels" className="rounded-full px-5 py-2.5 text-sm font-bold" style={{ background: '#006241', color: '#fff' }}>← Channels</Link>
     </div>
   );
 

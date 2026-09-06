@@ -1,13 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const WORKER = 'https://instarishta-profile-relay.instarishtalead.workers.dev/api/submit-profile-ad';
 
 export default function BiodataPage() {
   const formRef  = useRef<HTMLFormElement>(null);
-  const openedAt = useRef(Date.now());
+  // Stamped on mount rather than during render. Date.now() is impure, and
+  // useRef re-evaluated it on every render only to discard the result. For a
+  // spam trap measuring how long the form was open, a few milliseconds later
+  // is the same number.
+  const openedAt = useRef(0);
+  useEffect(() => { openedAt.current = Date.now(); }, []);
   const [busy,    setBusy]    = useState(false);
   const [status,  setStatus]  = useState<{ ok: boolean; msg: string } | null>(null);
 
