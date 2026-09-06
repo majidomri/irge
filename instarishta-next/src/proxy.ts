@@ -25,6 +25,15 @@ import {
   BAD_UA,
   BAD_REFERER,
 } from '@/lib/firewall';
+import {
+  clientIp,
+  deviceClass,
+  geoFrom,
+  geoLabel,
+  isDenied,
+  refreshDenyList,
+} from '@/lib/request-context';
+import { BUDGETS, rateLimit } from '@/lib/rate-limit';
 
 const SAFE_MODE = process.env.FIREWALL_SAFE_MODE === '1';
 
@@ -34,22 +43,88 @@ const ADMIN_ROUTE = /^\/nizam(\/.*)?$/;
 
 function block(reason: string, req: NextRequest): NextResponse {
   const label = `[8G${SAFE_MODE ? '-AUDIT' : '-BLOCK'}]`;
+  const ua = req.headers.get('user-agent') ?? '-';
+
+  // Geo turns "someone is probing /wp-admin" into something you can act on:
+  // one city hammering the site reads very differently from the same count
+  // spread across three continents.
   console.warn(
     `${label} ${reason} | ${req.method} ${req.nextUrl.pathname}${req.nextUrl.search} | ` +
-    `UA: ${(req.headers.get('user-agent') ?? '-').slice(0, 80)} | ` +
-    `IP: ${req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for') ?? '-'}`
+    `IP: ${clientIp(req.headers)} | GEO: ${geoLabel(geoFrom(req.headers))} | ` +
+    `DEV: ${deviceClass(ua)} | UA: ${ua.slice(0, 80)}`
   );
+
   if (SAFE_MODE) return NextResponse.next();
   return new NextResponse(null, { status: 403 });
 }
 
-export function middleware(req: NextRequest) {
+/** 429 with the headers a well-behaved client will actually respect. */
+function tooManyRequests(reason: string, req: NextRequest, resetSeconds: number): NextResponse {
+  console.warn(
+    `[RATE-LIMIT${SAFE_MODE ? '-AUDIT' : ''}] ${reason} | ${req.method} ${req.nextUrl.pathname} | ` +
+    `IP: ${clientIp(req.headers)} | GEO: ${geoLabel(geoFrom(req.headers))}`
+  );
+
+  if (SAFE_MODE) return NextResponse.next();
+
+  return new NextResponse('Too many requests\n', {
+    status: 429,
+    headers: {
+      'Retry-After': String(resetSeconds),
+      'Content-Type': 'text/plain; charset=utf-8',
+      // Never cache a rate-limit response: it is about this client, now.
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+export function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const isAPI    = pathname.startsWith('/api/');
 
   // Block old /admin URL — redirect silently so the route is not discoverable.
   if (pathname.startsWith('/admin')) {
     return NextResponse.redirect(new URL('/', req.url));
+  }
+
+  // The firewall's own back-channel must never be firewalled, or a refresh
+  // could lock the instance out of the list it needs.
+  if (pathname === '/api/firewall') return NextResponse.next();
+
+  const ip = clientIp(req.headers);
+
+  // Keep the admin-managed denylist warm. Not awaited: the first request after
+  // a TTL lapse should not wait on a round trip, it just uses the list we have.
+  refreshDenyList(req.nextUrl.origin, process.env.FIREWALL_SECRET);
+
+  // ── Denylist ──────────────────────────────────────────────────────────────
+  // Addresses an admin has blocked in /nizam, plus the BLOCKED_IPS fallback.
+  if (isDenied(ip)) {
+    return block('denied-ip', req);
+  }
+
+  // ── Rate limiting ─────────────────────────────────────────────────────────
+  // Real browsers requesting pages are never limited: those pages are
+  // CDN-cached, so fast clicking costs nothing, and a false positive here
+  // would break the site for a real family. Only the expensive surfaces and
+  // clients that look automated get a budget.
+  const device = deviceClass(req.headers.get('user-agent') ?? '');
+
+  if (ip !== 'unknown') {
+    const budget = pathname.startsWith('/api/auth/')
+      ? { ...BUDGETS.auth, scope: 'auth' }
+      : isAPI
+        ? { ...BUDGETS.api, scope: 'api' }
+        : device === 'bot'
+          ? { ...BUDGETS.botPages, scope: 'bot-pages' }
+          : null;
+
+    if (budget) {
+      const verdict = rateLimit(`${budget.scope}:${ip}`, budget.limit, budget.windowMs);
+      if (!verdict.ok) {
+        return tooManyRequests(`${budget.scope}:${verdict.count}/${verdict.limit}`, req, verdict.resetSeconds);
+      }
+    }
   }
 
   // ── [INTERNAL] HTTP Method ────────────────────────────────────────────────
