@@ -23,7 +23,8 @@
  * Node runtime.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { CACHE_TAGS } from '@/lib/cache/tags';
+import { purgeTag } from '@/lib/cache/revalidate';
 import { PROFILE_WORKER_BASE, clearProfilesDevCache } from '@/lib/data';
 
 export const runtime = 'nodejs';
@@ -77,7 +78,7 @@ async function run(req: NextRequest) {
     );
   }
 
-  revalidateTag('profiles', {});
+  purgeTag(CACHE_TAGS.profiles);
   clearProfilesDevCache();
 
   return NextResponse.json({ ok: true, count, refreshedAt: new Date().toISOString() });

@@ -11,7 +11,7 @@
  *      cache-busting query param on refetch.
  *   2. The worker's KV cache (5 min)    — deleted, then repopulated from
  *      source, by the worker's own refresh endpoint.
- *   3. Next's unstable_cache (30 min)   — revalidateTag('profiles') here.
+ *   3. Next's unstable_cache (30 min)   — purgeTag(CACHE_TAGS.profiles) here.
  *
  * Order matters: the worker is refreshed FIRST, so that when Next's tag is
  * purged and the next visitor triggers a refetch, the worker already holds
@@ -28,7 +28,8 @@
  * Node runtime (inherited from withAdmin).
  */
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { CACHE_TAGS } from '@/lib/cache/tags';
+import { purgeTag } from '@/lib/cache/revalidate';
 import { withAdmin } from '@/lib/admin-route';
 import { PROFILE_WORKER_BASE, clearProfilesDevCache } from '@/lib/data';
 
@@ -78,7 +79,7 @@ export const POST = withAdmin(async () => {
   // Purge Next's cache regardless of the worker's outcome. If the worker
   // refresh failed the page is no more stale than it already was, and a
   // successful worker refresh must not be stranded behind Next's own cache.
-  revalidateTag('profiles', {});
+  purgeTag(CACHE_TAGS.profiles);
   clearProfilesDevCache();
 
   if (!workerOk) {

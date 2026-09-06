@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { LISTING_DATA_TAGS } from '@/lib/cache/tags';
+import { purgeListingData } from '@/lib/cache/revalidate';
 
 /**
  * POST /api/revalidate   header  x-revalidate-secret: <REVALIDATE_SECRET>
@@ -18,14 +19,11 @@ import { revalidatePath, revalidateTag } from 'next/cache';
  * admin pushes new profiles and wants them visible now.
  */
 
-/** Cached data, keyed by the tags used in lib/data. */
-// 'biodata' was missing: lib/data tags all three loaders, but this route
-// only ever purged two, so hand-authored biodata stayed cached for the
-// full 30 minutes after an edit however many times the hook was called.
-const TAGS = ['profiles', 'featured', 'biodata'];
-
-/** Pages built from that data. */
-const PATHS = ['/', '/profiles', '/channels'];
+// The tags and the pages built from them now live together in
+// lib/cache/revalidate. This list used to be hand-maintained here, and it
+// drifted: 'biodata' was missing, so hand-authored biodata stayed cached for
+// the full 30 minutes after an edit however many times this hook was called.
+// A registry is harder to forget than a string literal.
 
 export async function POST(req: NextRequest) {
   const secret = process.env.REVALIDATE_SECRET?.trim();
@@ -41,26 +39,24 @@ export async function POST(req: NextRequest) {
     body = {};
   }
 
-  for (const tag of TAGS) revalidateTag(tag, {});
-
-  const paths = [...PATHS];
+  const extra: string[] = [];
 
   // Slugs are nano ids; anything else is not one of ours and is ignored
   // rather than passed to revalidatePath.
   if (typeof body.slug === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(body.slug)) {
-    paths.push(`/p/${body.slug}`);
+    extra.push(`/p/${body.slug}`);
   }
 
   // Same-origin absolute paths only — never a full URL, never a traversal.
   if (typeof body.path === 'string' && /^\/[A-Za-z0-9/_-]{0,120}$/.test(body.path)) {
-    paths.push(body.path);
+    extra.push(body.path);
   }
 
-  for (const path of paths) revalidatePath(path);
+  purgeListingData(extra);
 
   return NextResponse.json({
     ok: true,
-    revalidated: { tags: TAGS, paths },
+    revalidated: { tags: LISTING_DATA_TAGS, extraPaths: extra },
     at: new Date().toISOString(),
   });
 }

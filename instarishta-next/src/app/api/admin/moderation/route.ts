@@ -26,7 +26,7 @@
  * "blocked" has to mean logged out now rather than at token expiry.
  */
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { purgeModeration } from '@/lib/cache/revalidate';
 import { withAdmin, type AdminDb } from '@/lib/admin-route';
 
 const HIDEABLE = ['profile', 'member', 'post', 'story'] as const;
@@ -199,7 +199,7 @@ export const POST = withAdmin(async (_req, { db, body, email: actor }) => {
       await db.from('ir_user_profiles').update({ is_banned: false }).eq('email', subject);
       await logAction(db, 'unblock', 'member', subject, actor, reason);
 
-      revalidateTag('moderation', {});
+      purgeModeration();
       return NextResponse.json({ ok: true, action: 'unblock', email: subject });
     }
 
@@ -262,7 +262,7 @@ export const POST = withAdmin(async (_req, { db, body, email: actor }) => {
       await logAction(db, 'revoke-sessions', 'member', subject, actor, reason, { count: revoked });
     }
 
-    revalidateTag('moderation', {});
+    purgeModeration();
 
     return NextResponse.json({
       ok: true,
@@ -303,8 +303,10 @@ export const POST = withAdmin(async (_req, { db, body, email: actor }) => {
 
     await logAction(db, action, entityType, entityId, actor, reason);
 
-    // Without this the listing keeps rendering for up to 30 minutes.
-    revalidateTag('moderation', {});
+    // Purges the hidden-id cache *and* the pages built from it. The tag
+    // alone left /l/[id] — prerendered, revalidate 3600 — serving a hidden
+    // listing at its own permalink for up to an hour.
+    purgeModeration(entityType === 'profile' ? [entityId] : []);
 
     return NextResponse.json({ ok: true, action, entityType, entityId });
   }

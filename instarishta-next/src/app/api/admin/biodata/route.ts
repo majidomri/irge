@@ -12,7 +12,8 @@
 import { NextResponse } from 'next/server';
 import { withAdmin } from '@/lib/admin-route';
 import { normalizeSections } from '@/lib/biodata-schema';
-import { revalidateTag } from 'next/cache';
+import { CACHE_TAGS } from '@/lib/cache/tags';
+import { purgeTag } from '@/lib/cache/revalidate';
 
 const COLS = 'profile_id, sections, updated_at, updated_by';
 
@@ -55,7 +56,7 @@ export const PUT = withAdmin(async (_req, { body, db, email }) => {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  revalidateTag('biodata', {});
+  purgeTag(CACHE_TAGS.biodata);
   return NextResponse.json({ biodata: data });
 });
 
@@ -66,6 +67,6 @@ export const DELETE = withAdmin(async (req, { db }) => {
   const { error } = await db.from('ir_biodata').delete().eq('profile_id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  revalidateTag('biodata', {});
+  purgeTag(CACHE_TAGS.biodata);
   return NextResponse.json({ ok: true });
 });
