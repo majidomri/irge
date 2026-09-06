@@ -110,12 +110,32 @@ export default function MagicRings({
   const isHoveredRef = useRef(false);
   const burstRef = useRef(0);
 
-  propsRef.current = {
-    color, colorTwo, speed, ringCount, attenuation, lineThickness,
-    baseRadius, radiusStep, scaleRate, opacity, blur, noiseAmount,
-    rotation, ringGap, fadeIn, fadeOut, followMouse, mouseInfluence,
-    hoverScale, parallax, clickBurst,
-  };
+  /**
+   * The latest props, for the render loop to read.
+   *
+   * This was a bare assignment in the component body, which writes a ref
+   * during render. React may render a component without committing it — in
+   * StrictMode, or when a transition is thrown away — and the running WebGL
+   * loop would then already be drawing with props from a render that never
+   * happened. Both eslint and react-doctor flag it, and they are right.
+   *
+   * An effect with no dependency array runs after every commit, which is
+   * exactly when these values become true.
+   */
+  useEffect(() => {
+    propsRef.current = {
+      color, colorTwo, speed, ringCount, attenuation, lineThickness,
+      baseRadius, radiusStep, scaleRate, opacity, blur, noiseAmount,
+      rotation, ringGap, fadeIn, fadeOut, followMouse, mouseInfluence,
+      hoverScale, parallax, clickBurst,
+    };
+  });
+
+  // No lazy fallback here, deliberately. React runs effects in declaration
+  // order, and the effect above is declared before the one that starts the
+  // render loop — so propsRef is always populated by the time the loop can
+  // read it. A `if (propsRef.current === null)` guard would be dead code that
+  // reintroduced the render-time write this change exists to remove.
 
   useEffect(() => {
     const mount = mountRef.current;

@@ -136,6 +136,14 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
             }, 1500);
           })
         .subscribe((status: string) => setLive(status === 'SUBSCRIBED'));
+
+      // Unmount can land between the check above and this line, and the
+      // cleanup below has already run by then — it had no channel to remove.
+      // Checking again here is what stops the subscription outliving the tab.
+      if (cancelled) {
+        sb.removeChannel(channel as Parameters<typeof sb.removeChannel>[0]);
+        channel = null;
+      }
     })();
 
     return () => {

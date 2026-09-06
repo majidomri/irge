@@ -4,6 +4,13 @@
  * signed-in but non-admin. Provides a service-role Supabase client to
  * the handler for cross-RLS writes.
  */
+// Server-only: this module reaches for the service-role key, which bypasses
+// row-level security and must never be part of a browser bundle. Without
+// this line a client component importing it is a silent regression rather
+// than a build error — which is exactly how the Resend SDK ended up in the
+// /report page's first load.
+import 'server-only';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { auth, isAdminEmail } from '@/lib/auth';

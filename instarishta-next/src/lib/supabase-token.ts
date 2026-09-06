@@ -11,6 +11,13 @@
  * Requires env SUPABASE_JWT_SECRET (Dashboard → Settings → API → JWT Secret).
  * Returns null when unset so callers degrade gracefully to polling.
  */
+// Server-only: this module reaches for the service-role key, which bypasses
+// row-level security and must never be part of a browser bundle. Without
+// this line a client component importing it is a silent regression rather
+// than a build error — which is exactly how the Resend SDK ended up in the
+// /report page's first load.
+import 'server-only';
+
 import { createHmac } from 'node:crypto';
 
 const SECRET = process.env.SUPABASE_JWT_SECRET ?? '';
