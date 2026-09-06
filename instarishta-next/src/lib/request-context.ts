@@ -199,3 +199,31 @@ export const FORWARDED = {
 export function newRequestId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 }
+
+/**
+ * A per-browser identifier used only for rate-limit fairness.
+ *
+ * Set on API responses, never on page responses: a page can be served from the
+ * CDN, and a cached Set-Cookie would hand every visitor the same id. API
+ * routes are already no-store, so there is nothing to poison.
+ *
+ * Deliberately not an identity. It is httpOnly so page scripts cannot read it,
+ * carries no information about the person, and survives only as a bucket key.
+ * Anyone can drop it and fall back to being limited by address, which is why
+ * the address ceiling exists alongside it.
+ */
+export const VISITOR_COOKIE = 'ir_rl';
+
+export function visitorId(req: { cookies: { get(name: string): { value: string } | undefined } }): string | null {
+  const raw = req.cookies.get(VISITOR_COOKIE)?.value;
+  // Only accept what we would have issued; a hand-crafted value is ignored
+  // rather than trusted as a bucket key.
+  return raw && /^[a-z0-9]{16,32}$/.test(raw) ? raw : null;
+}
+
+export function newVisitorId(): string {
+  return (
+    Math.random().toString(36).slice(2, 12) +
+    Date.now().toString(36).slice(-6)
+  ).slice(0, 20);
+}

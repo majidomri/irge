@@ -33,9 +33,12 @@ import {
   geoLabel,
   isDenied,
   newRequestId,
+  newVisitorId,
   refreshDenyList,
+  visitorId,
+  VISITOR_COOKIE,
 } from '@/lib/request-context';
-import { BUDGETS, rateLimit } from '@/lib/rate-limit';
+import { BUDGETS, IP_CEILINGS, rateLimit } from '@/lib/rate-limit';
 
 const SAFE_MODE = process.env.FIREWALL_SAFE_MODE === '1';
 
@@ -164,20 +167,45 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
   // clients that look automated get a budget.
   const device = deviceClass(req.headers.get('user-agent') ?? '');
 
-  if (ip !== 'unknown') {
-    const budget = pathname.startsWith('/api/auth/')
-      ? { ...BUDGETS.auth, scope: 'auth' }
+  // Reports and comments accept writes from signed-out visitors by design, so
+  // they are the one anonymous write surface and get their own budget.
+  const isAnonWrite =
+    req.method === 'POST' &&
+    (pathname === '/api/reports' || pathname === '/api/comments');
+
+  const scope = isAnonWrite
+    ? 'anonWrite'
+    : pathname.startsWith('/api/auth/')
+      ? 'auth'
       : isAPI
-        ? { ...BUDGETS.api, scope: 'api' }
+        ? 'api'
         : device === 'bot'
-          ? { ...BUDGETS.botPages, scope: 'bot-pages' }
+          ? 'botPages'
           : null;
 
-    if (budget) {
-      const verdict = rateLimit(`${budget.scope}:${ip}`, budget.limit, budget.windowMs);
-      if (!verdict.ok) {
-        return tooManyRequests(`${budget.scope}:${verdict.count}/${verdict.limit}`, req, verdict.resetSeconds, event);
-      }
+  // The browser's own bucket, where it has one. A visitor behind a carrier NAT
+  // shares an address with thousands of people but not a cookie.
+  const visitor = visitorId(req);
+
+  if (scope && ip !== 'unknown') {
+    const perVisitor = BUDGETS[scope];
+    const perAddress = IP_CEILINGS[scope];
+
+    // Both apply and the stricter wins: the cookie stops one browser
+    // monopolising a shared address, the address stops one host rotating
+    // cookies to escape the cookie budget.
+    const checks = [
+      rateLimit(`${scope}:ip:${ip}`, perAddress.limit, perAddress.windowMs),
+      ...(visitor
+        ? [rateLimit(`${scope}:v:${visitor}`, perVisitor.limit, perVisitor.windowMs)]
+        // No cookie yet — hold them to the per-visitor budget on their address
+        // so a client that simply never stores cookies is not unlimited.
+        : [rateLimit(`${scope}:nocookie:${ip}`, perVisitor.limit, perVisitor.windowMs)]),
+    ];
+
+    const failed = checks.find(c => !c.ok);
+    if (failed) {
+      return tooManyRequests(`${scope}:${failed.count}/${failed.limit}`, req, failed.resetSeconds, event);
     }
   }
 
@@ -278,6 +306,19 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
     // Echoed back so a report of "this call failed" can be found in the logs
     // without asking anyone for a timestamp.
     apiRes.headers.set(FORWARDED.requestId, requestId);
+
+    // Issue the rate-limit cookie here and nowhere else. API responses are
+    // no-store, so this can never be cached and handed to a second visitor.
+    if (!visitor) {
+      apiRes.cookies.set(VISITOR_COOKIE, newVisitorId(), {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+
     return apiRes;
   }
 

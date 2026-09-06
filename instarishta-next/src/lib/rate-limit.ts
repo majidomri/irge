@@ -92,6 +92,27 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   };
 }
 
+/**
+ * Per-address ceilings, applied alongside the per-visitor budgets below.
+ *
+ * India's mobile networks are heavily CGNAT'd: thousands of real people can
+ * share one public address, so an IP-only limit punishes a whole carrier for
+ * one abuser. A visitor cookie gives each browser its own budget — but a
+ * cookie is trivially rotated, so keying *only* on it would hand an attacker
+ * an unlimited allowance.
+ *
+ * So both apply, and the stricter wins. The address ceiling is generous
+ * enough that a shared carrier NAT never reaches it in normal use, while
+ * still stopping one host hammering the site behind a thousand fresh cookies.
+ */
+export const IP_CEILINGS = {
+  auth: { limit: 60, windowMs: 60_000 },
+  api: { limit: 600, windowMs: 60_000 },
+  botPages: { limit: 240, windowMs: 60_000 },
+  /** Anonymous writes — reports and comments. Nobody files 20 in a minute. */
+  anonWrite: { limit: 40, windowMs: 60_000 },
+} as const;
+
 /** Budgets, by what is being protected. */
 export const BUDGETS = {
   /**
@@ -107,4 +128,11 @@ export const BUDGETS = {
    * costs us nothing, and a false positive here would be a broken site.
    */
   botPages: { limit: 60, windowMs: 60_000 },
+  /**
+   * /api/reports and /api/comments accept writes from signed-out visitors by
+   * design — requiring an account to report abuse suppresses the reports that
+   * matter most — which also makes them the only anonymous write surface, and
+   * the one worth a tighter budget than the rest of the API.
+   */
+  anonWrite: { limit: 8, windowMs: 60_000 },
 } as const;
