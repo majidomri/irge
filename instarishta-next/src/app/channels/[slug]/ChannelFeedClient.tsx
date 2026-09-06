@@ -19,7 +19,6 @@ import FeaturedCarousel from '@/components/FeaturedCarousel';
 import FeedFilters, {
   activeCount, applyFeedFilters, EMPTY_FILTERS, type FeedFilterState,
 } from './FeedFilters';
-import ZuckStories from '@/components/ZuckStories';
 import { useChromeAutoHide } from '@/lib/hooks/useChromeAutoHide';
 import {
   LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
@@ -29,6 +28,11 @@ import { isOptimizable, optimized } from '@/lib/img';
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
 const ShareSheet = dynamic(() => import('@/components/ShareSheet'), { ssr: false });
+// Same treatment as the three above, which it should have had all along: it
+// wraps zuck.js, 106.8 KB of story-viewer that only matters once a channel
+// actually has stories, and it was the one heavy import on this page still
+// loading eagerly.
+const ZuckStories = dynamic(() => import('@/components/ZuckStories'), { ssr: false });
 
 const POST_CATS = [
   { id: 'all',      label: 'All',       icon: '✦' },
