@@ -1,6 +1,7 @@
 'use client';
 import BiodataTab from './BiodataTab';
 import ImportTab from './ImportTab';
+import SecurityTab from './SecurityTab';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
@@ -82,7 +83,7 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata';
+type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata' | 'security';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'channels', label: 'Channels', icon: '📺' },
@@ -97,6 +98,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'biodata', label: 'Biodata', icon: '📋' },
   { key: 'reports',  label: 'Reports',  icon: '🚩' },
   { key: 'users',    label: 'Users',    icon: '👤' },
+  { key: 'security', label: 'Security', icon: '🛡️' },
 ];
 
 interface Entitlements {
@@ -334,6 +336,9 @@ export default function NizamClient({
         )}
         {tab === 'reports' && (
           <ReportsTab toast={showToast} />
+        )}
+        {tab === 'security' && (
+          <SecurityTab toast={showToast} />
         )}
         {tab === 'comments' && (
           <CommentsTab toast={showToast} />

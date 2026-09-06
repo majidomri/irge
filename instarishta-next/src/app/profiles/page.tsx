@@ -1,6 +1,7 @@
 import ProfilesClient from './ProfilesClient';
 import { WebMcpTools } from '@/components/WebMcpTools';
 import { getProfiles, getFeatured, getBiodata } from '@/lib/data';
+import { hiddenSet, withoutHidden } from '@/lib/moderation';
 import { applyFilters, parseFilterParams, parsePage, isUrgent, PAGE_SIZE, type Profile } from './_shared';
 
 export const metadata = {
@@ -17,15 +18,21 @@ export default async function ProfilesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [params, allProfiles, featured, biodata] = await Promise.all([
+  const [params, allProfiles, featured, biodata, hidden] = await Promise.all([
     searchParams,
     getProfiles() as Promise<Profile[]>,
     getFeatured('profiles'),
     getBiodata(),
+    hiddenSet('profile'),
   ]);
 
   const filters  = parseFilterParams(params);
-  const filtered = applyFilters(allProfiles, filters);
+
+  // Moderation runs before the visitor's own filters: a hidden listing is not
+  // a listing that failed a filter, it is one that should not be in the set at
+  // all — including in the counts and in what WebMcpTools can search.
+  const visible  = withoutHidden(allProfiles, hidden, p => p.id);
+  const filtered = applyFilters(visible, filters);
 
   /**
    * Stats count every match, not the page — "312 profiles found" has to stay
