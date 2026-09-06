@@ -1108,6 +1108,7 @@ export default function ChannelFeedClient({
           {POST_CATS.filter(c => c.id === 'all' || usedCats.has(c.id)).map(c => (
             <button
               key={c.id}
+              data-vitals="channel:category-chip"
               onClick={() => setCatFilter(c.id)}
               className="shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-all"
               style={{
@@ -1297,6 +1298,7 @@ export default function ChannelFeedClient({
               )}
               <button
                 id={`post-${i}`}
+                data-vitals="channel:open-post"
                 onClick={() => openPost(post)}
                 className="relative overflow-hidden border-0 p-0 cursor-pointer block text-left rounded-2xl"
                 style={{ background: '#171715' }}

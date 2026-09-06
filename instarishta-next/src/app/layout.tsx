@@ -9,6 +9,7 @@ import { GoogleOneTap } from '@/components/GoogleOneTap';
 import { SpeculationRules } from '@/components/SpeculationRules';
 import LazyNastaliq from '@/components/LazyNastaliq';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
+import { WebVitals } from '@/components/WebVitals';
 
 // Variable Inter (latin) — ~80 KB single file with all weights, smaller than
 // shipping multiple non-variable cuts and lets next/font auto-preload it.
@@ -73,6 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PreloadResources />
         <ContentProtection />
         <ServiceWorkerRegistration />
+        <WebVitals />
         <LazyNastaliq />
         {/* Prefetches the next page on hover; see the component for what it
             deliberately never speculates on. */}

@@ -336,14 +336,14 @@ const ProfileCard = memo(function ProfileCard({
 
       <div className="px-4 pb-3 pt-1 flex gap-2 items-center">
         {canContact ? (
-          <button onClick={handleContact}
+          <button data-vitals="profiles:contact" onClick={handleContact}
             className="flex-1 rounded-full py-2.5 text-sm font-bold flex items-center justify-center gap-2"
             style={{ background: '#006241', color: '#fff' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
             Contact
           </button>
         ) : (
-          <button onClick={handleContact}
+          <button data-vitals="profiles:contact" onClick={handleContact}
             className="flex-1 rounded-full py-2.5 text-sm font-bold flex items-center justify-center gap-2"
             style={{ background: '#1E3932', color: '#fff' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -729,7 +729,7 @@ export default function ProfilesClient({
 
           {/* Mobile: search + "All filters" (desktop has its own bar below). */}
           <div className="flex md:hidden gap-2 mb-3">
-            <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+            <input data-vitals="profiles:search" type="search" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by education, location…"
               className="flex-1 min-w-0 rounded-full px-4 py-2.5 text-sm outline-none border-0"
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }} />
@@ -742,7 +742,7 @@ export default function ProfilesClient({
 
           <div className="hidden md:flex gap-3 flex-wrap items-center mb-3">
             <div className="relative flex-1 min-w-55">
-              <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+              <input data-vitals="profiles:search" type="search" value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search by education, location…"
                 className="w-full rounded-full px-5 py-2.5 text-sm outline-none border-0"
                 style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }} />
