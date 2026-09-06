@@ -13,6 +13,17 @@ import { markdownForPath, approximateTokens } from '@/lib/markdown-view';
 
 export const runtime = 'nodejs';
 
+/**
+ * These markdown views exist so an agent can read a page without parsing the
+ * HTML, and the .well-known documents that advertise them already send this
+ * header. This route did not, so a browser-based agent could discover the
+ * endpoint and then be blocked from reading it.
+ *
+ * `*` is safe here specifically: the response is a public page's own text,
+ * there is no session, no cookie is read, and nothing varies per caller.
+ */
+const CORS = { 'Access-Control-Allow-Origin': '*' } as const;
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug?: string[] }> },
@@ -25,7 +36,7 @@ export async function GET(
   if (markdown === null) {
     return new Response('Not found\n', {
       status: 404,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', ...CORS },
     });
   }
 
@@ -39,6 +50,24 @@ export async function GET(
       // to a browser, or an HTML page to an agent.
       Vary: 'Accept',
       'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      ...CORS,
+    },
+  });
+}
+
+/**
+ * Preflight. A plain GET carrying only an Accept header is CORS-safelisted and
+ * never preflights, so this is reached only by a client that sends something
+ * extra. It costs nothing and it keeps that client from failing silently.
+ */
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      ...CORS,
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type',
+      'Access-Control-Max-Age': '86400',
     },
   });
 }
