@@ -9,7 +9,60 @@ import path from "path";
  *
  * Headers are added via next.config headers() rather than .htaccess.
  */
+/**
+ * Content-Security-Policy, in report-only mode.
+ *
+ * Report-only first on purpose. The only way to learn what a live site really
+ * loads is to ask it, and a policy that blocks Google sign-in is worse than no
+ * policy. Violations go to /api/csp-report; once they are quiet, this becomes
+ * `Content-Security-Policy` and the report-only header goes away.
+ *
+ * 'unsafe-inline' on script-src is a deliberate compromise, not an oversight.
+ * The alternative is per-request nonces, and Next's own guidance is explicit
+ * that "to use a nonce, your page must be dynamically rendered... static pages
+ * are generated at build time, when no request or response headers exist — so
+ * no nonce can be injected". This app prerenders 191 pages; adopting nonces
+ * would mean giving that up. Keeping 'unsafe-inline' still blocks the main
+ * delivery route for injected script — loading it from somebody else's origin
+ * — which is what matters here, since no user-supplied HTML is ever rendered.
+ *
+ * Origins are the ones the code actually reaches, not a guess: Supabase for
+ * data, realtime and images; the Cloudflare relay for the profile feed; Google
+ * for One Tap and phone auth; Cloudinary and placehold.co because they are the
+ * image hosts allowlisted in `images.remotePatterns` below.
+ */
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  // No plugins, and no <object>/<embed> anywhere in this app.
+  "object-src 'none'",
+  // Nothing here should ever be framed, matching X-Frame-Options above.
+  "frame-ancestors 'self'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com",
+  // Inline styles are used throughout, and LazyNastaliq injects a <style>.
+  "style-src 'self' 'unsafe-inline'",
+  // The Nastaliq subset is self-hosted; data: covers the inline blur tint.
+  "font-src 'self' data:",
+  "img-src 'self' data: blob: https://cxgxyqxeakjrghfzkuko.supabase.co https://res.cloudinary.com https://placehold.co",
+  "media-src 'self' https://cxgxyqxeakjrghfzkuko.supabase.co",
+  [
+    "connect-src 'self'",
+    'https://cxgxyqxeakjrghfzkuko.supabase.co',
+    'wss://cxgxyqxeakjrghfzkuko.supabase.co',
+    'https://instarishta-profile-relay.instarishtalead.workers.dev',
+    'https://accounts.google.com',
+    'https://www.googleapis.com',
+    'https://securetoken.googleapis.com',
+  ].join(' '),
+  // One Tap renders in an iframe from Google.
+  "frame-src 'self' https://accounts.google.com",
+  'report-uri /api/csp-report',
+].join('; ');
+
 const SECURITY_HEADERS = [
+  { key: 'Content-Security-Policy-Report-Only', value: CSP_REPORT_ONLY },
+
   // Prevent browsers from MIME-sniffing the content type
   { key: 'X-Content-Type-Options', value: 'nosniff' },
 
