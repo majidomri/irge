@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { REPORT_CATEGORIES, type ReportCategory, type ReportEntityType } from '@/lib/reports';
+import { REPORT_CATEGORIES, type ReportCategory, type ReportEntityType } from '@/lib/report-categories';
 
 /**
  * Report misuse or abuse on a specific listing, member, post, or story.

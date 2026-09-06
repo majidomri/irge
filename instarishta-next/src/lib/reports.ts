@@ -6,50 +6,30 @@
  * access; every read/write goes through a service-role route, same pattern
  * as ir_interests.
  */
+// Nothing in this module may reach the browser: it holds the Resend SDK and
+// the service-role client. The shared vocabulary lives in ./report-categories
+// and is re-exported below, so a client component imports that instead.
+import 'server-only';
+
 import { Resend } from 'resend';
 import { serviceClient } from './credits';
+import { categoryLabel, REPORT_CATEGORIES, severityFor } from './report-categories';
+import type { ReportCategory, ReportEntityType, ReportSeverity, ReportStatus } from './report-categories';
 
-export type ReportEntityType = 'profile' | 'member' | 'post' | 'story' | 'channel' | 'other';
-export type ReportCategory =
-  | 'fake_profile' | 'underage' | 'harassment' | 'scam_fraud'
-  | 'inappropriate_content' | 'impersonation' | 'spam' | 'other';
-export type ReportStatus = 'open' | 'reviewing' | 'actioned' | 'dismissed';
-export type ReportSeverity = 'normal' | 'urgent';
-
-export const ENTITY_TYPES: ReportEntityType[] = ['profile', 'member', 'post', 'story', 'channel', 'other'];
-
-/**
- * `urgent: true` categories page the safety team the moment a report lands
- * (Telegram + email) instead of waiting for someone to open /nizam — this is
- * what actually backs the "reviewed within 2 hours" promise on /child-safety
- * for suspected-minor reports.
- */
-export const REPORT_CATEGORIES: { key: ReportCategory; label: string; urgent?: boolean }[] = [
-  { key: 'underage',              label: 'Suspected minor / underage', urgent: true },
-  { key: 'fake_profile',          label: 'Fake or impersonated profile' },
-  { key: 'scam_fraud',            label: 'Scam, fraud, or money request' },
-  { key: 'harassment',            label: 'Harassment or abusive behaviour' },
-  { key: 'inappropriate_content', label: 'Inappropriate photo, video, or text' },
-  { key: 'impersonation',         label: 'Impersonating someone else' },
-  { key: 'spam',                  label: 'Spam or repeated messages' },
-  { key: 'other',                 label: 'Something else' },
-];
-
-export function isEntityType(v: unknown): v is ReportEntityType {
-  return typeof v === 'string' && (ENTITY_TYPES as string[]).includes(v);
-}
-
-export function isReportCategory(v: unknown): v is ReportCategory {
-  return typeof v === 'string' && REPORT_CATEGORIES.some(c => c.key === v);
-}
-
-export function categoryLabel(key: string): string {
-  return REPORT_CATEGORIES.find(c => c.key === key)?.label ?? key;
-}
-
-export function severityFor(category: ReportCategory): ReportSeverity {
-  return REPORT_CATEGORIES.find(c => c.key === category)?.urgent ? 'urgent' : 'normal';
-}
+export type {
+  ReportEntityType,
+  ReportCategory,
+  ReportStatus,
+  ReportSeverity,
+} from './report-categories';
+export {
+  ENTITY_TYPES,
+  REPORT_CATEGORIES,
+  isEntityType,
+  isReportCategory,
+  categoryLabel,
+  severityFor,
+} from './report-categories';
 
 const MAX_REPORTS_PER_WINDOW = 5;
 const WINDOW_MS = 24 * 60 * 60 * 1000;

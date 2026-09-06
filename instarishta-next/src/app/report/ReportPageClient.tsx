@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { REPORT_CATEGORIES, type ReportCategory } from '@/lib/reports';
+import { REPORT_CATEGORIES, type ReportCategory } from '@/lib/report-categories';
 
 /**
  * Full-page report form for when there's no specific card/member open to
