@@ -307,9 +307,24 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
     // without asking anyone for a timestamp.
     apiRes.headers.set(FORWARDED.requestId, requestId);
 
-    // Issue the rate-limit cookie here and nowhere else. API responses are
-    // no-store, so this can never be cached and handed to a second visitor.
-    if (!visitor) {
+    /**
+     * Issue the rate-limit cookie on writes only.
+     *
+     * The first version of this set it on any API response, on the assumption
+     * that /api/ is never cached. That is false — /api/professions answers
+     * `Cache-Control: public, max-age=60` and reports X-Vercel-Cache: HIT, and
+     * Vercel silently dropped the Set-Cookie rather than serve one visitor's
+     * id to everyone behind that cache entry. The CDN was right and the
+     * assumption was wrong.
+     *
+     * Non-GET responses are never CDN-cached, so they are the safe place to
+     * set it — and they are also where limiting actually matters: sign-in,
+     * reports, comments. A read-only visitor simply gets limited by address
+     * until their first write, which is the correct trade.
+     */
+    const isWrite = req.method !== 'GET' && req.method !== 'HEAD';
+
+    if (!visitor && isWrite) {
       apiRes.cookies.set(VISITOR_COOKIE, newVisitorId(), {
         httpOnly: true,
         secure: true,
