@@ -23,7 +23,7 @@ export default function LazyNastaliq() {
       link.id = 'lazy-nastaliq';
       link.rel = 'stylesheet';
       link.href =
-        'https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap';
+        'https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400..700&display=swap';
       document.head.appendChild(link);
     });
   }, []);

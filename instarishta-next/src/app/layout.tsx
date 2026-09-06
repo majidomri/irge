@@ -23,7 +23,8 @@ const inter = Inter({
 // ~85 KB, ships in the critical CSS, used for LCP.
 const notoNaskhArabic = Noto_Naskh_Arabic({
   subsets: ['arabic'],
-  weight: ['400', '700'],
+  // No `weight`: that asks next/font for the variable file, one wght 400-700
+  // axis instead of a separate static cut per weight.
   variable: '--font-arabic',
   display: 'swap',
 });
