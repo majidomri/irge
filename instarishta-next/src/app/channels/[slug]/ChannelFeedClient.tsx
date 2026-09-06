@@ -1344,6 +1344,7 @@ export default function ChannelFeedClient({
                           // it is scaled 110% and blurred to nothing, so it can
                           // be fetched at the smallest size that exists.
                           sizes="80px"
+                          quality={45}
                           noPlaceholder
                           className="object-cover scale-110 blur-xl opacity-40"
                           unoptimized={!isOptimizable(cover)}

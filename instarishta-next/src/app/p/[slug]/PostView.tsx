@@ -164,6 +164,7 @@ export default async function PostView({ slug }: { slug: string }) {
                   alt={`${(post.title ?? 'Rishta listing') as string} — image ${i + 1} of ${images.length}`}
                   width={80}
                   height={80}
+                  quality={45}
                   style={{ objectFit: 'cover' }}
                 />
               </div>

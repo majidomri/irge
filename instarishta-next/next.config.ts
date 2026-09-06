@@ -90,6 +90,19 @@ const nextConfig: NextConfig = {
     // 384 earns its place: a feed tile is ~177px wide on a phone, which at
     // DPR 2 asks for 354 and would otherwise round all the way up to 640.
     imageSizes: [80, 160, 256, 384],
+
+    /**
+     * Allowed `quality` values. Anything not listed is rejected, which is the
+     * point: each distinct quality is a separate transformation and a separate
+     * cache entry, so leaving it open multiplies both the bill and the miss
+     * rate.
+     *
+     * 75 is the default and stays for anything looked at properly. 45 is for
+     * images the layout never shows at size — an 80px thumbnail strip, a
+     * backdrop blurred to nothing — where the difference is invisible and the
+     * saving is not.
+     */
+    qualities: [45, 75],
   },
 
   turbopack: {
