@@ -125,6 +125,71 @@ function AudioBtn({ url }: { url?: string }) {
   );
 }
 
+// ── Pagination ────────────────────────────────────────────────────────────────
+
+/**
+ * Page links for the listing.
+ *
+ * Real <a href> elements, not buttons: a page of results is a URL, so it
+ * should be shareable, open in a new tab, and be followable by a crawler. The
+ * click handler only exists to keep the SPA navigation and preserve scroll.
+ */
+function Pagination({
+  page, pageCount, hrefFor, onNavigate,
+}: {
+  page: number;
+  pageCount: number;
+  hrefFor: (page: number) => string;
+  onNavigate: (page: number) => void;
+}) {
+  if (pageCount <= 1) return null;
+
+  // A window around the current page, always including the first and last.
+  const around = [page - 1, page, page + 1].filter(n => n > 1 && n < pageCount);
+  const numbers = [...new Set([1, ...around, pageCount])].sort((a, b) => a - b);
+
+  const link = (n: number, label: string, current: boolean, disabled = false) => (
+    <a
+      key={label + n}
+      href={hrefFor(n)}
+      aria-label={`Page ${n}`}
+      aria-current={current ? 'page' : undefined}
+      aria-disabled={disabled || undefined}
+      onClick={e => {
+        if (disabled) { e.preventDefault(); return; }
+        // Let modified clicks do what the person asked (new tab, etc.).
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        onNavigate(n);
+      }}
+      className="min-w-9 h-9 px-3 inline-flex items-center justify-center rounded-full text-sm font-semibold no-underline"
+      style={{
+        background:  current ? '#1E3932' : '#fff',
+        color:       current ? '#fff' : disabled ? '#B4B4B4' : '#141413',
+        border:      `1px solid ${current ? '#1E3932' : '#E8E4E0'}`,
+        pointerEvents: disabled ? 'none' : undefined,
+      }}
+    >
+      {label}
+    </a>
+  );
+
+  return (
+    <nav aria-label="Profile pages" className="flex flex-wrap items-center justify-center gap-2 mt-8 mb-4">
+      {link(Math.max(1, page - 1), 'Previous', false, page === 1)}
+      {numbers.map((n, i) => (
+        <span key={n} className="flex items-center gap-2">
+          {i > 0 && n - numbers[i - 1] > 1 && (
+            <span aria-hidden="true" style={{ color: '#767676' }}>…</span>
+          )}
+          {link(n, String(n), n === page)}
+        </span>
+      ))}
+      {link(Math.min(pageCount, page + 1), 'Next', false, page === pageCount)}
+    </nav>
+  );
+}
+
 // ── ProfileCard ───────────────────────────────────────────────────────────────
 
 const ProfileCard = memo(function ProfileCard({
@@ -564,7 +629,11 @@ function SwipeDeck({
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface ProfilesClientProps {
-  profiles:        DeckProfile[];        // full server-filtered list — no pagination
+  profiles:        DeckProfile[];        // one page of the server-filtered list
+  /** Every match, not just this page — what the counts are about. */
+  totalCount:      number;
+  page:            number;
+  pageCount:       number;
   stats:           { total: number; male: number; female: number; urgent: number };
   filters:         FilterParams;         // current filter values (from URL)
   initialFeatured?: { id: string; title: string; description: string | null; image_url: string | null; link_url: string | null }[];
@@ -575,12 +644,14 @@ interface ProfilesClientProps {
 
 export default function ProfilesClient({
   profiles,
+  totalCount,
+  page,
+  pageCount,
   stats,
   filters,
   initialFeatured,
   authoredBiodata,
 }: ProfilesClientProps) {
-  const totalCount = profiles.length;
   const router   = useRouter();
   const pathname = usePathname();
 
@@ -658,11 +729,36 @@ export default function ProfilesClient({
     if (aMin <= 18) params.delete('ageMin');
     if (aMax >= 60) params.delete('ageMax');
 
+    // Changing a filter changes the result set, so the old page number no
+    // longer refers to anything — and usually lands past the end.
+    params.delete('page');
+
     const qs = params.toString();
     startTransition(() => {
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     });
   }, [pathname, router]);
+
+  /** A page URL that keeps the current filters. */
+  const hrefForPage = useCallback((n: number) => {
+    const params = new URLSearchParams(
+      typeof window === 'undefined' ? '' : window.location.search,
+    );
+    if (n <= 1) params.delete('page');
+    else params.set('page', String(n));
+    const qs = params.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }, [pathname]);
+
+  const goToPage = useCallback((n: number) => {
+    // push, not replace: paging is navigation, and Back should undo it.
+    // Scrolling to the top is the point — a new page under a scrolled
+    // viewport reads as nothing having happened.
+    startTransition(() => {
+      router.push(hrefForPage(n), { scroll: false });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }, [router, hrefForPage]);
 
   // Debounce search input → URL
   useEffect(() => {
@@ -987,6 +1083,15 @@ export default function ProfilesClient({
                   ))}
                 </div>
               )}
+
+              {/* Mobile pager. The stack view is a deck of this page's cards,
+                  so paging moves the deck on too. */}
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                hrefFor={hrefForPage}
+                onNavigate={goToPage}
+              />
             </div>
 
             <p className="hidden md:block text-sm font-medium mb-5" style={{ color: '#696969' }}>
@@ -1007,6 +1112,15 @@ export default function ProfilesClient({
                   interestStatus={interests.statusFor(p.id)}
                 />
               ))}
+            </div>
+
+            <div className="hidden md:block">
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                hrefFor={hrefForPage}
+                onNavigate={goToPage}
+              />
             </div>
 
           </>

@@ -118,6 +118,23 @@ export const SORT_OPTIONS = [
 // hydration, and ships only the matched subset to the client. Client filter UI
 // just pushes URL changes — Remix-style, server is the source of truth.
 
+/**
+ * Listings per page.
+ *
+ * The grid used to render every match — 500 cards, 18,175 DOM elements, which
+ * is what Lighthouse's dom-size audit and most of the page's blocking time
+ * were measuring. 48 fills three full rows on the widest grid and keeps the
+ * document an order of magnitude smaller.
+ */
+export const PAGE_SIZE = 48;
+
+/** 1-based, clamped. Anything unparseable is page 1. */
+export function parsePage(raw: string | string[] | undefined): number {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const n = Number.parseInt(value ?? '1', 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
 export interface FilterParams {
   search:     string;
   idFilter:   string;
