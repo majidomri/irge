@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { type DeckProfile, textDir, URDU_FONT } from '../_shared';
+import { type DeckProfile, rtlTextProps, URDU_FONT } from '../_shared';
 import { INTEREST_CHIPS } from '@/lib/interest-chips';
 
 /**
@@ -103,8 +103,9 @@ export default function InterestModal({
                 <p className="text-[0.68rem] font-bold uppercase tracking-wide" style={{ color: isFemale ? '#C0397A' : '#006241' }}>
                   IR #{profile._num} · {isFemale ? 'Bride' : 'Groom'}
                 </p>
-                <p className="text-xs font-semibold truncate mt-0.5" dir={textDir(profile.title)}
-                  style={{ color: '#141413', fontFamily: textDir(profile.title) === 'rtl' ? URDU_FONT : 'inherit' }}>
+                <p className="text-xs font-semibold truncate mt-0.5"
+                  {...rtlTextProps(profile.title)}
+                  style={{ color: '#141413', ...rtlTextProps(profile.title).style }}>
                   {profile.title}
                 </p>
               </div>
@@ -129,7 +130,8 @@ export default function InterestModal({
                         <span className="text-sm font-bold block" style={{ color: on ? '#006241' : '#141413' }}>
                           {c.label}
                         </span>
-                        <span className="text-xs block mt-0.5" dir="rtl"
+                        {/* A fixed Urdu label, so the marking is literal. */}
+                        <span className="text-xs block mt-0.5" dir="rtl" lang="ur"
                           style={{ color: '#696969', fontFamily: URDU_FONT }}>
                           {c.ur}
                         </span>

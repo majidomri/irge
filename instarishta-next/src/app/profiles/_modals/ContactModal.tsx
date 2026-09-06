@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { logContact } from '@/lib/contact-log';
-import { type Profile, textDir, URDU_FONT } from '../_shared';
+import { type Profile, rtlTextProps } from '../_shared';
 
 const BUSINESS_WA = '+918886667121';
 
@@ -75,8 +75,8 @@ export default function ContactModal({
                 IR #{num} · {isFemale ? 'Bride' : 'Groom'}
               </p>
               <p className="text-xs font-semibold truncate mt-0.5"
-                dir={textDir(profile.title)}
-                style={{ color: '#141413', fontFamily: textDir(profile.title) === 'rtl' ? URDU_FONT : 'inherit' }}>
+                {...rtlTextProps(profile.title)}
+                style={{ color: '#141413', ...rtlTextProps(profile.title).style }}>
                 {profile.title}
               </p>
             </div>

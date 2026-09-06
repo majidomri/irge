@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { Profile } from '@/app/profiles/_shared';
+import type { Profile } from '@/types/profile';
 
 /**
  * WebMCP — exposes this page's actions to an agent running in the browser.

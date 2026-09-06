@@ -1,5 +1,5 @@
 'use client';
-import { textDir, URDU_FONT } from '../_shared';
+import { rtlTextProps } from '../_shared';
 import { type BioSection, type IconName, iconFor } from '@/lib/biodata-schema';
 import { LIVE, accentFor } from '@/lib/live-theme';
 
@@ -37,12 +37,10 @@ function BioIcon({ name, color, size = 14, className = 'shrink-0 mt-0.5' }: {
  * edge of its column visually detaches it from the label it belongs to.
  */
 function rtlProps(value: string) {
-  const dir = textDir(value);
-  return {
-    dir,
-    lang: dir === 'rtl' ? 'ur' : undefined,
-    fontFamily: dir === 'rtl' ? URDU_FONT : 'inherit',
-  };
+  // Flattened from the shared helper, which returns `style` — this component
+  // spreads fontFamily into style objects it builds itself.
+  const { dir, lang, style } = rtlTextProps(value);
+  return { dir, lang, fontFamily: style.fontFamily };
 }
 
 interface Palette { accent: string; accentBg: string; accentLine: string }

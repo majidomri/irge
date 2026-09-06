@@ -1,41 +1,18 @@
 // Shared types, constants, and pure helpers used by the profiles route.
-// Extracted from ProfilesClient.tsx so that lazy-loaded modal/drawer chunks
-// can reuse the same logic without re-bundling it.
+//
+// The listing type and the text-direction helpers now live in src/types and
+// src/lib, because shared code needs them and shared code must not import from
+// app/. They are re-exported here so the route's own files keep one import.
+import type { Profile, DeckProfile } from '@/types/profile';
 
-export interface Profile {
-  /**
-   * Upstream feed id — stable and unique (verified 500/500, none null).
-   * This, NOT `_num`, is the identity to persist against. `_num` is only the
-   * position in the filtered array and shifts whenever the feed changes.
-   */
-  id?: number;
-  title: string;
-  body: string;
-  gender: 'male' | 'female' | string;
-  /** Advertiser contact. Currently the business relay number on every profile. */
-  phone?: string;
-  whatsapp?: string;
-  age?: number;
-  education?: string;
-  priority?: string;
-  audio_url?: string;
-  instagram_post_id?: string;
-}
+export type { Profile, DeckProfile };
+export {
+  ARABIC_RE,
+  URDU_FONT,
+  textDir,
+  rtlTextProps,
+} from '@/lib/text-direction';
 
-export type DeckProfile = Profile & { _num: number };
-
-export const ARABIC_RE = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
-// Calligraphic Nastaliq fonts first — Faiz Nastaleeq / Jameel Noori Nastaleeq
-// are local on Pakistani user systems (free, instant). Noto Nastaliq Urdu is
-// loaded asynchronously via <LazyNastaliq /> and swapped in after first paint.
-// Noto Naskh Arabic (loaded synchronously via next/font) is the during-load
-// fallback so Urdu text always renders correctly during LCP.
-export const URDU_FONT =
-  "'Faiz Nastaleeq','Jameel Noori Nastaleeq','Noto Nastaliq Urdu','Noto Naskh Arabic',serif";
-
-export function textDir(text: string): 'rtl' | 'ltr' {
-  return ARABIC_RE.test(text) ? 'rtl' : 'ltr';
-}
 
 export function isUrgent(body: string) {
   return /urgent|جلد|ارجنٹ/.test(body.toLowerCase());

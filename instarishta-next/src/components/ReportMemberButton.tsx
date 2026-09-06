@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 
-const ReportModal = dynamic(() => import('@/app/profiles/_modals/ReportModal'), { ssr: false });
+const ReportModal = dynamic(() => import('@/components/ReportModal'), { ssr: false });
 
 /**
  * "Report this member" on a public /p/[slug] page.

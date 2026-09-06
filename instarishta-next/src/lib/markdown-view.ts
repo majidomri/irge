@@ -15,7 +15,7 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { getProfiles } from '@/lib/data';
-import type { Profile } from '@/app/profiles/_shared';
+import type { Profile } from '@/types/profile';
 
 const SITE = 'https://www.instarishta.me';
 

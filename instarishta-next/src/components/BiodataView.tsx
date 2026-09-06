@@ -1,7 +1,7 @@
 'use client';
 
 import { LIVE, accentFor } from '@/lib/live-theme';
-import { textDir, URDU_FONT } from '@/app/profiles/_shared';
+import { rtlTextProps } from '@/lib/text-direction';
 import { BiodataGlyph } from './biodata-icons';
 import type { ResolvedField, ResolvedSection } from '@/lib/biodata/types';
 
@@ -26,12 +26,8 @@ import type { ResolvedField, ResolvedSection } from '@/lib/biodata/types';
 
 /** Urdu needs `dir` for bidi, but stays start-aligned beside its label. */
 function rtl(value: string) {
-  const dir = textDir(value);
-  return {
-    dir,
-    lang: dir === 'rtl' ? ('ur' as const) : undefined,
-    fontFamily: dir === 'rtl' ? URDU_FONT : 'inherit',
-  };
+  const { dir, lang, style } = rtlTextProps(value);
+  return { dir, lang, fontFamily: style.fontFamily };
 }
 
 interface Palette { accent: string; accentBg: string; accentLine: string }

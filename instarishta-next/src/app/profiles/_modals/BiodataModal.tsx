@@ -4,7 +4,7 @@ import { type DeckProfile, isUrgent } from '../_shared';
 import { extractBioFields } from '@/lib/bio-extract';
 import { type BioSection, normalizeSections } from '@/lib/biodata-schema';
 import { LIVE, accentFor } from '@/lib/live-theme';
-import ReportModal from './ReportModal';
+import ReportModal from '@/components/ReportModal';
 
 interface BioRow { label: string; value: string }
 

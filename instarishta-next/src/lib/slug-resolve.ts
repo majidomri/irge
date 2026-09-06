@@ -12,6 +12,7 @@
  */
 import { cache } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { serverEnv } from '@/config/env';
 
 let client: SupabaseClient | null = null;
 
@@ -22,11 +23,12 @@ let client: SupabaseClient | null = null;
  */
 export function serverDb(): SupabaseClient {
   if (!client) {
-    client = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
+    // Validated rather than asserted: a missing variable says so, instead of
+    // handing undefined to createClient and failing later inside a query.
+    const { supabaseUrl, supabaseServiceRoleKey } = serverEnv();
+    client = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
   }
   return client;
 }
