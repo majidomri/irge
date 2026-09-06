@@ -35,6 +35,7 @@
  */
 import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
+import { SITE_URL } from '@/config/site';
 import QRCode from 'qrcode';
 
 export const runtime = 'nodejs';
@@ -122,7 +123,7 @@ export async function GET(
    * path back. `toDataURL` rather than the `toString({type:'svg'})` used on
    * the pay page: satori cannot decode SVG and drops it silently.
    */
-  const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://instarishta.me'}/p/${slug}`;
+  const shareUrl = `${SITE_URL}/p/${slug}`;
   const qr = await QRCode.toDataURL(shareUrl, {
     margin: 1,
     width: 200,

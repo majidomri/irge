@@ -18,6 +18,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { SITE_URL } from '@/config/site';
 import { getProfiles } from '@/lib/data';
 import { hiddenSet } from '@/lib/moderation';
 import { redactContacts } from '@/lib/redact';
@@ -28,7 +29,7 @@ import type { Profile } from '@/types/profile';
 export const revalidate = 3600;
 export const dynamicParams = true;
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.instarishta.me';
+const SITE = SITE_URL;
 
 type Params = { params: Promise<{ id: string }> };
 

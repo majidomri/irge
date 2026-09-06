@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { getProfiles } from '@/lib/data';
 import type { Profile } from '@/types/profile';
+import { SITE_URL } from '@/config/site';
 
 /**
  * sitemap.xml
@@ -15,7 +16,6 @@ import type { Profile } from '@/types/profile';
  */
 export const revalidate = 3600;
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://instarishta.me').replace(/\/$/, '');
 
 /** Public, indexable, and stable enough to be worth a crawl budget. */
 const STATIC_ROUTES: Array<[string, MetadataRoute.Sitemap[number]['changeFrequency'], number]> = [

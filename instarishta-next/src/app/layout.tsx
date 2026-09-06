@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SITE_URL } from '@/config/site';
 import { Inter, Noto_Naskh_Arabic } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
@@ -36,7 +37,7 @@ const notoNaskhArabic = Noto_Naskh_Arabic({
 // swaps from Naskh → Nastaliq with no LCP penalty.
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://instarishta.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'InstaRishta — Trusted Muslim Matrimony & Nikah Matchmaking',
     template: '%s — InstaRishta',
