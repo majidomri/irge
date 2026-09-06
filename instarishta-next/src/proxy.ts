@@ -1,5 +1,5 @@
 /**
- * 8G Firewall — Next.js Edge Middleware
+ * 8G Firewall — Next.js Proxy (the v16 rename of the middleware convention)
  *
  * Enforces the 8G Firewall rules that Apache's mod_rewrite handled server-side.
  * Two-mode operation controlled by FIREWALL_SAFE_MODE env var:
@@ -15,7 +15,7 @@
  *   PAGE routes — user agent, referrer   (API routes skip UA check so dev tools work)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, type NextFetchEvent } from 'next/server';
 import {
   BAD_METHOD,
   BAD_URI,
@@ -43,7 +43,50 @@ const SAFE_MODE = process.env.FIREWALL_SAFE_MODE === '1';
 // better-auth session AND for the user's email being on ADMIN_EMAILS.
 const ADMIN_ROUTE = /^\/nizam(\/.*)?$/;
 
-function block(reason: string, req: NextRequest): NextResponse {
+/**
+ * Write a security event, without making the visitor wait for it.
+ *
+ * The proxy runs at the edge and cannot reach Postgres, so it posts to
+ * /api/firewall, which can. `waitUntil` keeps the proxy alive until the write
+ * settles — without it the response returns and the request is torn down
+ * mid-flight, which is why nothing was landing in the table before.
+ *
+ * Failures are swallowed on purpose: a block must still block when the
+ * logging is broken.
+ */
+function recordEvent(
+  event: NextFetchEvent | undefined,
+  req: NextRequest,
+  kind: string,
+  reason: string,
+) {
+  const secret = process.env.FIREWALL_SECRET;
+  if (!secret || !event) return;
+
+  const ua = req.headers.get('user-agent') ?? '';
+  const geo = geoFrom(req.headers);
+
+  event.waitUntil(
+    fetch(`${req.nextUrl.origin}/api/firewall`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-firewall-secret': secret },
+      body: JSON.stringify({
+        kind,
+        reason,
+        ip: clientIp(req.headers),
+        country: geo.country, region: geo.region, city: geo.city,
+        device: deviceClass(ua),
+        method: req.method,
+        // Path only — a campaign parameter is the visitor's business, not
+        // something to keep in a security log.
+        path: req.nextUrl.pathname,
+        userAgent: ua.slice(0, 300),
+      }),
+    }).catch(() => {}),
+  );
+}
+
+function block(reason: string, req: NextRequest, event?: NextFetchEvent): NextResponse {
   const label = `[8G${SAFE_MODE ? '-AUDIT' : '-BLOCK'}]`;
   const ua = req.headers.get('user-agent') ?? '-';
 
@@ -56,16 +99,25 @@ function block(reason: string, req: NextRequest): NextResponse {
     `DEV: ${deviceClass(ua)} | UA: ${ua.slice(0, 80)}`
   );
 
+  recordEvent(event, req, SAFE_MODE ? 'audit' : 'blocked', reason);
+
   if (SAFE_MODE) return NextResponse.next();
   return new NextResponse(null, { status: 403 });
 }
 
 /** 429 with the headers a well-behaved client will actually respect. */
-function tooManyRequests(reason: string, req: NextRequest, resetSeconds: number): NextResponse {
+function tooManyRequests(
+  reason: string,
+  req: NextRequest,
+  resetSeconds: number,
+  event?: NextFetchEvent,
+): NextResponse {
   console.warn(
     `[RATE-LIMIT${SAFE_MODE ? '-AUDIT' : ''}] ${reason} | ${req.method} ${req.nextUrl.pathname} | ` +
     `IP: ${clientIp(req.headers)} | GEO: ${geoLabel(geoFrom(req.headers))}`
   );
+
+  recordEvent(event, req, 'rate-limited', reason);
 
   if (SAFE_MODE) return NextResponse.next();
 
@@ -80,7 +132,7 @@ function tooManyRequests(reason: string, req: NextRequest, resetSeconds: number)
   });
 }
 
-export function proxy(req: NextRequest) {
+export function proxy(req: NextRequest, event: NextFetchEvent) {
   const pathname = req.nextUrl.pathname;
   const isAPI    = pathname.startsWith('/api/');
 
@@ -102,7 +154,7 @@ export function proxy(req: NextRequest) {
   // ── Denylist ──────────────────────────────────────────────────────────────
   // Addresses an admin has blocked in /nizam, plus the BLOCKED_IPS fallback.
   if (isDenied(ip)) {
-    return block('denied-ip', req);
+    return block('denied-ip', req, event);
   }
 
   // ── Rate limiting ─────────────────────────────────────────────────────────
@@ -124,7 +176,7 @@ export function proxy(req: NextRequest) {
     if (budget) {
       const verdict = rateLimit(`${budget.scope}:${ip}`, budget.limit, budget.windowMs);
       if (!verdict.ok) {
-        return tooManyRequests(`${budget.scope}:${verdict.count}/${verdict.limit}`, req, verdict.resetSeconds);
+        return tooManyRequests(`${budget.scope}:${verdict.count}/${verdict.limit}`, req, verdict.resetSeconds, event);
       }
     }
   }
@@ -132,27 +184,27 @@ export function proxy(req: NextRequest) {
   // ── [INTERNAL] HTTP Method ────────────────────────────────────────────────
   // Block CONNECT, DEBUG, MOVE, TRACE, TRACK — browsers never send these.
   if (BAD_METHOD.test(req.method)) {
-    return block(`bad-method:${req.method}`, req);
+    return block(`bad-method:${req.method}`, req, event);
   }
 
   // ── [EXTERNAL] Request URI ────────────────────────────────────────────────
   // Block shell exploits, config file probes, dangerous extensions, etc.
   if (BAD_URI.test(pathname)) {
-    return block(`bad-uri:${pathname}`, req);
+    return block(`bad-uri:${pathname}`, req, event);
   }
 
   // ── [INTERNAL] Query String ───────────────────────────────────────────────
   // Block SQL injection, XSS, LFI, RFI, PHP code execution in query params.
   const rawQuery = req.nextUrl.search.slice(1); // strip leading '?'
   if (rawQuery && BAD_QUERY.test(rawQuery)) {
-    return block('bad-query', req);
+    return block('bad-query', req, event);
   }
 
   // ── [INTERNAL] Cookie ─────────────────────────────────────────────────────
   // Block malicious cookie values (HTML injection, null bytes, CRLF).
   const cookie = req.headers.get('cookie') ?? '';
   if (cookie && BAD_COOKIE.test(cookie)) {
-    return block('bad-cookie', req);
+    return block('bad-cookie', req, event);
   }
 
   // ── [EXTERNAL] User Agent + Referrer (page routes only) ──────────────────
@@ -165,12 +217,12 @@ export function proxy(req: NextRequest) {
     if (ALLOW_UA.test(ua)) return NextResponse.next();
 
     // Block AI training bots, scrapers, exploit scanners.
-    if (BAD_UA.test(ua)) return block('bad-ua', req);
+    if (BAD_UA.test(ua)) return block('bad-ua', req, event);
 
     // Block pharma spam referrers and code injection via Referer header.
     const referer = req.headers.get('referer') ?? '';
     if (referer && BAD_REFERER.test(referer)) {
-      return block('bad-referer', req);
+      return block('bad-referer', req, event);
     }
   }
 
