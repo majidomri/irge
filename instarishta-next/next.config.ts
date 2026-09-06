@@ -114,6 +114,20 @@ const nextConfig: NextConfig = {
       },
       {
         /**
+         * The self-hosted Nastaliq subset. Files under public/ get
+         * `public, max-age=0` by default, so a 239 KB face that never changes
+         * was being revalidated on every visit.
+         *
+         * `immutable` is a promise, and the way to keep it is to rename the
+         * file rather than replace it — a new subset means a new filename.
+         */
+        source: '/fonts/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        /**
          * These URLs answer with HTML or markdown depending on Accept (see
          * middleware.ts), so any shared cache has to key on it. Setting this
          * in middleware did not stick — Next replaces Vary on the response —
