@@ -8,6 +8,11 @@ export const metadata = {
   title: 'Browse Profiles – InstaRishta Muslim Matrimony',
   description:
     'Browse 500+ verified Muslim rishta profiles. Filter by gender, education, marital status. Contact via WhatsApp.',
+  // Every filter combination is a distinct URL of the same page — ?id=,
+  // ?gender=, ?education= and so on — so without this Google has to decide
+  // for itself which of them is the real /profiles. Pointing them all at the
+  // bare path says it plainly and keeps the crawl budget on one URL.
+  alternates: { canonical: '/profiles' },
 };
 
 // Remix-style loader: searchParams drive the filter state, server applies all
