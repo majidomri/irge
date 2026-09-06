@@ -283,6 +283,31 @@ const nextConfig: NextConfig = {
         // is server-filtered per searchParams, but the underlying data updates
         // only every ~30 min (ISR revalidate). Letting a CDN cache for that
         // window with stale-while-revalidate keeps p99 latency low.
+        //
+        // WARNING: this does not take effect in production, and the comment
+        // above described an optimisation that has never run. /profiles is the
+        // only page the build marks `ƒ Dynamic` — it reads searchParams — and
+        // Vercel sends `private, no-cache, no-store` for a dynamic page
+        // response regardless of what headers() asks for. Measured:
+        //
+        //   next start (local)   public, s-maxage=1800, stale-while-revalidate=3600
+        //   production           private, no-cache, no-store, must-revalidate
+        //                        X-Vercel-Cache: MISS on every request
+        //
+        // The cost is real: /profiles answers in ~390 ms where every static
+        // route answers in ~145 ms, because it re-renders per request.
+        //
+        // Left in place rather than deleted because it is correct for any host
+        // that honours it, and harmless where it is ignored. Making it work on
+        // Vercel means making the page non-dynamic — filtering client-side
+        // again, which this design deliberately moved away from, or the
+        // cacheComponents migration, which is still 50 build errors away.
+        //
+        // The page itself is safe to cache: its HTML is byte-identical with
+        // and without a session cookie, and the server component reads neither
+        // cookies nor a session. That was verified, not assumed, because a
+        // cache key that omits the viewer is how one person's page reaches
+        // another.
         source: '/profiles',
         headers: [
           { key: 'Cache-Control', value: 'public, s-maxage=1800, stale-while-revalidate=3600' },
