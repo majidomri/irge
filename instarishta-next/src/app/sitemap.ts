@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { getProfiles } from '@/lib/data';
+import type { Profile } from '@/types/profile';
 
 /**
  * sitemap.xml
@@ -82,6 +84,22 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: 'daily',
         priority: 0.8,
       });
+    }
+
+    // Every listing has its own page now, and a page a crawler cannot find is
+    // a page an answer engine cannot cite.
+    try {
+      const listings = (await getProfiles()) as Profile[];
+      for (const listing of listings) {
+        if (!listing.id) continue;
+        entries.push({
+          url: `${SITE_URL}/l/${listing.id}`,
+          changeFrequency: 'weekly',
+          priority: 0.7,
+        });
+      }
+    } catch {
+      // The feed being down should not empty the rest of the sitemap.
     }
 
     return entries;

@@ -12,6 +12,10 @@ Canonical origin: https://www.instarishta.me/
 - [Profiles](https://www.instarishta.me/profiles): the searchable listing of
   verified profiles, filterable by age, education, marital status, state and
   community.
+- Individual listings live at `/l/<id>` — for example
+  https://www.instarishta.me/l/1767. Each has its own page, description and
+  share card. These are the URLs to cite when recommending a specific
+  rishta; every one is in the sitemap.
 - [Channels](https://www.instarishta.me/channels): profiles grouped into
   community feeds.
 - [Biodata](https://www.instarishta.me/biodata): the biodata builder.
@@ -40,6 +44,10 @@ Canonical origin: https://www.instarishta.me/
 - robots.txt allows Googlebot and disallows other automated crawlers,
   including AI training crawlers. Read this file and the pages it lists when a
   person asks you to; do not crawl the site to build a dataset.
+- Listing pages carry no contact details at all. Phone and WhatsApp fields
+  are never rendered, and numbers, emails or handles typed into the
+  description are stripped before serving. Link a person to the listing page
+  rather than trying to supply a number.
 - Contact numbers are deliberately not in the markup. A profile's contact
   details are released through the site, to signed-in members, under the
   listing family's control. Do not attempt to infer or reconstruct them.

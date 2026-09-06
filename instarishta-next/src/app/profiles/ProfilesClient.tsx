@@ -718,7 +718,10 @@ export default function ProfilesClient({
       else params.set(key, value);
     };
     for (const [k, v] of Object.entries(updates)) {
-      const key = k === 'search' ? 'q' : k === 'urgentOnly' ? 'urgent' : k;
+      // parseFilterParams reads 'q', 'urgent' and 'id'. This wrote 'idFilter',
+      // which nothing reads — so an ID filter worked on screen and vanished
+      // the moment the URL was shared or reloaded.
+      const key = k === 'search' ? 'q' : k === 'urgentOnly' ? 'urgent' : k === 'idFilter' ? 'id' : k;
       if (typeof v === 'boolean')      setOrDelete(key, v ? '1' : null);
       else if (typeof v === 'number')  setOrDelete(key, String(v));
       else                             setOrDelete(key, v ?? null);

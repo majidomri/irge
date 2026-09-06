@@ -28,11 +28,36 @@ const ALLOWED = [
  * training crawler and is a different agent from Googlebot — allowing search
  * does not imply allowing training.
  */
+/**
+ * Answer engines: the crawlers that fetch a page in order to answer somebody's
+ * question and cite the source, as opposed to the ones that harvest it into a
+ * training set.
+ *
+ * These are allowed because the Content-Signal at the top of this file already
+ * says so — `ai-train=no, ai-input=yes`. Until now that was a contradiction:
+ * the signal invited grounding while every group below refused the crawlers
+ * that do it, so a question like "where can I find Muslim rishta listings in
+ * Hyderabad" could never surface this site.
+ *
+ * The training crawlers stay in DISALLOWED, which keeps the other half of the
+ * signal honest. GPTBot and OAI-SearchBot are different agents and are treated
+ * differently on purpose; so are ClaudeBot and Claude-User, and Googlebot and
+ * Google-Extended.
+ */
+const ANSWER_ENGINES = [
+  'OAI-SearchBot',
+  'ChatGPT-User',
+  'PerplexityBot',
+  'Perplexity-User',
+  'Claude-User',
+  'Claude-SearchBot',
+];
+
 const DISALLOWED = [
+  // Training crawlers. Listings are families' personal details.
   'Google-Extended',
-  'GPTBot', 'ChatGPT-User', 'OAI-SearchBot',
+  'GPTBot',
   'ClaudeBot', 'anthropic-ai', 'Claude-Web',
-  'PerplexityBot', 'Perplexity-User',
   'CCBot',
   'Bytespider',
   'FacebookBot', 'meta-externalagent', 'meta-externalfetcher',
@@ -77,6 +102,11 @@ function body(): string {
   ];
 
   for (const agent of ALLOWED) {
+    lines.push(`User-agent: ${agent}`, 'Allow: /', '');
+  }
+
+  lines.push('# Answer engines — may fetch to answer a question and cite us');
+  for (const agent of ANSWER_ENGINES) {
     lines.push(`User-agent: ${agent}`, 'Allow: /', '');
   }
 
