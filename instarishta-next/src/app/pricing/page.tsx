@@ -16,16 +16,25 @@ import type { OrderPlanId } from '@/lib/orders';
  * plan, while per-credit (₹12.22 vs ₹9.37) and volume (180 vs 480) argue for it.
  */
 
-const TIER_STYLE: Record<string, { color: string; accent: string; bg: string; ring: string }> = {
+/**
+ * `accentOnDark` exists because `accent` is used on both a pale card and the
+ * comparison table's #1E3932 header, and one colour cannot serve both. ir12's
+ * #00A86B reads at 4.04:1 on that header — under the 4.5:1 AA floor for text
+ * this size — while a lighter green would wash out on the card. Measured:
+ * #00A86B 4.04, #00C87A 5.66, and ir6's #C0CDD8 already passes at 7.69.
+ */
+const TIER_STYLE: Record<string, { color: string; accent: string; accentOnDark: string; bg: string; ring: string }> = {
   ir6: {
-    color:  '#7B8FA1',
+    color:  '#617285',
     accent: '#C0CDD8',
+    accentOnDark: '#C0CDD8',
     bg:     'linear-gradient(135deg, #f0f4f8 0%, #e8edf2 100%)',
     ring:   'rgba(123,143,161,0.3)',
   },
   ir12: {
     color:  '#006241',
     accent: '#00A86B',
+    accentOnDark: '#00C87A',
     bg:     'linear-gradient(135deg, #f0fdf8 0%, #d1fae5 100%)',
     ring:   'rgba(0,98,65,0.35)',
   },
@@ -224,7 +233,7 @@ export default function PricingPage() {
                     <span className="text-[0.78rem] text-[rgba(0,0,0,0.45)] font-medium">₹</span>
                     <span className="text-[2.2rem] font-bold text-[rgba(0,0,0,0.87)] leading-none">{plan.price.toLocaleString('en-IN')}</span>
                   </div>
-                  <p className="text-[0.75rem] text-[rgba(0,0,0,0.5)] mb-1">
+                  <p className="text-[0.75rem] text-[rgba(0,0,0,0.58)] mb-1">
                     for {plan.months} months — paid once
                   </p>
                   <p className="text-[0.8rem] font-semibold mb-5" style={{ color: s.color }}>
@@ -272,7 +281,7 @@ export default function PricingPage() {
           style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)' }}>
           <div>
             <p className="font-bold text-[0.88rem] text-[rgba(0,0,0,0.87)]">Ran out before the month is up?</p>
-            <p className="text-[0.78rem] text-[rgba(0,0,0,0.52)]">
+            <p className="text-[0.78rem] text-[rgba(0,0,0,0.58)]">
               Members can refill {TOPUP_TOTAL_CREDITS} credits ({TOPUP.credits} + {TOPUP_BONUS_CREDITS} bonus)
               for ₹{TOPUP.price}. It appears in your account the moment you reach zero — and refill
               credits never reset or expire.
@@ -288,7 +297,7 @@ export default function PricingPage() {
           <p className="text-center text-[0.8rem] font-semibold mt-4" style={{ color: '#CF4500' }}>{buyError}</p>
         )}
 
-        <p className="text-center text-[0.75rem] text-[rgba(0,0,0,0.42)] mt-6">
+        <p className="text-center text-[0.75rem] text-[rgba(0,0,0,0.58)] mt-6">
           All prices inclusive of GST · Credits activate the moment you confirm payment<br />
           No auto-renewal · All payments are final and non-refundable
         </p>
@@ -297,7 +306,7 @@ export default function PricingPage() {
       {/* Comparison */}
       <section className="px-4 pb-16 max-w-3xl mx-auto">
         <h2 className="text-[1.5rem] font-bold text-[rgba(0,0,0,0.87)] mb-2 text-center">Compare</h2>
-        <p className="text-center text-[0.85rem] text-[rgba(0,0,0,0.5)] mb-8">Free browsing always stays free</p>
+        <p className="text-center text-[0.85rem] text-[rgba(0,0,0,0.58)] mb-8">Free browsing always stays free</p>
 
         <div className="rounded-2xl overflow-x-auto border border-[rgba(0,0,0,0.07)]" style={{ background: '#fff' }}>
           <div className="min-w-[520px]">
@@ -305,7 +314,7 @@ export default function PricingPage() {
               <div className="p-4 text-[rgba(255,255,255,0.6)]">Feature</div>
               <div className="p-4 text-center text-[rgba(255,255,255,0.6)]">Free</div>
               {PLANS.map(p => (
-                <div key={p.id} className="p-4 text-center" style={{ color: TIER_STYLE[p.id].accent }}>{p.name}</div>
+                <div key={p.id} className="p-4 text-center" style={{ color: TIER_STYLE[p.id].accentOnDark }}>{p.name}</div>
               ))}
             </div>
 
@@ -329,7 +338,7 @@ export default function PricingPage() {
       {/* Payment methods */}
       <section className="px-4 pb-16 max-w-3xl mx-auto text-center">
         <h2 className="text-[1.2rem] font-bold text-[rgba(0,0,0,0.87)] mb-2">How to Pay</h2>
-        <p className="text-[0.85rem] text-[rgba(0,0,0,0.52)] mb-8">Three taps, and your credits are live</p>
+        <p className="text-[0.85rem] text-[rgba(0,0,0,0.58)] mb-8">Three taps, and your credits are live</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
@@ -340,7 +349,7 @@ export default function PricingPage() {
             <div key={m.title} className="rounded-xl p-5 border border-[rgba(0,0,0,0.07)] text-left" style={{ background: '#fff' }}>
               <div className="text-2xl mb-2">{m.icon}</div>
               <div className="font-bold text-[0.88rem] text-[rgba(0,0,0,0.87)] mb-1">{m.title}</div>
-              <div className="text-[0.75rem] text-[rgba(0,0,0,0.52)]">{m.desc}</div>
+              <div className="text-[0.75rem] text-[rgba(0,0,0,0.58)]">{m.desc}</div>
             </div>
           ))}
         </div>

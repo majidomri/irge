@@ -1,0 +1,67 @@
+# Lighthouse CI — Core Web Vitals gate for instarishta-next.
+#
+# Runs against the deployed site rather than a build made here, and that is a
+# deliberate trade-off worth stating.
+#
+# Building the app in CI would need NEXT_PUBLIC_SUPABASE_URL, the anon key and
+# DATABASE_URL as repository secrets: sitemap.ts and generateStaticParams read
+# Supabase at build time. Without them the build still succeeds — the loaders
+# catch their errors and fall back to empty — so CI would produce a page with
+# no listings and Lighthouse would score a site nobody visits. Measuring
+# production measures the thing users actually get.
+#
+# The cost of that choice: this catches a regression after it has shipped, not
+# before it merges. If you want a pre-merge gate, add the three secrets and a
+# build + `next start` step, and point collect.url at http://localhost:3000.
+#
+# Not run on push, also deliberately. A deploy landing mid-run serves HTML that
+# references chunks from the build being replaced, which shows up as console
+# 404s that are gone a minute later. A schedule measures a settled deployment.
+name: Lighthouse
+
+on:
+  schedule:
+    # 03:00 UTC — well clear of the daily crons at 02:00–06:00.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Single URL to test instead of the configured set'
+        required: false
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Run Lighthouse CI
+        working-directory: instarishta-next
+        run: |
+          if [ -n "${{ inputs.url }}" ]; then
+            npx --yes @lhci/cli@0.14.x autorun \
+              --collect.url="${{ inputs.url }}" \
+              --config=lighthouserc.json
+          else
+            npx --yes @lhci/cli@0.14.x autorun --config=lighthouserc.json
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: instarishta-next/.lighthouseci
+          retention-days: 14
+          if-no-files-found: ignore

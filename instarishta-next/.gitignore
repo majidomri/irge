@@ -43,3 +43,6 @@ next-env.d.ts
 # Local data artifact — a list of published IR ids, referenced by no code.
 # Ignored so tooling that requires a clean tree can run.
 published-ir.json
+
+# Lighthouse CI reports
+.lighthouseci/
