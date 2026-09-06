@@ -129,10 +129,11 @@ export const BUDGETS = {
    */
   botPages: { limit: 60, windowMs: 60_000 },
   /**
-   * /api/reports and /api/comments accept writes from signed-out visitors by
-   * design — requiring an account to report abuse suppresses the reports that
-   * matter most — which also makes them the only anonymous write surface, and
-   * the one worth a tighter budget than the rest of the API.
+   * /api/reports, /api/comments and /api/payment-notify accept writes from
+   * signed-out visitors by design — requiring an account to report abuse
+   * suppresses the reports that matter most, and someone paying for their
+   * first plan may not have signed in yet — which makes them the anonymous
+   * write surface, and the one worth a tighter budget than the rest of the API.
    */
   anonWrite: { limit: 8, windowMs: 60_000 },
 } as const;

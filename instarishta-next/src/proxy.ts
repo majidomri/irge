@@ -172,11 +172,20 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
   // clients that look automated get a budget.
   const device = deviceClass(req.headers.get('user-agent') ?? '');
 
-  // Reports and comments accept writes from signed-out visitors by design, so
-  // they are the one anonymous write surface and get their own budget.
+  // Reports, comments and payment notifications accept writes from signed-out
+  // visitors by design, so they are the anonymous write surface and get their
+  // own budget.
+  //
+  // payment-notify was missing from this list and fell into the general `api`
+  // budget — 120/min instead of 8/min. It grants nothing on its own, but it
+  // pushes caller-supplied text and an uploaded image straight into the admin
+  // Telegram channel, which makes it the worst of the three to leave at the
+  // generous limit.
   const isAnonWrite =
     req.method === 'POST' &&
-    (pathname === '/api/reports' || pathname === '/api/comments');
+    (pathname === '/api/reports' ||
+      pathname === '/api/comments' ||
+      pathname === '/api/payment-notify');
 
   const scope = isAnonWrite
     ? 'anonWrite'

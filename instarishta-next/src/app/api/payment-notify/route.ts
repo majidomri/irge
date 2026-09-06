@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
+import { auth } from '@/lib/auth';
 import { getPlan, totalCredits, TOPUP } from '@/lib/plans';
 
 /** Human summary of what the user says they paid for, from the shared catalog. */
@@ -19,6 +20,9 @@ function describe(id: string): { label: string; detail: string; price: number | 
   }
   return { label: id || 'unknown', detail: 'UNRECOGNISED — verify manually', price: null };
 }
+
+/** Telegram's own sendPhoto ceiling. */
+const MAX_SCREENSHOT_BYTES = 10 * 1024 * 1024;
 
 function esc(v: unknown): string {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest) {
   if (!token || !target) return NextResponse.json({ ok: false, error: 'Not configured' }, { status: 503 });
 
   let plan = '', utr = '', email = '', screenshotBytes: Buffer | null = null;
+  let oversized = false;
 
   const ct = req.headers.get('content-type') ?? '';
   if (ct.includes('multipart/form-data')) {
@@ -63,8 +68,15 @@ export async function POST(req: NextRequest) {
     utr   = String(fd.get('utr')   ?? '');
     email = String(fd.get('email') ?? '');
     const file = fd.get('screenshot');
+    // Capped before the read, not after: an unauthenticated caller should not
+    // be able to decide how much memory this buffers. 10 MB is Telegram's own
+    // sendPhoto ceiling, so anything larger would have failed there anyway.
     if (file instanceof File && file.size > 0) {
-      screenshotBytes = Buffer.from(await file.arrayBuffer());
+      if (file.size <= MAX_SCREENSHOT_BYTES) {
+        screenshotBytes = Buffer.from(await file.arrayBuffer());
+      } else {
+        oversized = true;
+      }
     }
   } else {
     const body = await req.json().catch(() => ({})) as Record<string, string>;
@@ -75,6 +87,37 @@ export async function POST(req: NextRequest) {
 
   const info     = describe(plan);
   const threadId = process.env.TELEGRAM_MESSAGE_THREAD_ID?.trim();
+
+  /**
+   * Who is actually asking.
+   *
+   * This endpoint stays open to signed-out visitors on purpose — somebody
+   * buying their first plan may not have an account yet — and it grants
+   * nothing by itself: an admin reads the message and does the grant by hand
+   * in /nizam. That human step is exactly why the identity has to be
+   * trustworthy. The `email` field is typed by the caller, so a forged request
+   * could name a real member's address and the admin had no way to tell it
+   * apart from a genuine one.
+   *
+   * So the session is read here and reported separately. Nothing is blocked on
+   * it; the message just stops presenting a self-declared address as fact.
+   */
+  let sessionEmail: string | null = null;
+  try {
+    const session = await auth.api.getSession({ headers: req.headers });
+    sessionEmail = session?.user?.email ?? null;
+  } catch {
+    // Never fail a payment notification over the session lookup — a message
+    // that reaches an admin unattested beats one that never arrives.
+    sessionEmail = null;
+  }
+
+  const claimed = email.trim();
+  const identity = sessionEmail
+    ? claimed && claimed.toLowerCase() !== sessionEmail.toLowerCase()
+      ? `<code>${esc(sessionEmail)}</code> (signed in) — ⚠️ but typed <code>${esc(claimed)}</code>`
+      : `<code>${esc(sessionEmail)}</code> (signed in)`
+    : `<code>${esc(claimed || 'not given')}</code> — ⚠️ not signed in, unverified`;
 
   const action = getPlan(plan)
     ? `Verify payment, then <b>/nizam → Users → Activate ${info.label}</b>.`
@@ -87,9 +130,9 @@ export async function POST(req: NextRequest) {
     ``,
     `<b>Plan:</b> ${esc(info.label)} — ₹${info.price ?? '?'}`,
     `<b>Grants:</b> ${esc(info.detail)}`,
-    `<b>User:</b> ${esc(email)}`,
+    `<b>User:</b> ${identity}`,
     `<b>UTR / Txn ID:</b> <code>${esc(utr)}</code>`,
-    `<b>Screenshot:</b> ${screenshotBytes ? 'Attached below' : 'Not provided'}`,
+    `<b>Screenshot:</b> ${screenshotBytes ? 'Attached below' : oversized ? '⚠️ Rejected — over 10 MB' : 'Not provided'}`,
     ``,
     `<b>Action needed:</b> ${action}`,
     `<b>Time:</b> ${new Date().toISOString()}`,
