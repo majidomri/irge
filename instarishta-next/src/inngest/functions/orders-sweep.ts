@@ -18,6 +18,35 @@
  * The HTTP route stays as it is. It is what the hand-testing used, it is
  * callable with ?grace=720 to see what a run would do, and having two entry
  * points to an idempotent sweep costs nothing.
+ *
+ * ---------------------------------------------------------------------------
+ * There is a third entry point, and it is the one that actually runs.
+ *
+ * pg_cron job #2 in this database is `SELECT public.ir_sweep_orders();` on
+ * `7 * * * *` — hourly, 24 runs a day, confirmed in cron.job_run_details. This
+ * function and the HTTP route are both scheduled daily. So by the time either
+ * of them runs, the hourly job has almost always swept already and they find
+ * nothing to report.
+ *
+ * That matters because the RPC is only half the job. Checked against the
+ * function source: ir_sweep_orders writes no audit row and sends no message —
+ * the ir_moderation_actions insert and the Telegram alert are in *this* file
+ * and in the route, not in the database. A revocation picked up by the hourly
+ * job therefore produces neither.
+ *
+ * Not yet a live incident, and worth being exact about why: the sweep has only
+ * ever expired unclaimed orders (6 expired, 0 revoked at the time of writing),
+ * and expiry is the harmless half. Zero rows in ir_moderation_actions for
+ * 'revoke-credits' is consistent with nothing having been revoked, not with a
+ * revocation having been swallowed. But the first real revocation would land
+ * on the hourly job, silently, which is precisely the outcome the top of this
+ * comment says must not happen.
+ *
+ * Fixing it is a scheduling decision rather than a code change — disabling
+ * cron job #2 so revocation only ever runs through an audited path, or moving
+ * the audit and notification into the RPC — and it touches live payment
+ * infrastructure, so it is written down here rather than done quietly.
+ * ---------------------------------------------------------------------------
  */
 import { cron } from 'inngest';
 
