@@ -69,6 +69,24 @@ const pool = new Pool({
   // `betterauth` schema rather than `public`. `public` is still on the path
   // so any auth-internal queries that touch public.* (none today) still work.
   options: '-c search_path=betterauth,public',
+
+  // Sizing, which was left at pg's defaults and should not have been.
+  //
+  // This connects to the Session-mode pooler on 5432 (see the note below on
+  // why it must not be 6543), and in session mode every pooled connection
+  // holds a real Postgres backend for as long as it is open. The default max
+  // is 10 — per Node process, and on Vercel that means per concurrent
+  // serverless instance. Ten instances is a hundred backends against a
+  // database that allows far fewer.
+  //
+  // The default that actually bites is connectionTimeoutMillis, which is 0:
+  // wait forever. So the failure mode was not an error, it was every
+  // auth-touching request hanging until the platform timeout, with the
+  // database sitting there reporting idle sessions. Failing in five seconds
+  // is worse for one request and much better for the site.
+  max: 5,
+  idleTimeoutMillis: 10_000,     // hand connections back sooner between bursts
+  connectionTimeoutMillis: 5_000, // fail fast rather than queue indefinitely
 });
 
 // Belt-and-suspenders: also SET search_path on every new physical connection.

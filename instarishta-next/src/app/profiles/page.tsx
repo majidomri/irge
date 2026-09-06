@@ -56,6 +56,29 @@ export default async function ProfilesPage({
   const page      = Math.min(parsePage(params.page), pageCount);
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  /**
+   * Biodata for the profiles on this page, and no others.
+   *
+   * getBiodata() reads the whole ir_biodata table, and the entire map used to
+   * be handed to ProfilesClient — which reads exactly one entry from it, for
+   * the profile the visitor opened. So every /profiles response carried the
+   * authored biodata of every profile that has any, to render at most one.
+   *
+   * That is invisible today because the table is empty, which is the only
+   * reason it has cost nothing so far. It is worth bounding before it fills:
+   * these sections are the detailed family write-ups, and shipping all of
+   * them to every signed-out visitor is the wrong default to leave in place.
+   *
+   * Scoping to pageItems is safe rather than clever — the modal can only be
+   * opened from a card that is on the page, so an entry outside this slice
+   * was never reachable.
+   */
+  const pageBiodata: Record<string, unknown> = {};
+  for (const p of pageItems) {
+    const key = String(p.id ?? '');
+    if (key && key in biodata) pageBiodata[key] = biodata[key];
+  }
+
   return (
     <>
       {/* Exposes search over the same listings this page rendered — the page,
@@ -69,7 +92,7 @@ export default async function ProfilesPage({
       stats={stats}
       filters={filters}
       initialFeatured={featured}
-      authoredBiodata={biodata}
+      authoredBiodata={pageBiodata}
       />
     </>
   );
