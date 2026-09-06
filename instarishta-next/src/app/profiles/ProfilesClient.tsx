@@ -878,7 +878,7 @@ export default function ProfilesClient({
               className="rounded-full px-4 py-2.5 text-sm w-32 outline-none border-0 placeholder:text-white/50"
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }} />
             <div className="flex items-center gap-1.5 rounded-full px-4 py-1.5" style={{ background: 'rgba(255,255,255,0.13)' }}>
-              <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>Age</span>
+              <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.75)' }}>Age</span>
               <input type="number" min={18} max={60} value={ageMin}
                 onChange={e => setAgeMin(Math.min(Math.max(+e.target.value || 18, 18), ageMax - 1))}
                 aria-label="Minimum age"
