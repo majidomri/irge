@@ -114,6 +114,50 @@ const nextConfig: NextConfig = {
       },
       {
         /**
+         * These URLs answer with HTML or markdown depending on Accept (see
+         * middleware.ts), so any shared cache has to key on it. Setting this
+         * in middleware did not stick — Next replaces Vary on the response —
+         * and a CDN without it would eventually hand markdown to a browser.
+         */
+        source: '/:path(|profiles|channels|biodata|pricing|security|child-safety|privacy|toc|disclaimer|refund-policy)',
+        headers: [{ key: 'Vary', value: 'Accept' }],
+      },
+      {
+        source: '/p/:slug',
+        headers: [{ key: 'Vary', value: 'Accept' }],
+      },
+      {
+        /**
+         * RFC 8288 Link headers, so an agent can find the machine-readable
+         * description of this site before parsing any HTML.
+         *
+         * Deliberately no rel="api-catalog" or rel="service-desc". Those
+         * advertise an API for third parties to call, and there isn't one:
+         * every route under /api/ serves this site's own frontend and is
+         * authenticated, admin-only, or a cron target. Publishing a catalog
+         * of them would invite traffic they are not built to answer and that
+         * the rate limiters would reject anyway. llms.txt says the same thing
+         * in prose.
+         *
+         * rel values below are all in the IANA link relations registry.
+         */
+        source: '/',
+        headers: [
+          {
+            key: 'Link',
+            value: [
+              '</md>; rel="alternate"; type="text/markdown"',
+              '</llms.txt>; rel="describedby"; type="text/plain"',
+              '</manifest.webmanifest>; rel="manifest"; type="application/manifest+json"',
+              '</sitemap.xml>; rel="describedby"; type="application/xml"',
+              '</toc>; rel="terms-of-service"',
+              '</privacy>; rel="privacy-policy"',
+            ].join(', '),
+          },
+        ],
+      },
+      {
+        /**
          * The traffic-advice file must be served as this exact type or the
          * prefetch proxy ignores it. It opts this origin in to cross-site
          * prefetching from search results, so the first page a visitor sees

@@ -117,8 +117,57 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  // ── Markdown content negotiation ──────────────────────────────────────────
+  // An agent asking for `Accept: text/markdown` gets the markdown view of the
+  // same URL. Browsers ask for text/html and are unaffected.
+  if (req.method === 'GET' && wantsMarkdown(req) && MARKDOWN_PATHS.test(pathname)) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/md${pathname === '/' ? '' : pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  const res = NextResponse.next();
+
+  // Every public page can answer in two representations now, so shared caches
+  // must key on Accept even when this request wanted HTML.
+  if (!isAPI && MARKDOWN_PATHS.test(pathname)) {
+    res.headers.set('Vary', 'Accept');
+  }
+
+  return res;
 }
+
+/**
+ * True when markdown is genuinely asked for.
+ *
+ * A wildcard Accept — what curl and most scripts send — must not match, or
+ * every scripted fetch would get markdown instead of the page. Only an
+ * explicit mention of text/markdown counts, and a `q=0` on it means "not this".
+ */
+function wantsMarkdown(req: NextRequest): boolean {
+  const accept = req.headers.get('accept');
+  if (!accept) return false;
+
+  for (const part of accept.split(',')) {
+    const [type, ...rest] = part.trim().split(';');
+    if (type.trim().toLowerCase() !== 'text/markdown') continue;
+
+    const q = rest
+      .map((p) => p.trim().toLowerCase())
+      .find((p) => p.startsWith('q='));
+
+    return q ? Number(q.slice(2)) > 0 : true;
+  }
+
+  return false;
+}
+
+/**
+ * Paths with a markdown view. Kept in step with markdownForPath() in
+ * lib/markdown-view.ts — a path listed here but unknown there 404s.
+ */
+const MARKDOWN_PATHS =
+  /^\/(?:$|profiles$|channels$|biodata$|pricing$|security$|child-safety$|privacy$|toc$|disclaimer$|refund-policy$|p\/[A-Za-z0-9_-]{1,64}$)/;
 
 export const config = {
   matcher: [

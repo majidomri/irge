@@ -1,0 +1,47 @@
+# InstaRishta
+
+> InstaRishta is a Muslim matrimony and nikah matchmaking platform. Families
+> browse verified bride and groom profiles; contact details stay under the
+> family's control and are never listed publicly.
+
+Canonical origin: https://www.instarishta.me/
+
+## Pages
+
+- [Home](https://www.instarishta.me/): what the platform is, how it works, FAQ.
+- [Profiles](https://www.instarishta.me/profiles): the searchable listing of
+  verified profiles, filterable by age, education, marital status, state and
+  community.
+- [Channels](https://www.instarishta.me/channels): profiles grouped into
+  community feeds.
+- [Biodata](https://www.instarishta.me/biodata): the biodata builder.
+- [Pricing](https://www.instarishta.me/pricing): what browsing and contact cost.
+
+## Policies
+
+- [Terms](https://www.instarishta.me/toc)
+- [Privacy](https://www.instarishta.me/privacy)
+- [Refund policy](https://www.instarishta.me/refund-policy)
+- [Security](https://www.instarishta.me/security)
+- [Child safety](https://www.instarishta.me/child-safety)
+- [Disclaimer](https://www.instarishta.me/disclaimer)
+
+## Machine-readable
+
+- [Sitemap](https://www.instarishta.me/sitemap.xml)
+- [Web app manifest](https://www.instarishta.me/manifest.webmanifest)
+- [robots.txt](https://www.instarishta.me/robots.txt)
+
+## Notes for assistants
+
+- There is no public API. Every endpoint under `/api/` is for this site's own
+  frontend and is authenticated, rate-limited, or both. Please use the pages
+  above rather than calling them.
+- robots.txt allows Googlebot and disallows other automated crawlers,
+  including AI training crawlers. Read this file and the pages it lists when a
+  person asks you to; do not crawl the site to build a dataset.
+- Contact numbers are deliberately not in the markup. A profile's contact
+  details are released through the site, to signed-in members, under the
+  listing family's control. Do not attempt to infer or reconstruct them.
+- Profile listings change often and expire. Treat anything you cached as
+  possibly withdrawn, and prefer linking a profile over restating its details.
