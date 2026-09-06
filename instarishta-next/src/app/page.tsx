@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
+import { restSelect } from '@/lib/supabase-rest';
 import dynamic from 'next/dynamic';
 import StarBorder from '@/components/ui/StarBorder';
 const Masonry = dynamic(() => import('@/components/ui/Masonry'), { ssr: false });
@@ -71,18 +71,17 @@ export default function HomePage() {
 
   async function loadChannels() {
     try {
-      const client = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-      const { data } = await client
-        .from('ir_channels')
-        .select('slug, name, description, cover_image')
+      // A plain PostgREST GET. This used to build a full supabase-js client
+      // for one anonymous select, which put 222 KB of realtime and auth code
+      // into the home page's first load.
+      const data = await restSelect<Channel>('ir_channels', {
+        select: 'slug,name,description,cover_image',
         // Cohorts share this table but are member circles, not content
         // feeds — see getCohorts() in lib/supabase.ts.
-        .eq('is_cohort', false)
-        .order('created_at', { ascending: false })
-        .limit(8);
+        is_cohort: 'eq.false',
+        order: 'created_at.desc',
+        limit: 8,
+      });
       setChannels(data ?? []);
     } catch {
       setChannels([]);

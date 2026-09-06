@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getDb } from '@/lib/db';
+import { restSelect } from '@/lib/supabase-rest';
 import dynamic from 'next/dynamic';
 
 const Carousel = dynamic(() => import('@/components/ui/Carousel'), { ssr: false });
@@ -26,19 +26,19 @@ export default function FeaturedCarousel({
 
   useEffect(() => {
     if (initialItems && initialItems.length > 0) return; // server already fetched
-    getDb()
-      .from('ir_featured')
-      .select('id, title, description, image_url, link_url')
-      .eq('active', true)
-      .or(`placement.eq.all,placement.eq.${placement}`)
-      .order('sort_order', { ascending: true })
-      .limit(10)
-      .then(({ data, error }: { data: FeaturedItem[] | null; error?: unknown }) => {
-        // Without this the carousel disappears identically whether the table is
-        // empty or the anon-key query was rejected — log so the two differ.
-        if (error) console.error('[FeaturedCarousel] ir_featured query failed:', error);
-        if (data && data.length > 0) setItems(data);
-      });
+    // A plain PostgREST GET. getDb() built a full @supabase/ssr browser
+    // client for this one select, and because this carousel renders on /,
+    // /profiles and /channels/[slug], that put supabase-js — realtime, auth
+    // and a Buffer polyfill — into the first load of all three.
+    restSelect<FeaturedItem>('ir_featured', {
+      select: 'id,title,description,image_url,link_url',
+      active: 'eq.true',
+      or: `(placement.eq.all,placement.eq.${placement})`,
+      order: 'sort_order.asc',
+      limit: 10,
+    }).then((data) => {
+      if (data.length > 0) setItems(data);
+    });
   }, [placement, initialItems]);
 
   if (items.length === 0) return null;

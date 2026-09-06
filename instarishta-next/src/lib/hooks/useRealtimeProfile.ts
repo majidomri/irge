@@ -12,7 +12,11 @@
  * `enabled` stays false and callers keep their polling fallback.
  */
 import { useEffect, useRef, useState } from 'react';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+// Type-only. The SDK itself is imported below, inside the effect: it is 222 KB
+// of realtime and auth code, and it was landing in the first load of every
+// route that renders this hook — including /profiles, where most visitors
+// are signed out and never reach the code that needs it.
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { useSession } from '@/lib/auth-client';
 
 const SUPABASE_URL  = 'https://cxgxyqxeakjrghfzkuko.supabase.co';
@@ -48,6 +52,11 @@ export function useRealtimeProfile(onChange: (credits: number, plan: string) => 
       const data = await fetchToken();
       if (!data?.token || cancelled) return;
       token = data.token;
+
+      // Fetched only now: past the signed-in check and past a successful
+      // token mint, so the download happens for people who will use it.
+      const { createClient } = await import('@supabase/supabase-js');
+      if (cancelled) return;
 
       client = createClient(SUPABASE_URL, SUPABASE_ANON, {
         accessToken: async () => token ?? '',          // third-party auth: our minted JWT
