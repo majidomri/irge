@@ -38,7 +38,7 @@ import {
   visitorId,
   VISITOR_COOKIE,
 } from '@/lib/request-context';
-import { BUDGETS, IP_CEILINGS, rateLimit } from '@/lib/rate-limit';
+import { BUDGETS, IP_CEILINGS, rateLimit, STRIKES } from '@/lib/rate-limit';
 
 const SAFE_MODE = process.env.FIREWALL_SAFE_MODE === '1';
 
@@ -166,10 +166,16 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
   }
 
   // ── Rate limiting ─────────────────────────────────────────────────────────
-  // Real browsers requesting pages are never limited: those pages are
+  // Real browsers requesting ordinary pages are not limited: those pages are
   // CDN-cached, so fast clicking costs nothing, and a false positive here
-  // would break the site for a real family. Only the expensive surfaces and
-  // clients that look automated get a budget.
+  // would break the site for a real family.
+  //
+  // Listing detail pages are the exception, and were the hole. They are the
+  // one surface where the id is guessable, so "not limited unless the UA looks
+  // like a bot" meant a scraper sending a Chrome string could walk the whole
+  // catalogue at full speed. They now have their own budget regardless of UA,
+  // and repeat offenders escalate rather than being told to wait a minute
+  // forever.
   const device = deviceClass(req.headers.get('user-agent') ?? '');
 
   // Reports, comments and payment notifications accept writes from signed-out
@@ -187,15 +193,33 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
       pathname === '/api/comments' ||
       pathname === '/api/payment-notify');
 
-  const scope = isAnonWrite
+  // Listing detail pages, which are the enumerable surface: /l/[id] is a
+  // sequential integer, so the catalogue can be walked by counting. Crawlers
+  // are deliberately excluded — Googlebot and the answer engines are invited
+  // to read all 500, and they keep the botPages budget below.
+  const isListingPage =
+    device !== 'bot' &&
+    (/^\/l\/[^/]+$/.test(pathname) || /^\/p\/[^/]+$/.test(pathname));
+
+  // Anything that can move contact credits. Narrow on purpose: this is the
+  // expensive surface, not the whole /api/interests tree — sending an interest
+  // is free and already capped per member by its own allowance.
+  const isCreditSpend =
+    req.method === 'POST' && pathname === '/api/interests/reveal';
+
+  const scope = isCreditSpend
+    ? 'creditSpend'
+    : isAnonWrite
     ? 'anonWrite'
     : pathname.startsWith('/api/auth/')
       ? 'auth'
       : isAPI
         ? 'api'
-        : device === 'bot'
-          ? 'botPages'
-          : null;
+        : isListingPage
+          ? 'listings'
+          : device === 'bot'
+            ? 'botPages'
+            : null;
 
   // The browser's own bucket, where it has one. A visitor behind a carrier NAT
   // shares an address with thousands of people but not a cookie.
@@ -219,6 +243,30 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
 
     const failed = checks.find(c => !c.ok);
     if (failed) {
+      // Step two: is this the same pattern again?
+      //
+      // Only the enumerable and the expensive surfaces escalate. Tripping the
+      // general page or API budget is usually a burst, and a one-minute pause
+      // is the correct and complete answer to it.
+      const escalates = scope === 'listings' || scope === 'creditSpend';
+
+      if (escalates) {
+        const strikeKey = `${scope}:strike:${visitor ?? ip}`;
+        const strike = rateLimit(strikeKey, STRIKES.limit, STRIKES.windowMs);
+
+        if (!strike.ok) {
+          // Third trip inside the hour. A longer pause, and an event an admin
+          // can act on in /nizam — this never blocks anyone by itself, because
+          // the denylist is deliberately a human decision.
+          return tooManyRequests(
+            `${scope}:repeat-pattern:${strike.count}-trips-in-${STRIKES.windowMs / 60_000}m`,
+            req,
+            STRIKES.cooldownSeconds,
+            event,
+          );
+        }
+      }
+
       return tooManyRequests(`${scope}:${failed.count}/${failed.limit}`, req, failed.resetSeconds, event);
     }
   }

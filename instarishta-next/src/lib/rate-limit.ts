@@ -111,6 +111,14 @@ export const IP_CEILINGS = {
   botPages: { limit: 240, windowMs: 60_000 },
   /** Anonymous writes — reports and comments. Nobody files 20 in a minute. */
   anonWrite: { limit: 40, windowMs: 60_000 },
+  /**
+   * Generous, because Indian mobile networks put thousands of people behind
+   * one carrier-NAT address and a whole college sharing an IP must not be
+   * throttled because one of them is browsing quickly.
+   */
+  listings: { limit: 200, windowMs: 60_000 },
+  /** Same reasoning as listings: the ceiling is the shared-address guard. */
+  creditSpend: { limit: 60, windowMs: 60_000 },
 } as const;
 
 /** Budgets, by what is being protected. */
@@ -136,4 +144,57 @@ export const BUDGETS = {
    * write surface, and the one worth a tighter budget than the rest of the API.
    */
   anonWrite: { limit: 8, windowMs: 60_000 },
+  /**
+   * Listing detail pages — /l/[id] and /p/[slug].
+   *
+   * These carry sequential ids, so the whole catalogue can be walked by
+   * counting. Page requests were only limited when the user-agent looked like
+   * a bot, which means a scraper sending a normal Chrome string had no limit
+   * at all — the exact "hit a sequence of ids in one session" pattern this
+   * budget exists to stop.
+   *
+   * 45/min is far more than reading allows. Opening a listing, reading it and
+   * going back is a several-second loop, so a person skimming hard reaches
+   * perhaps 15; 45 leaves room for prefetch and double-taps while still
+   * cutting a 500-page harvest from seconds to a quarter of an hour — long
+   * enough that STRIKES below can see it happening.
+   */
+  listings: { limit: 45, windowMs: 60_000 },
+  /**
+   * The endpoints that can move a member's contact credits.
+   *
+   * Today this is belt and braces: /api/interests/reveal needs a session, a
+   * real interestId, an interest the other family has *accepted*, and it is
+   * idempotent on a repeat reveal — so credits cannot be drained by walking
+   * ids, and re-revealing the same contact charges once.
+   *
+   * The reason it gets its own budget anyway is that every one of those checks
+   * is an invariant in application code. A future change that relaxes any of
+   * them turns the general 120/min API budget into 120 chances a minute to
+   * spend somebody else's credits. A member reveals a handful of numbers in a
+   * sitting; 10 a minute is already generous, and it costs a real user
+   * nothing.
+   */
+  creditSpend: { limit: 10, windowMs: 60_000 },
+} as const;
+
+/**
+ * The second step: what happens when the pattern repeats.
+ *
+ * One burst is a fast reader or a flaky connection retrying, and a 60-second
+ * 429 is the whole answer. Somebody who trips that budget repeatedly is not
+ * reading, and telling them "try again in a minute" forever just sets the pace
+ * of their crawl.
+ *
+ * So trips are counted, and the third within the hour buys a much longer
+ * pause and writes a security event, which is what puts the address in front
+ * of an admin in /nizam. Verification is a human step there — the denylist is
+ * admin-managed on purpose, so nothing here bans anyone by itself.
+ */
+export const STRIKES = {
+  /** Trips allowed in the window before the long pause applies. */
+  limit: 3,
+  windowMs: 60 * 60_000,
+  /** Retry-After sent once the strikes are used up. */
+  cooldownSeconds: 15 * 60,
 } as const;
