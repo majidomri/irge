@@ -286,7 +286,7 @@ const ProfileCard = memo(function ProfileCard({
             {isFemale ? '♀' : '♂'}
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.07em]" style={{ color: '#A0A0A0' }}>IR #{profile._num}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.07em]" style={{ color: '#6B6B6B' }}>IR #{profile._num}</p>
             <p className="text-xs font-bold capitalize" style={{ color: isFemale ? '#C0397A' : '#006241' }}>
               {isFemale ? 'Bride' : 'Groom'}
             </p>
@@ -295,7 +295,7 @@ const ProfileCard = memo(function ProfileCard({
         <div className="flex items-center gap-2">
           {urgent && (
             <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
-              style={{ background: '#FFF3EE', color: '#CF4500' }}>Urgent</span>
+              style={{ background: '#FFF3EE', color: '#A83800' }}>Urgent</span>
           )}
         </div>
       </div>
@@ -381,7 +381,7 @@ const ProfileCard = memo(function ProfileCard({
           </p>
           <p className="text-[0.6rem] font-medium" style={{ color: '#696969' }}>Trusted Muslim Matrimony · IR #{profile._num}</p>
         </div>
-        <p className="text-[0.58rem] font-semibold text-right" style={{ color: '#A0A0A0', maxWidth: 100 }}>
+        <p className="text-[0.58rem] font-semibold text-right" style={{ color: '#6B6B6B', maxWidth: 100 }}>
           instarishta.me/profiles
         </p>
       </div>
@@ -402,7 +402,7 @@ const ProfileCard = memo(function ProfileCard({
           </svg>
           Biodata
         </button>
-        <span className="text-[10px]" style={{ color: '#D1CDC7' }}>double-tap to save · ↕ swipe</span>
+        <span className="text-[10px]" style={{ color: '#767676' }}>double-tap to save · ↕ swipe</span>
       </div>
     </div>
   );
@@ -525,7 +525,7 @@ function SwipeDeck({
   return (
     <div>
       <div className="flex items-center justify-between mb-3 px-0.5">
-        <span className="text-xs font-semibold" style={{ color: '#A0A0A0' }}>{idx + 1} / {profiles.length}</span>
+        <span className="text-xs font-semibold" style={{ color: '#6B6B6B' }}>{idx + 1} / {profiles.length}</span>
         <div className="flex gap-2">
           <button onClick={goPrev} disabled={idx === 0}
             className="w-8 h-8 rounded-full flex items-center justify-center text-sm border transition-all"
@@ -720,7 +720,7 @@ export default function ProfilesClient({
 
       <div style={{ background: '#1E3932', color: '#fff' }} className="px-4 sm:px-6 pt-4 pb-4">
         <div className="max-w-7xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.08em] mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>Browse</p>
+          <p className="text-xs font-bold uppercase tracking-[0.08em] mb-1" style={{ color: 'rgba(255,255,255,0.62)' }}>Browse</p>
           <h1 className="font-extrabold tracking-[-0.03em] mb-4" style={{ fontSize: 'clamp(1.3rem,3.5vw,2rem)' }}>
             <GradientText colors={['#00C87A', '#ffffff', '#00A86B', '#ffffff']} animationSpeed={7} className="font-extrabold tracking-[-0.03em]">
               Verified Rishta Profiles
@@ -747,12 +747,12 @@ export default function ProfilesClient({
                 className="w-full rounded-full px-5 py-2.5 text-sm outline-none border-0"
                 style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }} />
             </div>
-            <select value={education} onChange={e => setEducation(e.target.value)}
+            <select aria-label="Filter by education" value={education} onChange={e => setEducation(e.target.value)}
               className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
               {EDUCATION_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
             </select>
-            <select value={marital} onChange={e => setMarital(e.target.value)}
+            <select aria-label="Filter by marital status" value={marital} onChange={e => setMarital(e.target.value)}
               className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
               {MARITAL_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
@@ -761,17 +761,17 @@ export default function ProfilesClient({
 
           {/* Desktop: the rest of the filters, inline (mobile keeps the drawer). */}
           <div className="hidden md:flex gap-3 flex-wrap items-center mb-3">
-            <select value={sort} onChange={e => setSort(e.target.value)}
+            <select aria-label="Sort profiles" value={sort} onChange={e => setSort(e.target.value)}
               className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label === 'Default' ? 'Sort: Default' : o.label}</option>)}
             </select>
-            <select value={state} onChange={e => setState(e.target.value)}
+            <select aria-label="Filter by state" value={state} onChange={e => setState(e.target.value)}
               className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
               {STATE_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
             </select>
-            <select value={community} onChange={e => setCommunity(e.target.value)}
+            <select aria-label="Filter by community" value={community} onChange={e => setCommunity(e.target.value)}
               className="rounded-full px-4 py-2.5 text-sm font-medium border-0 outline-none"
               style={{ background: 'rgba(255,255,255,0.13)', color: '#fff' }}>
               {COMMUNITY_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: '#141413' }}>{o.label}</option>)}
@@ -787,7 +787,7 @@ export default function ProfilesClient({
                 onChange={e => setAgeMin(Math.min(Math.max(+e.target.value || 18, 18), ageMax - 1))}
                 aria-label="Minimum age"
                 className="w-10 bg-transparent text-sm text-white outline-none text-center" />
-              <span style={{ color: 'rgba(255,255,255,0.4)' }}>–</span>
+              <span style={{ color: 'rgba(255,255,255,0.6)' }}>–</span>
               <input type="number" min={18} max={60} value={ageMax}
                 onChange={e => setAgeMax(Math.max(Math.min(+e.target.value || 60, 60), ageMin + 1))}
                 aria-label="Maximum age"
@@ -823,7 +823,7 @@ export default function ProfilesClient({
                 <strong className="block text-lg font-extrabold" style={{ color: '#141413' }}>
                   <CountUp to={s.value} duration={1.2} />
                 </strong>
-                <span className="text-xs font-medium" style={{ color: '#A0A0A0' }}>{s.label}</span>
+                <span className="text-xs font-medium" style={{ color: '#6B6B6B' }}>{s.label}</span>
               </div>
             ))}
           </div>
@@ -930,7 +930,7 @@ export default function ProfilesClient({
           <>
             <div className="md:hidden">
               <div className="flex items-center justify-end gap-1.5 mb-3">
-                <span className="text-xs mr-auto" style={{ color: '#A0A0A0' }}>
+                <span className="text-xs mr-auto" style={{ color: '#6B6B6B' }}>
                   {totalCount.toLocaleString()} profile{totalCount !== 1 ? 's' : ''}
                 </span>
                 <button

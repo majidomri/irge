@@ -14,25 +14,22 @@
  * Stories keep their own /s/[slug] route: a story is a different surface with
  * a different lifetime, not a variant of this page.
  */
-import { createClient } from '@supabase/supabase-js';
+import { resolveSlug } from '@/lib/slug-resolve';
 import { notFound }     from 'next/navigation';
 import type { Metadata } from 'next';
 import ProfileView      from './ProfileView';
 import PostView         from './PostView';
 
-/** Which kind of thing does this slug point at? One cheap lookup. */
+/**
+ * Which kind of thing does this slug point at?
+ *
+ * resolveSlug is request-cached, so generateMetadata and the render below
+ * share one lookup instead of issuing two, and ProfileView/PostView reuse the
+ * same result rather than repeating it a third time.
+ */
 async function resolveType(slug: string): Promise<string | null> {
-  const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
-  const { data } = await db
-    .from('ir_nano_ids')
-    .select('entity_type')
-    .eq('slug', slug)
-    .maybeSingle();
-  return data?.entity_type ?? null;
+  const resolved = await resolveSlug(slug);
+  return resolved?.entity_type ?? null;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

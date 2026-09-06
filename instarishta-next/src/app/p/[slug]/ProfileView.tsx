@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { resolveSlug, serverDb } from '@/lib/slug-resolve';
 import { notFound }      from 'next/navigation';
 import Image             from 'next/image';
 import ShareButton       from '@/components/ShareButton';
@@ -7,20 +7,12 @@ import ReportMemberButton from '@/components/ReportMemberButton';
 
 // UUID is resolved server-side — never exposed in the URL or response
 async function resolveProfile(slug: string) {
-  const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+  const db = serverDb();
 
-  const { data: nano } = await db
-    .from('ir_nano_ids')
-    .select('entity_id, entity_type, views, shares')
-    .eq('slug', slug)
-    .eq('entity_type', 'profile')
-    .maybeSingle();
-
-  if (!nano) return null;
+  // Already fetched by the route that rendered this component; cache() makes
+  // this the same lookup rather than another round trip.
+  const nano = await resolveSlug(slug);
+  if (!nano || nano.entity_type !== 'profile') return null;
 
   // Posts by this user (UUID used internally, never sent to client)
   const { data: posts } = await db
@@ -43,7 +35,8 @@ async function resolveProfile(slug: string) {
   const slugMap = Object.fromEntries((postSlugs ?? []).map(r => [r.entity_id, r.slug]));
 
   return {
-    stats: { views: nano.views, shares: nano.shares },
+    // resolveSlug types these as nullable; the UI formats them as numbers.
+    stats: { views: nano.views ?? 0, shares: nano.shares ?? 0 },
     posts: (posts ?? []).map(p => ({
       ...p,
       shareSlug: slugMap[p.id as string] ?? null,
@@ -64,16 +57,16 @@ export default async function ProfileView({ slug }: { slug: string }) {
       {/* Header */}
       <div style={{ background: '#1E3932', padding: '28px 24px 20px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
-          <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.62)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
             InstaRishta Profile
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-            <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 13, color: 'rgba(255,255,255,0.4)', letterSpacing: 2 }}>
+            <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: 2 }}>
               instarishta.me/p/{slug}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <ReportMemberButton slug={slug} />
-              <ShareButton slug={slug} entityType="profile" />
+              <ShareButton slug={slug} entityType="profile" onDark />
             </div>
           </div>
         </div>
@@ -97,7 +90,7 @@ export default async function ProfileView({ slug }: { slug: string }) {
       {/* Posts grid */}
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '24px' }}>
         {posts.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#B0A8A0', padding: '64px 0', fontSize: 15 }}>
+          <p style={{ textAlign: 'center', color: '#7A716A', padding: '64px 0', fontSize: 15 }}>
             No posts yet.
           </p>
         ) : (
@@ -154,7 +147,7 @@ export default async function ProfileView({ slug }: { slug: string }) {
       </div>
 
       {/* Footer */}
-      <div style={{ textAlign: 'center', padding: '32px 24px', color: '#B0A8A0', fontSize: 12 }}>
+      <div style={{ textAlign: 'center', padding: '32px 24px', color: '#7A716A', fontSize: 12 }}>
         <a href="https://instarishta.me" style={{ color: '#006241', textDecoration: 'none', fontWeight: 700 }}>
           instarishta.me
         </a>

@@ -59,6 +59,12 @@ const DISALLOWED = [
  *
  * These are declarations, not access control. A crawler that ignores the
  * Disallow lines below will ignore this line too.
+ *
+ * Emitted once, at the top, rather than inside every group. The spec treats it
+ * as origin-wide, and repeating it made Lighthouse report 42 "Unknown
+ * directive" errors instead of one — robots.txt validators do not know this
+ * directive yet (google/robotstxt#80 tracks it upstream). Real crawlers ignore
+ * lines they do not recognise, so nothing about indexing changes either way.
  */
 const CONTENT_SIGNAL = 'ai-train=no, search=yes, ai-input=yes';
 
@@ -76,13 +82,12 @@ function body(): string {
 
   lines.push('# Everything else, including AI training crawlers');
   for (const agent of DISALLOWED) {
-    lines.push(`User-agent: ${agent}`, `Content-Signal: ${CONTENT_SIGNAL}`, 'Disallow: /', '');
+    lines.push(`User-agent: ${agent}`, 'Disallow: /', '');
   }
 
   lines.push(
     '# Catch-all',
     'User-agent: *',
-    `Content-Signal: ${CONTENT_SIGNAL}`,
     'Disallow: /',
     '',
     'Sitemap: https://www.instarishta.me/sitemap.xml',

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { resolveSlug, serverDb } from '@/lib/slug-resolve';
 import { notFound }      from 'next/navigation';
 import Image             from 'next/image';
 import ShareButton       from '@/components/ShareButton';
@@ -6,20 +6,11 @@ import ViewTracker       from '@/components/ViewTracker';
 import CommentSection    from '@/components/CommentSection';
 
 async function resolvePost(slug: string) {
-  const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+  const db = serverDb();
 
-  const { data: nano } = await db
-    .from('ir_nano_ids')
-    .select('entity_id, views, shares')
-    .eq('slug', slug)
-    .eq('entity_type', 'post')
-    .maybeSingle();
-
-  if (!nano) return null;
+  // Shared with the route's own lookup via cache(); see lib/slug-resolve.
+  const nano = await resolveSlug(slug);
+  if (!nano || nano.entity_type !== 'post') return null;
 
   const { data: post } = await db
     .from('ir_posts')
@@ -52,7 +43,8 @@ async function resolvePost(slug: string) {
 
   return {
     post,
-    stats:       { views: nano.views, shares: nano.shares },
+    // resolveSlug types these as nullable; the UI formats them as numbers.
+    stats:       { views: nano.views ?? 0, shares: nano.shares ?? 0 },
     profileSlug,
     comments:     comments ?? [],
     commentCount: commentCount ?? 0,
@@ -77,7 +69,7 @@ export default async function PostView({ slug }: { slug: string }) {
           <a href="https://instarishta.me" style={{ color: '#00C87A', fontWeight: 800, fontSize: 18, textDecoration: 'none' }}>
             InstaRishta
           </a>
-          <ShareButton slug={slug} entityType="post" />
+          <ShareButton slug={slug} entityType="post" onDark />
         </div>
       </div>
 

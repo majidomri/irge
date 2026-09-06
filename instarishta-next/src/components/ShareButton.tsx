@@ -8,9 +8,15 @@ interface Props {
   entityType: string;
   label?:     string;
   size?:      'sm' | 'md';
+  /**
+   * Set when the button sits on the dark green header. The button is
+   * transparent, so it inherits whatever is behind it — and the default
+   * #696969 is 2.26 against #1E3932, well under the 4.5 it needs.
+   */
+  onDark?:    boolean;
 }
 
-export default function ShareButton({ slug, entityType, label, size = 'md' }: Props) {
+export default function ShareButton({ slug, entityType, label, size = 'md', onDark = false }: Props) {
   const [state, setState] = useState<'idle' | 'copied' | 'error'>('idle');
 
   async function handleShare() {
@@ -45,9 +51,13 @@ export default function ShareButton({ slug, entityType, label, size = 'md' }: Pr
         padding:        isSm ? '4px 10px' : '7px 16px',
         borderRadius:   100,
         border:         '1px solid',
-        borderColor:    state === 'copied' ? '#006241' : '#D1CDC7',
+        borderColor:    state === 'copied'
+          ? '#006241'
+          : onDark ? 'rgba(255,255,255,0.45)' : '#D1CDC7',
         background:     state === 'copied' ? '#F0FAF5' : 'transparent',
-        color:          state === 'copied' ? '#006241' : '#696969',
+        color:          state === 'copied'
+          ? '#006241'
+          : onDark ? 'rgba(255,255,255,0.92)' : '#696969',
         fontSize:       isSm ? 11 : 13,
         fontWeight:     600,
         letterSpacing:  '-0.2px',
