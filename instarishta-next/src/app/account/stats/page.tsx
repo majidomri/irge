@@ -24,6 +24,7 @@ import { useCallback, useEffect, useState } from 'react';
 import GradientText from '@/components/ui/GradientText';
 import { useSession } from '@/lib/auth-client';
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
+import { useMemberRealtime } from '@/lib/hooks/useMemberRealtime';
 import { planLabel } from '@/lib/plans';
 
 const GREEN = '#00A86B';
@@ -63,8 +64,18 @@ type Stats = {
     posts: number; stories: number; views: number; likes: number;
     commentsReceived: number; storyViews: number;
   };
+  audience: null | {
+    listings: number;
+    totals: Record<string, number>;
+    reach: number;
+    sources: { source: string; label: string; count: number }[];
+    countries: Record<string, number>;
+    devices: Record<string, number>;
+    perListing: { profileNum: string; total: number; reach: number }[];
+  };
+  claims: { profile_num: number; status: string; created_at: string }[];
   recentInterests: Interest[];
-  series: { date: string; interests: number; comments: number; activity: number }[];
+  series: { date: string; interests: number; comments: number; activity: number; audience: number }[];
   failed: string[];
 };
 
@@ -93,7 +104,8 @@ function Stat({ icon, label, value, note }: {
  * than the feature.
  */
 function Sparks({ series }: { series: Stats['series'] }) {
-  const peak = Math.max(1, ...series.map((d) => d.interests + d.comments + d.activity));
+  const total = (d: Stats['series'][number]) => d.interests + d.comments + d.activity + d.audience;
+  const peak = Math.max(1, ...series.map(total));
   return (
     <div className="rounded-2xl p-4 mb-4" style={PANEL}>
       <p className="text-[11px] font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -101,14 +113,14 @@ function Sparks({ series }: { series: Stats['series'] }) {
       </p>
       <div className="flex items-end gap-[3px] h-16">
         {series.map((d) => {
-          const total = d.interests + d.comments + d.activity;
+          const n = total(d);
           return (
             <div key={d.date} className="flex-1 rounded-sm transition-all"
-              title={`${d.date} — ${total} action${total === 1 ? '' : 's'}`}
+              title={`${d.date} — ${n} action${n === 1 ? '' : 's'}`}
               style={{
-                height: `${Math.max(3, (total / peak) * 100)}%`,
-                background: total === 0 ? 'rgba(255,255,255,0.07)' : GREEN,
-                opacity: total === 0 ? 1 : 0.55 + 0.45 * (total / peak),
+                height: `${Math.max(3, (n / peak) * 100)}%`,
+                background: n === 0 ? 'rgba(255,255,255,0.07)' : GREEN,
+                opacity: n === 0 ? 1 : 0.55 + 0.45 * (n / peak),
               }} />
           );
         })}
@@ -117,6 +129,74 @@ function Sparks({ series }: { series: Stats['series'] }) {
         <span>{series[0]?.date.slice(5)}</span>
         <span>today</span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Claiming a listing. The number is printed on every ad, so asking for it is
+ * asking the member to look at their own advertisement — not to remember an
+ * identifier we never showed them.
+ */
+function ClaimBox({ claims, onClaimed }: {
+  claims: Stats['claims'];
+  onClaimed: () => void;
+}) {
+  const [num, setNum] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const profileNum = Number(num.trim());
+    if (!Number.isInteger(profileNum) || profileNum <= 0) { setMsg('Enter the number printed on your ad.'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/account/claims', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileNum }),
+      });
+      const data = await res.json();
+      setMsg(res.ok ? data.message : (data.error ?? 'Could not submit that claim.'));
+      if (res.ok) { setNum(''); onClaimed(); }
+    } catch {
+      setMsg('Could not submit that claim.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pending = claims.filter((c) => c.status === 'pending');
+  const rejected = claims.filter((c) => c.status === 'rejected');
+
+  return (
+    <div className="rounded-2xl p-4 mb-6" style={PANEL}>
+      <p className="text-sm font-semibold text-white mb-1">Is one of these ads yours?</p>
+      <p className="text-[11px] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+        Enter the listing number on your ad and we will show you who is seeing it.
+        Claims from a verified mobile matching the ad are approved instantly.
+      </p>
+      <form onSubmit={submit} className="flex gap-2">
+        <input value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric"
+          placeholder="e.g. 1769" className="flex-1 rounded-xl px-3 py-2 text-sm text-white"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
+        <button type="submit" disabled={busy} className="rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
+          style={{ background: GREEN, color: '#fff' }}>
+          {busy ? '…' : 'Claim'}
+        </button>
+      </form>
+      {msg && <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.6)' }}>{msg}</p>}
+      {pending.length > 0 && (
+        <p className="text-[11px] mt-2" style={{ color: '#E8C468' }}>
+          Waiting on review: {pending.map((c) => '#' + c.profile_num).join(', ')}
+        </p>
+      )}
+      {rejected.length > 0 && (
+        <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          Not approved: {rejected.map((c) => '#' + c.profile_num).join(', ')}
+        </p>
+      )}
     </div>
   );
 }
@@ -165,7 +245,11 @@ export default function StatsPage() {
     })();
   }, [fetchStats]);
 
-  useLiveRefresh(refresh, signedIn);
+  // Push when the bridge is on, focus+interval when it is not. Polling is not
+  // switched off by `live`: a websocket that silently drops would otherwise
+  // leave the page frozen with no way back.
+  const { live } = useMemberRealtime(refresh);
+  useLiveRefresh(refresh, signedIn, live ? 60_000 : 15_000);
 
   if (isPending || (!stats && !error)) {
     return (
@@ -224,6 +308,48 @@ export default function StatsPage() {
         )}
 
         <Sparks series={stats.series} />
+
+        {stats.audience ? (
+          <>
+            <p className="text-xs font-bold uppercase tracking-[0.08em] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Your listing{stats.audience.listings === 1 ? '' : 's'} · last 30 days
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <Stat icon="👥" label="PEOPLE REACHED" value={stats.audience.reach}
+                note={`across ${stats.audience.listings} listing${stats.audience.listings === 1 ? '' : 's'}`} />
+              <Stat icon="👁️" label="SEEN IN FEED" value={stats.audience.totals.impression ?? 0} />
+              <Stat icon="📖" label="OPENED" value={stats.audience.totals.view ?? 0} />
+              <Stat icon="📞" label="CONTACT TAPPED" value={stats.audience.totals.contact ?? 0} />
+              <Stat icon="🔗" label="SHARED" value={stats.audience.totals.share ?? 0} />
+              <Stat icon="🎧" label="VOICE PLAYED" value={stats.audience.totals.listen ?? 0} />
+            </div>
+
+            {stats.audience.sources.length > 0 && (
+              <div className="rounded-2xl p-4 mb-6" style={PANEL}>
+                <p className="text-[11px] font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  WHERE THEY CAME FROM
+                </p>
+                {stats.audience.sources.slice(0, 8).map((src) => {
+                  const top = stats.audience!.sources[0].count || 1;
+                  return (
+                    <div key={src.source} className="mb-2 last:mb-0">
+                      <div className="flex justify-between text-[12px] mb-1">
+                        <span className="text-white">{src.label}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.45)' }}>{src.count}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                        <div className="h-full rounded-full"
+                          style={{ width: `${Math.max(4, (src.count / top) * 100)}%`, background: GREEN }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          <ClaimBox claims={stats.claims} onClaimed={refresh} />
+        )}
 
         <p className="text-xs font-bold uppercase tracking-[0.08em] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
           Your search

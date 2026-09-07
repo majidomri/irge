@@ -2,21 +2,23 @@
  * GET /api/account/stats — everything the platform knows about one member,
  * shown back to that member.
  *
- * What this is NOT: audience numbers for "my ad". The profile catalogue is an
- * external read-only feed (see PROFILE_WORKER_BASE in lib/data.ts) whose
- * records carry `id, title, phone, whatsapp, age, body, gender, priority,
- * date, education` and no account reference at all. Nothing links a listing to
- * the member who is browsing it, so "views on my profile" is not a number that
- * exists — and inventing one from ir_profile_events would mean reporting the
- * whole site's traffic to whoever asked.
+ * Audience numbers for "my ad" exist only where the member has proven the ad
+ * is theirs. The catalogue is an external read-only feed with no owner field
+ * (see PROFILE_WORKER_BASE in lib/data.ts), so ownership comes from
+ * ir_profile_claims — migration 031 — and only an approved claim opens the
+ * events for that listing. Without that gate this endpoint would be reporting
+ * the whole site's traffic to whoever asked.
  *
- * What a member genuinely has is two things, and both are here:
+ * What a member has is three things, and all three are here:
  *
  *   1. Their activity — interests sent, contacts unlocked, credits spent and
  *      left, comments, listens, stories watched, what they paid.
  *   2. Their content, when an admin has attributed a post or story to their
  *      account (ir_posts.user_id / ir_stories.user_id). Then views, likes and
  *      comments on it are theirs and are reported.
+ *   3. Their audience, for every listing with an approved claim: impressions,
+ *      views, clicks, contact reveals, shares and voice-note listens, split by
+ *      where the visitor came from.
  *
  * Scoped by the session on every query — email for the tables keyed by email,
  * id for the tables keyed by user. There is no id parameter, so there is no
@@ -28,6 +30,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
+import { SOURCE_LABEL, type TrafficSource } from '@/lib/traffic-source';
 import { serviceClient } from '@/lib/credits';
 
 export const runtime = 'nodejs';
@@ -54,7 +57,7 @@ export async function GET(req: NextRequest) {
 
   const db = serviceClient();
 
-  const [profile, interests, orders, comments, usage, notifications, storyViews, posts, stories] =
+  const [profile, interests, orders, comments, usage, notifications, storyViews, posts, stories, claims] =
     await Promise.all([
       db.from('ir_user_profiles')
         .select('plan, contact_credits, bonus_credits, plan_expires_at, credits_reset_at, monthly_credits, created_at, profession_key, profession_verified_at')
@@ -94,6 +97,10 @@ export async function GET(req: NextRequest) {
       db.from('ir_stories')
         .select('id, image, likes, created_at')
         .eq('user_id', id).order('created_at', { ascending: false }).limit(CAP),
+
+      db.from('ir_profile_claims')
+        .select('profile_num, status, created_at')
+        .eq('user_id', id).order('created_at', { ascending: false }).limit(100),
     ]);
 
   const interestRows = rows(interests) as Row[];
@@ -127,6 +134,93 @@ export async function GET(req: NextRequest) {
     ownedStoryViews = count ?? 0;
   }
 
+  // ── Day-by-day, last 30 days ──────────────────────────────────────────────
+  // Seeded with every day in the window so the chart has no gaps where the
+  // member simply did nothing — a missing bar and a zero bar mean different
+  // things to the person reading it.
+  const series = new Map<string, { date: string; interests: number; comments: number; activity: number; audience: number }>();
+  for (let d = DAYS - 1; d >= 0; d--) {
+    const key = dayKey(new Date(Date.now() - d * 86_400_000).toISOString());
+    series.set(key, { date: key, interests: 0, comments: 0, activity: 0, audience: 0 });
+  }
+
+  // ── Audience for listings this member has proven are theirs ───────────────
+  // Only approved claims. A pending one is an assertion, and showing somebody
+  // else's audience on the strength of an assertion is the failure this whole
+  // table exists to prevent.
+  const claimRows = rows(claims) as { profile_num: number; status: string }[];
+  const ownedNums = claimRows.filter((c) => c.status === 'approved').map((c) => String(c.profile_num));
+
+  let audience: {
+    listings: number;
+    totals: Record<string, number>;
+    reach: number;
+    sources: { source: string; label: string; count: number }[];
+    countries: Record<string, number>;
+    devices: Record<string, number>;
+    perListing: { profileNum: string; total: number; reach: number }[];
+  } | null = null;
+
+  if (ownedNums.length > 0) {
+    const { data: evData } = await db
+      .from('ir_profile_events')
+      .select('entity_id, event, source, country, device, visitor_hash, created_at')
+      .eq('entity_type', 'profile')
+      .in('entity_id', ownedNums)
+      .gte('created_at', since)
+      .limit(20_000);
+
+    const ev = (evData ?? []) as {
+      entity_id: string; event: string; source: string | null;
+      country: string | null; device: string | null; visitor_hash: string | null; created_at: string;
+    }[];
+
+    const totals: Record<string, number> = {};
+    const sourceCount: Record<string, number> = {};
+    const countries: Record<string, number> = {};
+    const devices: Record<string, number> = {};
+    const perListing = new Map<string, { total: number; visitors: Set<string> }>();
+    const allVisitors = new Set<string>();
+
+    for (const e of ev) {
+      totals[e.event] = (totals[e.event] ?? 0) + 1;
+      if (e.source) sourceCount[e.source] = (sourceCount[e.source] ?? 0) + 1;
+      if (e.country) countries[e.country] = (countries[e.country] ?? 0) + 1;
+      if (e.device) devices[e.device] = (devices[e.device] ?? 0) + 1;
+      if (e.visitor_hash) allVisitors.add(e.visitor_hash);
+
+      let slot = perListing.get(e.entity_id);
+      if (!slot) { slot = { total: 0, visitors: new Set() }; perListing.set(e.entity_id, slot); }
+      slot.total += 1;
+      if (e.visitor_hash) slot.visitors.add(e.visitor_hash);
+
+      // Audience activity belongs on the same 30-day strip as everything else.
+      const hit = series.get(dayKey(e.created_at));
+      if (hit) hit.audience += 1;
+    }
+
+    audience = {
+      listings: ownedNums.length,
+      totals,
+      // Distinct salted hashes, which is as close to "people" as this data
+      // gets — the hash is per-listing and one-way, so it counts without
+      // identifying.
+      reach: allVisitors.size,
+      sources: Object.entries(sourceCount)
+        .map(([source, count]) => ({
+          source,
+          label: SOURCE_LABEL[source as TrafficSource] ?? source,
+          count,
+        }))
+        .sort((a, b) => b.count - a.count),
+      countries,
+      devices,
+      perListing: [...perListing.entries()]
+        .map(([profileNum, v]) => ({ profileNum, total: v.total, reach: v.visitors.size }))
+        .sort((a, b) => b.total - a.total),
+    };
+  }
+
   // ── Derived counts ────────────────────────────────────────────────────────
   const byStatus: Record<string, number> = {};
   for (const i of interestRows) {
@@ -137,15 +231,6 @@ export async function GET(req: NextRequest) {
   const usageByFeature: Record<string, number> = {};
   for (const u of usageRows) usageByFeature[u.feature] = (usageByFeature[u.feature] ?? 0) + 1;
 
-  // ── Day-by-day, last 30 days ──────────────────────────────────────────────
-  // Seeded with every day in the window so the chart has no gaps where the
-  // member simply did nothing — a missing bar and a zero bar mean different
-  // things to the person reading it.
-  const series = new Map<string, { date: string; interests: number; comments: number; activity: number }>();
-  for (let d = DAYS - 1; d >= 0; d--) {
-    const key = dayKey(new Date(Date.now() - d * 86_400_000).toISOString());
-    series.set(key, { date: key, interests: 0, comments: 0, activity: 0 });
-  }
   const bump = (iso: string | null | undefined, field: 'interests' | 'comments' | 'activity') => {
     if (!iso || iso < since) return;
     const hit = series.get(dayKey(iso));
@@ -212,6 +297,10 @@ export async function GET(req: NextRequest) {
             commentsReceived: ownedComments,
             storyViews: ownedStoryViews,
           },
+    // Null when nothing is claimed, so the page can invite a claim instead of
+    // rendering an empty dashboard.
+    audience,
+    claims: claimRows,
     recentInterests: interestRows.slice(0, 20),
     series: [...series.values()],
     failed: [
@@ -222,6 +311,7 @@ export async function GET(req: NextRequest) {
       notifications.error && 'notifications',
       storyViews.error && 'stories',
       posts.error && 'posts',
+      claims.error && 'claims',
     ].filter(Boolean),
   });
 }
