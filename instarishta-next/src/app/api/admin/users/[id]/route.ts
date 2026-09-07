@@ -41,14 +41,14 @@ export const GET = withAdmin(async (req, { db }) => {
   // Independent reads, so they go together. Anything that fails comes back as
   // an empty section rather than failing the whole panel — an admin looking at
   // a support case should still see the other nine things.
-  const [orders, interests, comments, notifications, usage, moderation] =
+  const [orders, interests, comments, notifications, usage, moderation, storyViews, posts, stories] =
     await Promise.all([
       db.from('ir_orders')
         .select('id, plan_id, amount_paise, status, utr, created_at, resolved_at, resolved_by, note')
         .eq('email', email).order('created_at', { ascending: false }).limit(RECENT),
 
       db.from('ir_interests')
-        .select('id, status, created_at, profile_num, profile_title, revealed_at, revealed_phone')
+        .select('id, status, created_at, profile_num, profile_title, revealed_at, responded_at, revealed_phone')
         .eq('from_email', email).order('created_at', { ascending: false }).limit(RECENT),
 
       db.from('ir_comments')
@@ -66,6 +66,18 @@ export const GET = withAdmin(async (req, { db }) => {
       db.from('ir_moderation_actions')
         .select('action, subject_type, subject_id, actor, reason, created_at')
         .eq('subject_id', email).order('created_at', { ascending: false }).limit(RECENT),
+
+      // The same three reads /api/account/stats makes, so an admin sees the
+      // numbers the member sees rather than a different set of them.
+      db.from('ir_story_views').select('story_id').eq('viewer_id', id).limit(500),
+
+      db.from('ir_posts')
+        .select('id, title, views, likes, created_at')
+        .eq('user_id', id).order('created_at', { ascending: false }).limit(RECENT),
+
+      db.from('ir_stories')
+        .select('id, likes, created_at')
+        .eq('user_id', id).order('created_at', { ascending: false }).limit(RECENT),
     ]);
 
   // No audience analytics here on purpose. ir_profile_events is keyed to a
@@ -84,6 +96,9 @@ export const GET = withAdmin(async (req, { db }) => {
   for (const u of usageRows) usageByFeature[u.feature] = (usageByFeature[u.feature] ?? 0) + 1;
 
   const orderRows = rows(orders) as { status: string; amount_paise: number }[];
+  const interestRows = rows(interests) as { revealed_at: string | null; responded_at: string | null }[];
+  const postRows = rows(posts) as { views: number | null; likes: number | null }[];
+  const storyRows = rows(stories) as { likes: number | null }[];
 
   return NextResponse.json({
     profile,
@@ -101,6 +116,11 @@ export const GET = withAdmin(async (req, { db }) => {
         .reduce((s, o) => s + (o.amount_paise ?? 0), 0),
       interestsSent: rows(interests).length,
       commentsPosted: rows(comments).length,
+      contactsUnlocked: interestRows.filter((i) => i.revealed_at).length,
+      repliesReceived: interestRows.filter((i) => i.responded_at).length,
+      storiesWatched: rows(storyViews).length,
+      unreadNotifications: (rows(notifications) as { read_at: string | null }[])
+        .filter((n) => !n.read_at).length,
       usageByFeature,
     },
     orders: rows(orders),
@@ -108,6 +128,19 @@ export const GET = withAdmin(async (req, { db }) => {
     comments: rows(comments),
     notifications: rows(notifications),
     moderation: rows(moderation),
+    // Null rather than zeroes when nothing is attributed to this account, so
+    // "no posts" and "a post with no views" stay distinguishable.
+    content:
+      postRows.length + storyRows.length === 0
+        ? null
+        : {
+            posts: postRows.length,
+            stories: storyRows.length,
+            views: postRows.reduce((s, x) => s + (x.views ?? 0), 0),
+            likes:
+              postRows.reduce((s, x) => s + (x.likes ?? 0), 0) +
+              storyRows.reduce((s, x) => s + (x.likes ?? 0), 0),
+          },
     // Said plainly, because an empty section that failed and an empty section
     // that is genuinely empty look identical otherwise.
     failed: [
@@ -117,6 +150,9 @@ export const GET = withAdmin(async (req, { db }) => {
       notifications.error && 'notifications',
       usage.error && 'usage',
       moderation.error && 'moderation',
+      storyViews.error && 'story views',
+      posts.error && 'posts',
+      stories.error && 'stories',
     ].filter(Boolean),
   });
 });

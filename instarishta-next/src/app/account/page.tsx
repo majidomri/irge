@@ -297,6 +297,24 @@ export default function AccountPage() {
         {/* Interests / leads */}
         <MyInterests enabled={!!user} onCreditsChanged={loadSummary} />
 
+        {/* Your own numbers */}
+        <Link
+          href="/account/stats"
+          className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 mb-4 transition-all hover:bg-white/[0.08] no-underline"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">📊</span>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-white">Your activity</p>
+              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Interests, contacts unlocked, credits and what you&apos;ve heard
+              </p>
+            </div>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>›</span>
+        </Link>
+
         {/* Plans */}
         <Link
           href="/pricing"

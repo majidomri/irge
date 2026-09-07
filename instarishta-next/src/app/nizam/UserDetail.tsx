@@ -24,7 +24,15 @@ type Summary = {
   paidPaise: number;
   interestsSent: number;
   commentsPosted: number;
+  contactsUnlocked: number;
+  repliesReceived: number;
+  storiesWatched: number;
+  unreadNotifications: number;
   usageByFeature: Record<string, number>;
+};
+
+type Content = {
+  posts: number; stories: number; views: number; likes: number;
 };
 
 type Row = Record<string, unknown>;
@@ -37,6 +45,7 @@ type Detail = {
   comments: Row[];
   notifications: Row[];
   moderation: Row[];
+  content: Content | null;
   failed: string[];
 };
 
@@ -155,6 +164,12 @@ export function UserDetail({
           ['Orders', s.ordersTotal],
           ['Interests', s.interestsSent],
           ['Comments', s.commentsPosted],
+          ['Contacts unlocked', s.contactsUnlocked],
+          ['Replies received', s.repliesReceived],
+          ['Stories watched', s.storiesWatched],
+          ['Unread alerts', s.unreadNotifications],
+          ['Voice notes heard', s.usageByFeature.audio ?? 0],
+          ['Profiles opened', s.usageByFeature.view ?? 0],
         ].map(([label, value]) => (
           <div key={String(label)} style={CARD}>
             <div style={{ fontSize: 20, fontWeight: 700 }}>{String(value)}</div>
@@ -162,6 +177,16 @@ export function UserDetail({
           </div>
         ))}
       </div>
+
+      {data.content && (
+        <div style={{ ...CARD, fontSize: 13 }}>
+          <strong>Content attributed to this account</strong>
+          <div style={{ marginTop: 6, color: '#767676' }}>
+            {data.content.posts} post(s), {data.content.stories} story/stories ·{' '}
+            {data.content.views} views · {data.content.likes} likes
+          </div>
+        </div>
+      )}
 
       <Section title="Payments" rows={data.orders}
         cols={['created_at', 'plan_id', 'amount_paise', 'status', 'utr', 'resolved_by']} />
