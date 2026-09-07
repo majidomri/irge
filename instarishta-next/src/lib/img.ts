@@ -29,7 +29,15 @@
 const OPTIMIZABLE_HOSTS = [
   'cxgxyqxeakjrghfzkuko.supabase.co',
   'res.cloudinary.com',
-  'placehold.co',
+  // placehold.co is deliberately absent even though it is in remotePatterns.
+  // It answers with image/svg+xml, and the optimizer refuses SVG unless
+  // dangerouslyAllowSVG is set — which it must not be for a third-party host,
+  // because an SVG can carry script. So every placeholder came back 400 and
+  // the card rendered empty. Left off this list, next/image is told
+  // `unoptimized` and serves the URL straight through, which works.
+  //
+  // api/share-card already documents hitting this from the other direction;
+  // this list had not caught up.
 ];
 
 export function isOptimizable(url: string | null | undefined): boolean {
