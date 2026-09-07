@@ -96,6 +96,9 @@ export default function CommentSection({
     (async () => {
       try {
         const res = await fetch(`/api/comments?entityType=${entityType}&entityId=${entityId}`);
+        // A failed load leaves the thread as it was rather than blanking it:
+        // showing zero comments on a post that has them reads as deletion.
+        if (!res.ok) { console.error('[comments] load failed:', res.status); return; }
         const data = await res.json();
         if (cancelled) return;   // a fast navigation must not overwrite the newer thread
         setComments(data.comments ?? []);

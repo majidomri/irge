@@ -89,6 +89,7 @@ export default function ZuckStories({ channelId }: { channelId: string }) {
     (async () => {
       try {
         const res = await fetch(`/api/stories?channel_id=${channelId}`);
+        if (!res.ok) { console.error('[stories] load failed:', res.status); return; }
         const data = await res.json().catch(() => ({ stories: [] }));
         if (!cancelled) setStories(data.stories ?? []);
       } catch {

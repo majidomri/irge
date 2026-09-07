@@ -36,6 +36,8 @@ export default function NotificationBell() {
 
   const load = async () => {
     const res = await fetch('/api/notifications');
+    // An unchecked failure emptied the bell, which reads as "all caught up".
+    if (!res.ok) { console.error('[notifications] load failed:', res.status); return; }
     const data = await res.json().catch(() => ({}));
     setItems(data.notifications ?? []);
     setUnread(data.unreadCount ?? 0);

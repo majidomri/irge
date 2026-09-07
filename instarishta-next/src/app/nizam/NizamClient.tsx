@@ -206,10 +206,20 @@ export default function NizamClient({
   const [channels, setChannels] = useState<Channel[]>(initialChannels);
   const [toast, setToast] = useState('');
 
-  const showToast = (msg: string) => {
+  /**
+   * Stable identity, and that is load-bearing rather than tidiness.
+   *
+   * Every tab takes this as `toast` and now uses it inside the useCallback
+   * that loads its data, so it belongs in those dependency arrays. As a plain
+   * arrow function it was a new value on every render of this component —
+   * which meant a failed load would toast, re-render the parent, give the tab
+   * a fresh `load`, refire its effect, fail again, and toast again. A refetch
+   * loop, on exactly the endpoint that was already broken.
+   */
+  const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
-  };
+  }, []);
 
   const logout = async () => {
     await signOut();
@@ -1111,12 +1121,16 @@ function ReportsTab({ toast }: { toast: (m: string) => void }) {
       if (status) params.set('status', status);
       if (query)  params.set('q', query);
       const res  = await fetch(`/api/admin/reports${params.toString() ? `?${params}` : ''}`);
+      // Without this a 500 parsed to {} and the tab showed "no reports" —
+      // indistinguishable from a clean queue, which is the worst way for a
+      // moderation surface to fail.
+      if (!res.ok) { toast('Could not load reports'); return; }
       const data = await res.json();
       setItems(data.reports ?? []);
       setOpenCount(data.openCount ?? 0);
       setUrgentCount(data.urgentOpenCount ?? 0);
     } finally { setLoading(false); }
-  }, []);
+  }, [toast]);
 
   useEffect(() => { queueMicrotask(() => load(filter, qRef.current)); }, [load, filter]);
 
@@ -1370,12 +1384,13 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
     setLoading(true);
     try {
       const res  = await fetch(`/api/admin/users${query ? `?q=${encodeURIComponent(query)}` : ''}`);
+      if (!res.ok) { toast('Could not load users'); return; }
       const data = await res.json();
       setUsers(data.users ?? []);
       setNoLeadsForIr(typeof data.noLeadsForIr === 'number' ? data.noLeadsForIr : null);
       setIrProfile(data.irProfile ?? null);
     } finally { setLoading(false); }
-  }, []);
+  }, [toast]);
 
   useEffect(() => { queueMicrotask(() => load()); }, [load]);
 
@@ -1739,10 +1754,11 @@ function VerificationTab({ toast }: { toast: (m: string) => void }) {
     setLoading(true);
     try {
       const res  = await fetch(`/api/admin/verification?status=${f}`);
+      if (!res.ok) { toast('Could not load verification requests'); return; }
       const data = await res.json();
       setItems((data.requests ?? []) as VerificationRow[]);
     } finally { setLoading(false); }
-  }, []);
+  }, [toast]);
 
   useEffect(() => { queueMicrotask(() => load(filter)); }, [load, filter]);
 
@@ -1908,10 +1924,11 @@ function ProfessionsTab({ toast }: { toast: (m: string) => void }) {
     setLoading(true);
     try {
       const res  = await fetch('/api/admin/professions');
+      if (!res.ok) { toast('Could not load professions'); return; }
       const data = await res.json();
       setItems((data.professions ?? []) as Profession[]);
     } finally { setLoading(false); }
-  }, []);
+  }, [toast]);
 
   useEffect(() => { queueMicrotask(load); }, [load]);
 
