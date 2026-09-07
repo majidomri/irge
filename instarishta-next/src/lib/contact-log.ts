@@ -8,7 +8,16 @@ export interface ContactEntry {
   revealed:     boolean; // true = full number shown once, then permanently masked
 }
 
-const KEY = 'ir_contact_log';
+/**
+ * Versioned, so a change to ContactEntry cannot poison an existing browser.
+ *
+ * The shape stored here is parsed straight back into ContactEntry with a cast
+ * and no validation. Add or rename a field and every returning visitor reads
+ * yesterday's shape as today's type — a silent, per-browser failure that
+ * never reproduces on a fresh profile, which is the worst kind to debug.
+ * Bumping the suffix abandons the old key instead; browsers evict it.
+ */
+const KEY = 'ir_contact_log_v1';
 const MAX = 300;
 
 /** Mask number — show only last 4 digits. e.g. +918886667121 → +91XXXXXXX7121 */

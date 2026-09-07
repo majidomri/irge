@@ -181,7 +181,11 @@ const Masonry: React.FC<MasonryProps> = ({
           key={item.id}
           data-masonry-key={item.id}
           className="absolute box-content"
-          style={{ willChange: 'transform, width, height, opacity', cursor: item.url ? 'pointer' : 'default' }}
+          // No permanent will-change. It pins a compositor layer for the life of
+          // every tile — on a masonry grid that is a layer per item, held
+          // whether or not anything is animating. The GPU memory is real and
+          // the hint buys nothing outside the transition itself.
+          style={{ cursor: item.url ? 'pointer' : 'default' }}
           onClick={() => item.url && window.open(item.url, '_blank', 'noopener')}
           onMouseEnter={() => handleMouseEnter(item.id)}
           onMouseLeave={e => handleMouseLeave(item.id, e.currentTarget)}

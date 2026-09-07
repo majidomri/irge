@@ -143,7 +143,10 @@ const CardNav: React.FC<CardNavProps> = ({
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid rgba(255,255,255,0.12)',
-          willChange: 'height',
+          // willChange: 'height' was permanent, holding a layer for a nav
+          // that animates only while opening. Dropped rather than toggled:
+          // the animation is short and the browser promotes on its own.
+
         }}
       >
         {/* Top bar */}

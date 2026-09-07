@@ -44,19 +44,21 @@ export async function GET(req: NextRequest) {
   // The member's own profession/verified-at live on the profile, but
   // ensureProfile's RPC projection predates migration 015 and doesn't return
   // them, so read those two columns directly.
-  const { data: prof } = await db
-    .from('ir_user_profiles')
-    .select('profession_key, profession_verified_at')
-    .eq('id', profile.id)
-    .maybeSingle();
-
-  const { data: request } = await db
-    .from('ir_verification_requests')
-    .select(REQ_COLS)
-    .eq('user_id', profile.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Both keyed on profile.id and neither feeds the other, so they run together.
+  const [{ data: prof }, { data: request }] = await Promise.all([
+    db
+      .from('ir_user_profiles')
+      .select('profession_key, profession_verified_at')
+      .eq('id', profile.id)
+      .maybeSingle(),
+    db
+      .from('ir_verification_requests')
+      .select(REQ_COLS)
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   return NextResponse.json({
     professionKey: prof?.profession_key ?? null,

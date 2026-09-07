@@ -96,8 +96,12 @@ export function SpeculationRules() {
     <script
       type="speculationrules"
       // The content is a constant defined immediately above, not anything
-      // derived from user input or the database.
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(rules) }}
+      // derived from user input or the database — so the escape below is
+      // belt and braces rather than a fix. It is here because the other two
+      // JSON-in-script blocks in this codebase (the listing JSON-LD and the
+      // homepage WebSite/Organization graph) already escape, and one that
+      // does not is the one a future edit will feed a variable into.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(rules).replace(/</g, '\\u003c') }}
     />
   );
 }

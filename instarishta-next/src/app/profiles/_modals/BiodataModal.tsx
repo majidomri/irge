@@ -156,6 +156,18 @@ export default function BiodataModal({ profile, authored, onClose }: {
   const isFemale = profile.gender === 'female';
   const { accent, accentBg, accentLine } = accentFor(isFemale);
   const [igOpen,    setIgOpen]    = useState(false);
+
+  /**
+   * The Instagram shortcode, or nothing.
+   *
+   * Instagram shortcodes are base64url and 5-30 characters. Anything else —
+   * a slash, a dot, a scheme — is not a shortcode, and interpolating it into
+   * the embed URL below would point the frame at a path we did not choose.
+   * The value arrives from the feed, so it is not ours to trust.
+   */
+  const igShortcode = /^[A-Za-z0-9_-]{5,30}$/.test(profile.instagram_post_id ?? '')
+    ? profile.instagram_post_id
+    : null;
   const [reporting, setReporting] = useState(false);
 
   // Authored biodata wins outright: someone read the ad and wrote this down, so
@@ -216,12 +228,28 @@ export default function BiodataModal({ profile, authored, onClose }: {
           </div>
         </div>
 
-        {igOpen && profile.instagram_post_id && (
+        {igOpen && igShortcode && (
           <div className="px-4 pt-4">
             <iframe
-              src={`https://www.instagram.com/p/${profile.instagram_post_id}/embed/`}
+              src={`https://www.instagram.com/p/${igShortcode}/embed/`}
               className="w-full rounded-2xl"
               style={{ height: 480, border: 'none' }}
+              /**
+               * Sandboxed, and the id validated above rather than interpolated
+               * raw. instagram_post_id comes from the feed, so a value with a
+               * slash or a scheme in it could point this frame somewhere other
+               * than Instagram — the shortcode pattern makes that impossible
+               * rather than unlikely.
+               *
+               * The grants are what an Instagram embed needs and no more:
+               * scripts to render, same-origin to reach its own API, popups so
+               * "View on Instagram" opens. Notably absent are allow-forms and
+               * allow-top-navigation, so the frame cannot navigate the page
+               * out from under the visitor.
+               */
+              sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+              referrerPolicy="no-referrer-when-downgrade"
+              loading="lazy"
               allowFullScreen
               title="Instagram post"
             />

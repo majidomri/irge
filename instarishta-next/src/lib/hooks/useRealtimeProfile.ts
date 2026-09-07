@@ -76,6 +76,15 @@ export function useRealtimeProfile(onChange: (credits: number, plan: string) => 
         )
         .subscribe();
 
+      // Unmount can land between the `cancelled` check above and this point,
+      // and the cleanup has already run by then — it saw `client` as null and
+      // removed nothing. Without this the socket outlives the component, and
+      // on /profiles that is one leaked subscription per navigation.
+      if (cancelled) {
+        client.removeAllChannels();
+        return;
+      }
+
       // Re-mint the token before it expires and hand it to Realtime.
       refreshTimer = setInterval(async () => {
         const next = await fetchToken();

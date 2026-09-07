@@ -1,7 +1,27 @@
 'use client';
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, useMotionValue, useAnimationFrame, useTransform } from 'motion/react';
+import React, { useCallback, useState } from 'react';
 
+/**
+ * A shine sweeping across text.
+ *
+ * This used motion/react — useAnimationFrame writing a motion value into
+ * backgroundPosition on every frame. That was 43.4 KB gzipped of animation
+ * engine in the first load of all 25 routes, because this renders the wordmark
+ * in the Navbar and the Navbar is in the root layout. Every page on the site
+ * paid for it whether or not anything else animated.
+ *
+ * It is a linear loop of one background-position, which is what a CSS keyframe
+ * is for. Same effect, no engine, and it inherits the prefers-reduced-motion
+ * block in globals.css for free — the JS version could not.
+ *
+ * The props are unchanged, including the ones the Navbar does not use, so this
+ * is a drop-in:
+ *   yoyo          → animation-direction: alternate
+ *   direction     → reverse, rather than swapping the keyframe
+ *   delay         → animation-delay
+ *   pauseOnHover  → animation-play-state
+ *   disabled      → no animation at all
+ */
 interface ShinyTextProps {
   text: string;
   disabled?: boolean;
@@ -30,77 +50,45 @@ const ShinyText: React.FC<ShinyTextProps> = ({
   delay = 0,
 }) => {
   const [isPaused, setIsPaused] = useState(false);
-  const progress = useMotionValue(0);
-  const elapsedRef = useRef(0);
-  const lastTimeRef = useRef<number | null>(null);
-  const directionRef = useRef(direction === 'left' ? 1 : -1);
-
-  const animationDuration = speed * 1000;
-  const delayDuration = delay * 1000;
-
-  useAnimationFrame(time => {
-    if (disabled || isPaused) { lastTimeRef.current = null; return; }
-    if (lastTimeRef.current === null) { lastTimeRef.current = time; return; }
-    const deltaTime = time - lastTimeRef.current;
-    lastTimeRef.current = time;
-    elapsedRef.current += deltaTime;
-
-    if (yoyo) {
-      const cycleDuration = animationDuration + delayDuration;
-      const fullCycle = cycleDuration * 2;
-      const cycleTime = elapsedRef.current % fullCycle;
-      if (cycleTime < animationDuration) {
-        const p = (cycleTime / animationDuration) * 100;
-        progress.set(directionRef.current === 1 ? p : 100 - p);
-      } else if (cycleTime < cycleDuration) {
-        progress.set(directionRef.current === 1 ? 100 : 0);
-      } else if (cycleTime < cycleDuration + animationDuration) {
-        const reverseTime = cycleTime - cycleDuration;
-        const p = 100 - (reverseTime / animationDuration) * 100;
-        progress.set(directionRef.current === 1 ? p : 100 - p);
-      } else {
-        progress.set(directionRef.current === 1 ? 0 : 100);
-      }
-    } else {
-      const cycleDuration = animationDuration + delayDuration;
-      const cycleTime = elapsedRef.current % cycleDuration;
-      if (cycleTime < animationDuration) {
-        const p = (cycleTime / animationDuration) * 100;
-        progress.set(directionRef.current === 1 ? p : 100 - p);
-      } else {
-        progress.set(directionRef.current === 1 ? 100 : 0);
-      }
-    }
-  });
-
-  useEffect(() => {
-    directionRef.current = direction === 'left' ? 1 : -1;
-    elapsedRef.current = 0;
-    progress.set(0);
-  }, [direction]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const backgroundPosition = useTransform(progress, p => `${150 - p * 2}% center`);
 
   const handleMouseEnter = useCallback(() => { if (pauseOnHover) setIsPaused(true); }, [pauseOnHover]);
   const handleMouseLeave = useCallback(() => { if (pauseOnHover) setIsPaused(false); }, [pauseOnHover]);
 
-  const gradientStyle: React.CSSProperties = {
-    backgroundImage: `linear-gradient(${spread}deg, ${color} 0%, ${color} 35%, ${shineColor} 50%, ${color} 65%, ${color} 100%)`,
+  // The JS version stepped 150% → -50% over `speed` seconds and, with a delay,
+  // held at the end for `delay` before restarting. animation-delay only delays
+  // the first run, so the hold is folded into the duration instead and the
+  // keyframe reaches its end early.
+  const style: React.CSSProperties = {
+    backgroundImage:
+      `linear-gradient(${spread}deg, ${color} 0%, ${color} 35%, ${shineColor} 50%, ${color} 65%, ${color} 100%)`,
     backgroundSize: '200% auto',
+    backgroundPosition: '150% center',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
   };
 
+  if (!disabled) {
+    style.animationName = 'ir-shine';
+    style.animationDuration = `${speed}s`;
+    style.animationTimingFunction = 'linear';
+    style.animationIterationCount = 'infinite';
+    style.animationDirection = yoyo
+      ? (direction === 'right' ? 'alternate-reverse' : 'alternate')
+      : (direction === 'right' ? 'reverse' : 'normal');
+    if (delay) style.animationDelay = `${delay}s`;
+    if (isPaused) style.animationPlayState = 'paused';
+  }
+
   return (
-    <motion.span
+    <span
       className={`inline-block ${className}`}
-      style={{ ...gradientStyle, backgroundPosition }}
+      style={style}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {text}
-    </motion.span>
+    </span>
   );
 };
 

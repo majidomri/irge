@@ -52,7 +52,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(JSON_LD).replace(/</g, '\u003c'),
+          __html: JSON.stringify(JSON_LD).replace(/</g, '\\u003c'),
         }}
       />
       {children}

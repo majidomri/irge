@@ -47,10 +47,13 @@ export const GET = withAdmin(async (req, { db }) => {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const { count: openCount } = await db
-    .from('ir_reports').select('id', { count: 'exact', head: true }).eq('status', 'open');
-  const { count: urgentOpenCount } = await db
-    .from('ir_reports').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('severity', 'urgent');
+  // Two counts that do not depend on each other, so they go together rather
+  // than one after the other — the route was paying two round trips for what
+  // costs one.
+  const [{ count: openCount }, { count: urgentOpenCount }] = await Promise.all([
+    db.from('ir_reports').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+    db.from('ir_reports').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('severity', 'urgent'),
+  ]);
 
   return NextResponse.json({ reports: data ?? [], openCount: openCount ?? 0, urgentOpenCount: urgentOpenCount ?? 0 });
 });

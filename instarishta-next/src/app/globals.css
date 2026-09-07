@@ -249,3 +249,13 @@ img {
     scroll-behavior: auto !important;
   }
 }
+
+/* Shine sweep for <ShinyText>. Was motion/react driving backgroundPosition on
+   every animation frame — 43.4 KB gzipped of animation engine, on every route,
+   because ShinyText renders the wordmark in the Navbar and the Navbar is in
+   the root layout. A background-position keyframe is the same effect for
+   nothing, and it inherits the reduced-motion block above for free. */
+@keyframes ir-shine {
+  from { background-position: 150% center; }
+  to   { background-position: -50% center; }
+}
