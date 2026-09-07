@@ -68,58 +68,84 @@ function loaderFailed(source: string, err: unknown): void {
   console.error(`[data] ${source} failed — rendering empty:`, err);
 }
 
-export const getProfiles = unstable_cache(
+/**
+ * Degrade to `fallback` on failure, WITHOUT letting the failure be cached.
+ *
+ * This wrapper has to sit outside unstable_cache, and that placement is the
+ * entire point. An earlier version caught the error inside the cached function
+ * and returned [] from there, so unstable_cache did what it is supposed to do
+ * and stored the empty array against the key — for the full 30-minute
+ * revalidate window. One blip from the profile worker therefore took the main
+ * listing page down for half an hour and healed on its own, which is the
+ * hardest possible shape of bug to catch in the act. It emptied /profiles in
+ * production and had to be cleared with a tag purge.
+ *
+ * Throwing from inside the cached function instead means nothing is written,
+ * so the next request retries. The empty result still reaches the page — the
+ * page must not crash over a missing carousel — but it is never persisted.
+ */
+async function orEmpty<T>(source: string, fallback: T, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    loaderFailed(source, err);
+    return fallback;
+  }
+}
+
+const cachedProfiles = unstable_cache(
   async () => devCached('profiles', 120_000, async () => {
-    try {
-      const res = await fetch(WORKER_URL, {
-        cache: 'no-store',
-        headers: { 'Origin': WORKER_ORIGIN, 'Referer': WORKER_ORIGIN + '/' },
-      });
-      if (!res.ok) {
-        loaderFailed('getProfiles', `worker responded ${res.status} ${res.statusText}`);
-        return [];
-      }
-      const data = await res.json() as unknown;
-      if (!Array.isArray(data)) {
-        loaderFailed('getProfiles', 'worker payload was not an array');
-        return [];
-      }
-      return data;
-    } catch (err) {
-      loaderFailed('getProfiles', err);
-      return [];
-    }
+    const res = await fetch(WORKER_URL, {
+      cache: 'no-store',
+      headers: { 'Origin': WORKER_ORIGIN, 'Referer': WORKER_ORIGIN + '/' },
+    });
+    // Every failure below throws rather than returning [], so that the empty
+    // result never becomes the cached answer. See orEmpty.
+    if (!res.ok) throw new Error(`worker responded ${res.status} ${res.statusText}`);
+
+    const data = await res.json() as unknown;
+    if (!Array.isArray(data)) throw new Error('worker payload was not an array');
+    // An empty array from a healthy worker is not a plausible state for a
+    // catalogue of 500 listings, and caching it blanks the site. Treated as a
+    // failure so the next request asks again.
+    if (data.length === 0) throw new Error('worker returned an empty catalogue');
+
+    return data;
   }),
   ['ir-profiles'],
   { revalidate: 1800, tags: ['profiles'] },
 );
 
+export const getProfiles = () => orEmpty('getProfiles', [] as unknown[], cachedProfiles);
+
 // ── Featured carousel ─────────────────────────────────────────────────────────
 // ISR: 30 min cache (aligned with profiles), tag 'featured' for on-demand purge
-export const getFeatured = unstable_cache(
+const cachedFeatured = unstable_cache(
   async (placement: ProfilePlacement) => devCached(`featured-${placement}`, 120_000, async () => {
-    try {
-      const sb = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      );
-      const { data, error } = await sb
-        .from('ir_featured')
-        .select('id, title, description, image_url, link_url')
-        .eq('active', true)
-        .or(`placement.eq.all,placement.eq.${placement}`)
-        .order('sort_order', { ascending: true })
-        .limit(10);
-      if (error) loaderFailed(`getFeatured(${placement})`, error);
-      return (data ?? []) as FeaturedItem[];
-    } catch (err) {
-      loaderFailed(`getFeatured(${placement})`, err);
-      return [] as FeaturedItem[];
-    }
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    const { data, error } = await sb
+      .from('ir_featured')
+      .select('id, title, description, image_url, link_url')
+      .eq('active', true)
+      .or(`placement.eq.all,placement.eq.${placement}`)
+      .order('sort_order', { ascending: true })
+      .limit(10);
+    // Thrown, not swallowed: a query that errored and a carousel with nothing
+    // in it are different facts, and only one of them should be remembered.
+    // An empty result IS legitimate here — an admin can deactivate every
+    // featured item — so unlike the profile feed it is cached as-is.
+    if (error) throw new Error(error.message);
+    return (data ?? []) as FeaturedItem[];
   }),
   ['ir-featured'],
   { revalidate: 1800, tags: ['featured'] },
 );
+
+export const getFeatured = (placement: ProfilePlacement) =>
+  orEmpty(`getFeatured(${placement})`, [] as FeaturedItem[], () => cachedFeatured(placement));
 
 // ── Authored biodata ──────────────────────────────────────────────────────────
 // Rich biodata written in /nizam, keyed by feed profile id. Only a minority of
@@ -128,23 +154,24 @@ export const getFeatured = unstable_cache(
 //
 // Returned as a plain object rather than a Map: this crosses the server/client
 // boundary as a prop, and a Map does not survive serialisation.
-export const getBiodata = unstable_cache(
+const cachedBiodata = unstable_cache(
   async () => devCached('biodata', 120_000, async () => {
-    try {
-      const sb = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      );
-      const { data, error } = await sb.from('ir_biodata').select('profile_id, sections');
-      if (error) loaderFailed('getBiodata', error);
-      const out: Record<string, unknown> = {};
-      for (const row of data ?? []) out[String(row.profile_id)] = row.sections;
-      return out;
-    } catch (err) {
-      loaderFailed('getBiodata', err);
-      return {} as Record<string, unknown>;
-    }
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    const { data, error } = await sb.from('ir_biodata').select('profile_id, sections');
+    // The previous version logged the error and then cached the empty map it
+    // built from `data ?? []` anyway, so a failed read looked exactly like a
+    // table with no rows — which this table genuinely has today.
+    if (error) throw new Error(error.message);
+    const out: Record<string, unknown> = {};
+    for (const row of data ?? []) out[String(row.profile_id)] = row.sections;
+    return out;
   }),
   ['ir-biodata'],
   { revalidate: 1800, tags: ['biodata'] },
 );
+
+export const getBiodata = () =>
+  orEmpty('getBiodata', {} as Record<string, unknown>, cachedBiodata);
