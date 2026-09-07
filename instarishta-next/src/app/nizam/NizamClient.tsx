@@ -6,6 +6,11 @@ const AnalyticsTab = dynamic(
   () => import('./AnalyticsTab').then((m) => m.AnalyticsTab),
   { ssr: false },
 );
+
+const UserDetail = dynamic(
+  () => import('./UserDetail').then((m) => m.UserDetail),
+  { ssr: false },
+);
 import BiodataTab from './BiodataTab';
 import ImportTab from './ImportTab';
 import SecurityTab from './SecurityTab';
@@ -1370,6 +1375,9 @@ function CommentsTab({ toast }: { toast: (m: string) => void }) {
 }
 
 function UsersTab({ toast }: { toast: (m: string) => void }) {
+  // The member whose full record is open, or null for the list.
+  const [detailId, setDetailId] = useState<string | null>(null);
+
   const [users, setUsers]     = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ]             = useState('');
@@ -1407,6 +1415,12 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
       toast('Save failed');
     }
   }, [toast]);
+
+  // One member's full record replaces the list rather than opening beside it:
+  // this panel is already dense, and a support question is about one person.
+  if (detailId) {
+    return <UserDetail userId={detailId} onClose={() => setDetailId(null)} toast={toast} />;
+  }
 
   return (
     <div>
@@ -1504,7 +1518,16 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {users.map(u => <UserRow key={u.id} user={u} onSave={save} />)}
+          {users.map(u => (
+            <div key={u.id}>
+              <button type="button" onClick={() => setDetailId(u.id)}
+                className="text-[11px] font-bold mb-1"
+                style={{ color: GREEN, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                Open full record →
+              </button>
+              <UserRow user={u} onSave={save} />
+            </div>
+          ))}
         </div>
       )}
     </div>
