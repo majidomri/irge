@@ -26,6 +26,7 @@ deep inside the OAuth round-trip with cryptic errors. All of these are required:
 | `ADMIN_EMAILS` | Comma-separated emails allowed into `/nizam` |
 | `SUPABASE_JWT_SECRET` | *Optional.* Dashboard → Settings → API → JWT Settings → "JWT Secret". Enables the session-fabric bridge (true real-time credits + per-user RLS). Blank = falls back to focus+poll. |
 | `ADMIN_FRESH_SESSION` | *Optional.* `1` to require a fresh (<15 min) session for admin mutations. |
+| `REVALIDATE_SECRET` | Required for `POST /api/revalidate`, which purges the listing caches. Any long random string (`openssl rand -hex 32`), sent as the `x-revalidate-secret` header. **Unset means the endpoint refuses with 503**, not that it runs unauthenticated — it used to skip the check when blank, which left on-demand cache purging open to anyone who knew the path. `/nizam`'s Refresh button does not use it (it is admin-gated and purges directly). |
 
 On boot, `src/lib/auth.ts` logs `[auth] Missing required env …` listing anything
 absent — check the server console first.
