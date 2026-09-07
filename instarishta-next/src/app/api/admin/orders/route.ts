@@ -23,9 +23,14 @@ export const GET = withAdmin(async (req, { db }) => {
   let query = db.from('ir_orders').select(ORDER_COLS)
     .order('created_at', { ascending: false }).limit(200);
 
-  // Default view is the only one that needs action.
+  // Default view is the only one that needs action. `status=all` asks for
+  // every status; anything else unrecognised is a typo, and answering it with
+  // the unfiltered list would quietly show more than was asked for.
   if (status && STATUSES.includes(status as OrderStatus)) query = query.eq('status', status);
   else if (!status)                                       query = query.eq('status', 'pending_verification');
+  else if (status !== 'all') {
+    return NextResponse.json({ error: `Unknown status '${status}'` }, { status: 400 });
+  }
 
   if (q) {
     // Strip the characters PostgREST's `or=` list treats as syntax — see the

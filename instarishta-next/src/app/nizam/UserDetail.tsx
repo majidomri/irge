@@ -37,7 +37,6 @@ type Detail = {
   comments: Row[];
   notifications: Row[];
   moderation: Row[];
-  recentActivity: Row[];
   failed: string[];
 };
 

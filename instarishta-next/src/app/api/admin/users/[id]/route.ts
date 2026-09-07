@@ -41,7 +41,7 @@ export const GET = withAdmin(async (req, { db }) => {
   // Independent reads, so they go together. Anything that fails comes back as
   // an empty section rather than failing the whole panel — an admin looking at
   // a support case should still see the other nine things.
-  const [orders, interests, comments, notifications, usage, moderation, events] =
+  const [orders, interests, comments, notifications, usage, moderation] =
     await Promise.all([
       db.from('ir_orders')
         .select('id, plan_id, amount_paise, status, utr, created_at, resolved_at, resolved_by, note')
@@ -66,11 +66,15 @@ export const GET = withAdmin(async (req, { db }) => {
       db.from('ir_moderation_actions')
         .select('action, subject_type, subject_id, actor, reason, created_at')
         .eq('subject_id', email).order('created_at', { ascending: false }).limit(RECENT),
-
-      db.from('ir_profile_events')
-        .select('event, source, created_at')
-        .order('created_at', { ascending: false }).limit(RECENT),
     ]);
+
+  // No audience analytics here on purpose. ir_profile_events is keyed to a
+  // listing (entity_type is always 'profile') and identifies the viewer only
+  // by a salted visitor_hash; nothing links a listing back to the account that
+  // pays for it. An earlier draft of this route selected the most recent rows
+  // with no filter at all and returned them as this member's activity, which
+  // is a site-wide feed wearing one person's name. Per-listing numbers live in
+  // the Analytics tab, where the entity they belong to is the thing named.
 
   const rows = <T,>(r: { data: T[] | null }) => r.data ?? [];
 
@@ -104,7 +108,6 @@ export const GET = withAdmin(async (req, { db }) => {
     comments: rows(comments),
     notifications: rows(notifications),
     moderation: rows(moderation),
-    recentActivity: rows(events),
     // Said plainly, because an empty section that failed and an empty section
     // that is genuinely empty look identical otherwise.
     failed: [
@@ -114,7 +117,6 @@ export const GET = withAdmin(async (req, { db }) => {
       notifications.error && 'notifications',
       usage.error && 'usage',
       moderation.error && 'moderation',
-      events.error && 'activity',
     ].filter(Boolean),
   });
 });

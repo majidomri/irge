@@ -7,6 +7,16 @@ const AnalyticsTab = dynamic(
   { ssr: false },
 );
 
+const PaymentsTab = dynamic(
+  () => import('./PaymentsTab').then((m) => m.PaymentsTab),
+  { ssr: false },
+);
+
+const VitalsTab = dynamic(
+  () => import('./VitalsTab').then((m) => m.VitalsTab),
+  { ssr: false },
+);
+
 const UserDetail = dynamic(
   () => import('./UserDetail').then((m) => m.UserDetail),
   { ssr: false },
@@ -95,10 +105,12 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata' | 'security' | 'analytics';
+type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata' | 'security' | 'analytics' | 'payments' | 'vitals';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'analytics', label: 'Analytics', icon: '📈' },
+  { key: 'payments', label: 'Payments', icon: '💳' },
+  { key: 'vitals',   label: 'Vitals',   icon: '🩺' },
   { key: 'channels', label: 'Channels', icon: '📺' },
   { key: 'posts',    label: 'Posts',    icon: '📝' },
   { key: 'import',   label: 'Import',   icon: '📥' },
@@ -365,6 +377,12 @@ export default function NizamClient({
         )}
         {tab === 'analytics' && (
           <AnalyticsTab toast={showToast} />
+        )}
+        {tab === 'payments' && (
+          <PaymentsTab toast={showToast} />
+        )}
+        {tab === 'vitals' && (
+          <VitalsTab toast={showToast} />
         )}
         {tab === 'comments' && (
           <CommentsTab toast={showToast} />
