@@ -133,9 +133,21 @@ export async function forgetFirebaseSession(): Promise<void> {
   } catch { /* best-effort */ }
 }
 
-/** Map Firebase's error codes onto something a user can act on. */
+/**
+ * Map Firebase's error codes onto something a user can act on.
+ *
+ * Also logs the RAW code. Without that line these failures are undebuggable:
+ * every unmapped code collapsed into one generic sentence, so a project-level
+ * misconfiguration (see the `not-allowed` entries below) was indistinguishable
+ * from a user typo, in the UI and in the console both.
+ */
 export function humanizePhoneError(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
+
+  // Raw code first, always — the humanised string is for the member, this is
+  // for whoever has to work out why it broke.
+  console.error('[firebase-phone] send/verify failed:', code || '(no code)', e);
+
   const map: Record<string, string> = {
     'auth/invalid-phone-number':    'That does not look like a valid phone number.',
     'auth/missing-phone-number':    'Enter your phone number.',
@@ -147,6 +159,14 @@ export function humanizePhoneError(e: unknown): string {
     'auth/invalid-app-credential':  'Verification failed. Please reload the page and try again.',
     'auth/unauthorized-domain':     'Phone sign-in is not enabled for this domain yet.',
     'auth/network-request-failed':  'Network problem. Check your connection and try again.',
+    // Project-level misconfiguration, NOT anything the member did. Both were
+    // live on this project until the Firebase console was finished: the SMS
+    // region policy defaulted to 'Allow' with an EMPTY region list (allowing
+    // nothing), and phone auth needs billing enabled. Mapped explicitly so the
+    // next occurrence names itself instead of blaming the member's number.
+    'auth/operation-not-allowed':   'Phone sign-in is not available right now. Please use email — we are on it.',
+    'auth/billing-not-enabled':     'Phone sign-in is not available right now. Please use email — we are on it.',
+    'auth/admin-restricted-operation': 'Phone sign-in is not available right now. Please use email — we are on it.',
   };
   return map[code] ?? 'Could not verify your number. Please try again.';
 }

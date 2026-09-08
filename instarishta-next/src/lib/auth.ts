@@ -26,7 +26,8 @@
  * Cloud redirect URIs that must be registered).
  */
 import { betterAuth } from 'better-auth';
-import { APIError } from 'better-auth/api';
+import { APIError, getSessionFromCtx } from 'better-auth/api';
+import type { GenericEndpointContext } from '@better-auth/core';
 import { magicLink, oneTap, phoneNumber } from 'better-auth/plugins';
 import { createHash, createHmac } from 'node:crypto';
 import { Pool } from 'pg';
@@ -179,6 +180,85 @@ function phoneTempName(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length < 7) return 'InstaRishta member';
   return `+${digits.slice(0, 2)} ${digits.slice(2, 4)}${'•'.repeat(5)}${digits.slice(-3)}`;
+}
+
+/**
+ * Absorb a provably-empty phone-only account that already holds this number.
+ *
+ * ── The trap this closes ─────────────────────────────────────────────────────
+ * A signed-out member who picks "Continue with mobile number" gets a NEW
+ * account: signUpOnVerification finds-or-creates by number, which is correct
+ * for the email-less users this whole feature exists for. But if that person
+ * already had a Google account, nothing can merge the two — better-auth links
+ * accounts by email, and a phone signup has only a synthetic one.
+ *
+ * Worse, the new account now OWNS the number, so the correct path afterwards
+ * (sign in with Google → link on /account) fails forever with
+ * PHONE_NUMBER_EXIST. One wrong click permanently closed the right path.
+ *
+ * So: when a signed-in member proves control of a number that is held by an
+ * empty placeholder account, we delete the placeholder and let the link
+ * proceed. Proof of control is the precondition — this runs only AFTER the
+ * Firebase ID token has been verified against that exact number, so the caller
+ * has demonstrably just received an SMS on it.
+ *
+ * ── What "provably empty" means ──────────────────────────────────────────────
+ * Every one of these must hold, or we leave the account alone and let
+ * better-auth's own PHONE_NUMBER_EXIST surface to the user:
+ *   • its email is one of OUR placeholders (never a real address),
+ *   • it has NO account rows — no password, no OAuth link, so nobody can
+ *     sign into it by any means other than the number being claimed,
+ *   • it holds no balance, no plan, and no order history.
+ * A real account can therefore never be absorbed, however the number moved.
+ */
+async function absorbEmptyPhoneAccount(
+  ctx: GenericEndpointContext,
+  phoneNumber: string,
+): Promise<void> {
+  const session = await getSessionFromCtx(ctx);
+  if (!session) return;                       // the route rejects this next anyway
+
+  const owner = await ctx.context.adapter.findOne<{ id: string; email: string }>({
+    model: 'user',
+    where: [{ field: 'phoneNumber', value: phoneNumber }],
+  });
+  if (!owner) return;                         // nothing holds it — normal path
+  if (owner.id === session.user.id) return;   // already ours — nothing to do
+
+  // Only ever a placeholder minted by signUpOnVerification.
+  if (!owner.email?.endsWith(`@${PHONE_EMAIL_DOMAIN}`)) return;
+
+  // A password or any OAuth link means a real person can sign in with it.
+  const accounts = await ctx.context.internalAdapter.findAccountByUserId(owner.id);
+  if (accounts.length > 0) return;
+
+  // Nothing of value on the app side. A missing profile row is fine (nothing
+  // to lose); a row with credits, a plan, or any order is NOT.
+  const { rows } = await pool.query<{ credits: string; plan: string; orders: string }>(
+    `select coalesce(p.contact_credits, 0) + coalesce(p.bonus_credits, 0) as credits,
+            coalesce(p.plan, 'none')                                     as plan,
+            (select count(*) from public.ir_orders o where o.email = $1)  as orders
+       from public.ir_user_profiles p
+      where p.email = $1`,
+    [owner.email],
+  );
+  const row = rows[0];
+  if (row && (Number(row.credits) > 0 || row.plan !== 'none' || Number(row.orders) > 0)) {
+    console.warn('[auth] refusing to absorb phone account with value:', owner.id);
+    return;
+  }
+
+  await pool.query('delete from public.ir_user_profiles where email = $1', [owner.email]);
+  // Cascades the account's sessions and account rows.
+  await ctx.context.internalAdapter.deleteUser(owner.id);
+
+  await audit({
+    event:    'user.phone_account_absorbed',
+    userId:   session.user.id,
+    email:    session.user.email,
+    provider: 'phone-firebase',
+  });
+  console.warn(`[auth] absorbed empty phone-only account ${owner.id} into ${session.user.id}`);
 }
 
 export const auth = betterAuth({
@@ -349,6 +429,14 @@ export const auth = betterAuth({
             // a replay can never outlive its own marker.
             expiresAt:  new Date(Date.now() + 60 * 60 * 1000),
           });
+        }
+
+        // Linking to the signed-in account: if an empty placeholder already
+        // holds this number, clear it out of the way. MUST happen here —
+        // verifyOTP runs before the route's PHONE_NUMBER_EXIST check, which is
+        // the check that would otherwise make the trap permanent.
+        if (ctx && ctx.body?.updatePhoneNumber === true) {
+          await absorbEmptyPhoneAccount(ctx, claimed);
         }
 
         return true;

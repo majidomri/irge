@@ -269,7 +269,11 @@ export default function AccountPage() {
               />
               {summary.bonus_credits > 0 && (
                 <UsageStat
-                  icon="✨" label="Top-up credits" remaining={summary.bonus_credits} limit={-1}
+                  icon="✨" label="Top-up credits" remaining={summary.bonus_credits}
+                  // limit 0, not -1: a purchased balance is FINITE, it just has no
+                  // ceiling to measure against. -1 means "unlimited" to UsageStat,
+                  // which rendered a real balance of 17 credits as "∞".
+                  limit={0}
                   note="Permanent — never reset, never expire"
                 />
               )}
