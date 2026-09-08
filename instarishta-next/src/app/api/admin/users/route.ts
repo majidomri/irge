@@ -3,12 +3,21 @@
  * PATCH /api/admin/users
  *   { id, activate: 'ir6'|'ir12' } → sell a subscription term (preferred)
  *   { id, bonus_add: number }      → grant persistent top-up credits
+ *   { id, phone: '+91…' | null } → link or clear a verified mobile by hand
  *   { id, contact_credits?, plan?, is_banned? } → raw field edit (support override)
  *
  * Admin-gated via withAdmin (better-auth session + ADMIN_EMAILS allowlist,
  * service-role DB). Writes land on ir_user_profiles, which the user's open
  * session picks up in real-time through the session-fabric Realtime
  * subscription. Node runtime.
+ *
+ * The phone actions go through RPCs (ir_admin_set_phone / ir_admin_phone_map,
+ * migration 024) because the number lives on betterauth."user" — a private
+ * schema the service-role PostgREST client cannot see at all. A number set here
+ * is marked VERIFIED, which unlocks the credit gate without Firebase having
+ * proved it. That bypass is deliberate — the operator verifies over their own
+ * SMS/WhatsApp channel, far cheaper per member — and every set and clear writes
+ * an auth_audit row naming the acting admin, so it stays reconstructable.
  *
  * Prefer `activate` over hand-editing plan/credits: it sets the term, the reset
  * anchor, the allowance and cycle 0 in one atomic call (ir_activate_plan). A
@@ -157,19 +166,31 @@ export const GET = withAdmin(async (req, { db }) => {
     usage.set(r.from_email, u);
   }
 
+  // Phone numbers live in the private betterauth schema, so they come back
+  // through an RPC rather than a join. One call for the whole page — a call
+  // per row would be 200 round-trips to render one table.
+  const phones = new Map<string, { phone: string | null; verified: boolean }>();
+  if (emails.length) {
+    const { data: pm } = await db.rpc('ir_admin_phone_map', { p_emails: emails });
+    const rowsPm = (pm ?? []) as { email: string; phone: string | null; verified: boolean }[];
+    for (const r of rowsPm) phones.set(r.email, { phone: r.phone, verified: r.verified });
+  }
+
   return NextResponse.json({
     irProfile,
     users: users.map(u => ({
       ...u,
       entitlements: entitlementsFor((u as { plan?: string }).plan),
       interests: usage.get(u.email) ?? { month: 0, total: 0, accepted: 0, connected: 0 },
+      phone:          phones.get(u.email)?.phone    ?? null,
+      phone_verified: phones.get(u.email)?.verified ?? false,
     })),
     // The catalog itself, so the admin UI never hardcodes plan numbers.
     catalog: [FREE_ENTITLEMENTS, ...PLANS.map(p => entitlementsFor(p.id))],
   });
 });
 
-export const PATCH = withAdmin(async (_req, { db, body }) => {
+export const PATCH = withAdmin(async (_req, { db, body, email: adminEmail }) => {
   const id = typeof body.id === 'string' ? body.id : null;
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
@@ -178,6 +199,29 @@ export const PATCH = withAdmin(async (_req, { db, body }) => {
   const { data: target } = await db
     .from('ir_user_profiles').select('email').eq('id', id).maybeSingle();
   if (!target?.email) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+  // ── Link or clear a mobile number ─────────────────────────────────────────
+  // Tested with `'phone' in body`, not truthiness: an explicit null is the
+  // CLEAR action and must not be mistaken for "field omitted".
+  if ('phone' in body) {
+    const raw = typeof body.phone === 'string' ? body.phone.trim() : null;
+    const { data, error } = await db
+      .rpc('ir_admin_set_phone', {
+        p_email: target.email,
+        p_phone: raw || null,
+        p_actor: adminEmail,
+      })
+      .single<{ email: string; phone: string | null; verified: boolean }>();
+
+    // The RPC raises with a reason written for the operator — not E.164,
+    // already linked to <who>, no account. Pass it through verbatim.
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    const { data: user } = await db.from('ir_user_profiles').select(COLS).eq('id', id).single();
+    return NextResponse.json({
+      user: { ...user, phone: data?.phone ?? null, phone_verified: data?.verified ?? false },
+    });
+  }
 
   // ── Sell a term ───────────────────────────────────────────────────────────
   if (body.activate === 'ir6' || body.activate === 'ir12') {

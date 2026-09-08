@@ -50,3 +50,8 @@ tmp-headless-profile*/
 # Credentials / recovery codes — never commit
 authentication.txt
 twilio_2FA_recovery_code.txt
+
+# Brand logo source + renders. Uploaded to Firebase/Google consoles by hand,
+# never served by the app, and the PNGs are regenerable from the SVG.
+instarishta-next/public/logo-red.svg
+instarishta-next/public/logo-red-*.png

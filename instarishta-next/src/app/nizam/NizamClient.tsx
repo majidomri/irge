@@ -209,6 +209,9 @@ interface UserProfile {
   created_at: string;
   entitlements: Entitlements;
   interests: InterestUsage;
+  /** From betterauth."user" via ir_admin_phone_map — not a profiles column. */
+  phone: string | null;
+  phone_verified: boolean;
 }
 
 const BG       = '#0a1a14';
@@ -1642,6 +1645,7 @@ function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, pat
   const [credits, setCredits] = useState(String(user.contact_credits));
   const [busy, setBusy]       = useState(false);
   const [copied, setCopied]   = useState(false);
+  const [phone, setPhone]     = useState(user.phone ?? '');
 
   const dirty      = Number(credits) !== user.contact_credits;
   const activePlan = getPlan(user.plan);
@@ -1745,6 +1749,58 @@ function UserRow({ user, onSave }: { user: UserProfile; onSave: (id: string, pat
           style={{ background: 'rgba(240,192,64,0.12)', color: '#F0C040', border: '1px solid rgba(240,192,64,0.4)' }}>
           +{TOPUP.credits} top-up · ₹{TOPUP.price}
         </button>
+      </div>
+
+      {/* ── Mobile number ────────────────────────────────────────────────────
+          Linked BY HAND: the operator sends a code over their own SMS/WhatsApp,
+          the member reads it back, and it gets typed here. Cheaper per member
+          than a Firebase verification, and it is the only way to fix a member
+          who cannot complete the self-serve flow.
+
+          What is saved here is marked VERIFIED, so it unlocks the credit gate
+          without Firebase proving anything — hence the audit row behind it.
+          Server-side ir_admin_set_phone rejects non-E.164 and any number
+          another account already holds, naming that account. */}
+      <div className="rounded-xl px-3 py-2.5 mb-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            Mobile number
+          </span>
+          {user.phone
+            ? <span className="text-[10px] font-bold rounded-full px-2 py-0.5"
+                style={user.phone_verified
+                  ? { background: GREEN_BG, color: GREEN }
+                  : { background: 'rgba(255,176,32,0.15)', color: '#FFB020' }}>
+                {user.phone_verified ? 'Verified' : 'Unverified'}
+              </span>
+            : <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>not linked</span>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+            placeholder="+919876543210"
+            className="flex-1 min-w-[180px] rounded-xl px-3 py-2 text-sm outline-none font-mono"
+            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+          <button
+            onClick={() => run({ phone: phone.trim() })}
+            disabled={busy || !phone.trim() || phone.trim() === (user.phone ?? '')}
+            className="rounded-xl px-3 py-2 text-[11px] font-bold disabled:opacity-40"
+            style={{ background: GREEN_BG, color: GREEN, border: `1px solid ${GREEN}` }}>
+            {user.phone ? 'Replace' : 'Link'}
+          </button>
+          {user.phone && (
+            <button
+              onClick={() => { setPhone(''); run({ phone: null }); }}
+              disabled={busy}
+              className="rounded-xl px-3 py-2 text-[11px] font-bold disabled:opacity-40"
+              style={{ background: 'rgba(255,107,107,0.12)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,0.35)' }}>
+              Clear
+            </button>
+          )}
+        </div>
+        <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.32)' }}>
+          E.164 only (+country code). Saving marks it verified and unlocks the member&apos;s credits.
+        </p>
       </div>
 
       {/* Support override — raw cycle balance. */}
