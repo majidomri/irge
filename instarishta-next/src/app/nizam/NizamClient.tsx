@@ -1442,7 +1442,11 @@ function UsersTab({ toast }: { toast: (m: string) => void }) {
       setUsers(us => us.map(u => (u.id === id ? { ...u, ...user } : u)));
       toast('Saved — user sees it live');
     } else {
-      toast('Save failed');
+      // Surface the server's reason. The phone RPC answers with things the
+      // operator can act on — not E.164, already linked to <who> — and a bare
+      // "Save failed" throws all of that away.
+      const body = await res.json().catch(() => null);
+      toast(typeof body?.error === 'string' ? body.error : 'Save failed');
     }
   }, [toast]);
 

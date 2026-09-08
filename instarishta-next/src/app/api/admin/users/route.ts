@@ -215,7 +215,12 @@ export const PATCH = withAdmin(async (_req, { db, body, email: adminEmail }) => 
 
     // The RPC raises with a reason written for the operator — not E.164,
     // already linked to <who>, no account. Pass it through verbatim.
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      // Postgres prefixes RAISE with the function name; the operator does not
+      // need 'ir_admin_set_phone: ' in front of every message.
+      const msg = error.message.replace(/^ir_admin_set_phone:\s*/, '');
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
 
     const { data: user } = await db.from('ir_user_profiles').select(COLS).eq('id', id).single();
     return NextResponse.json({
