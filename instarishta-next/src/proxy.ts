@@ -161,6 +161,14 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
   // function. Rate-limiting it would throttle our own job runner.
   if (pathname === '/api/inngest') return NextResponse.next();
 
+  // Google's Pub/Sub push for RCS events, same reasoning: it authenticates
+  // itself with an HMAC signature the route verifies (see api/rcs/webhook), and
+  // a campaign's delivery and read receipts arrive in a burst that would blow
+  // through the 120/min API budget. A 429 here does not stop anyone abusing us
+  // — the signature does that — it just makes Pub/Sub redeliver receipts we
+  // would rather have recorded the first time.
+  if (pathname === '/api/rcs/webhook') return NextResponse.next();
+
   const ip = clientIp(req.headers);
 
   // Keep the admin-managed denylist warm. Not awaited: the first request after
