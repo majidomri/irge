@@ -17,7 +17,7 @@ import { NextResponse } from 'next/server';
 import { withAdmin } from '@/lib/admin-route';
 import { ensureProfile } from '@/lib/credits';
 
-const COLS = 'id, channel_id, user_id, title, caption, image, audio_url, needs_redaction, created_at';
+const COLS = 'id, channel_id, user_id, title, caption, image, images, audio_url, needs_redaction, created_at';
 
 export const GET = withAdmin(async (req, { db }) => {
   const channelId = new URL(req.url).searchParams.get('channel_id');
@@ -49,9 +49,32 @@ export const POST = withAdmin(async (_req, { body, db }) => {
   const channelId  = String(body.channel_id ?? '').trim();
   const title      = String(body.title      ?? '').trim() || null;
   const caption    = String(body.caption    ?? '').trim() || null;
-  const image      = String(body.image      ?? '').trim() || null;
   const audioUrl   = String(body.audio_url  ?? '').trim() || null;
   const ownerEmail = String(body.owner_email ?? '').trim().toLowerCase() || null;
+
+  /**
+   * A listing can be several pages — a biodata too long for one image.
+   *
+   * `images` is the ordered set and `image` is the cover, and the two overlap
+   * on purpose: the viewer dedupes `[image, ...images]`, so writing the cover
+   * into both is what the WhatsApp importer already does and what the feed
+   * expects. Writing only `image` (which is all this route accepted before)
+   * produced a single-frame post no matter how many pages the biodata had —
+   * the schema and the viewer both supported carousels, but nothing published
+   * by hand could ever make one.
+   *
+   * `image` is still read for older callers; it becomes page one when no
+   * array is sent.
+   */
+  const legacyImage = String(body.image ?? '').trim() || null;
+  const images = (Array.isArray(body.images) ? body.images : [])
+    .map((v) => String(v ?? '').trim())
+    .filter(Boolean)
+    // Same URL twice is a mis-click, not a page.
+    .filter((v, i, a) => a.indexOf(v) === i);
+
+  const pages = images.length ? images : (legacyImage ? [legacyImage] : []);
+  const image = pages[0] ?? null;
 
   if (!channelId) return NextResponse.json({ error: 'channel_id required' }, { status: 400 });
   if (!caption && !image && !audioUrl) {
@@ -65,7 +88,8 @@ export const POST = withAdmin(async (_req, { body, db }) => {
 
   const { data, error } = await db
     .from('ir_posts')
-    .insert({ channel_id: channelId, user_id: userId, title, caption, image, audio_url: audioUrl })
+    .insert({ channel_id: channelId, user_id: userId, title, caption, image,
+              images: pages.length ? pages : null, audio_url: audioUrl })
     .select(COLS)
     .single();
 

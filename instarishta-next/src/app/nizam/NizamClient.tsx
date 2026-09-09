@@ -585,13 +585,132 @@ function ChannelsTab({
 
 // ── Tab: Posts ───────────────────────────────────────────────────────────────
 
+/**
+ * The pages of one listing, in order.
+ *
+ * A biodata is often longer than one image, and the feed viewer already walks
+ * `images` as a carousel — but this form could only ever send a single `image`,
+ * so nothing published by hand could have more than one page. Files upload
+ * through /api/admin/uploads; a URL can also be pasted, because plenty of
+ * biodata already lives somewhere.
+ *
+ * Order is the reading order and the first is the cover — which is why it is
+ * labelled, and why the arrows exist. Uploads are sequential rather than
+ * parallel: the endpoint takes one file at a time, and eight biodata pages
+ * fired at once is how you get half of them failing on a phone tether.
+ */
+function ImagePagesField({ pages, setPages, toast }: {
+  pages: string[]; setPages: (next: string[]) => void; toast: (m: string) => void;
+}) {
+  const [url, setUrl] = useState('');
+  const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
+
+  const add = (next: string[]) => {
+    const merged = [...pages, ...next].filter((v, i, a) => v && a.indexOf(v) === i);
+    setPages(merged);
+  };
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const list = Array.from(files);
+    setUploading({ done: 0, total: list.length });
+    const urls: string[] = [];
+    for (const [i, file] of list.entries()) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/admin/uploads', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: 'Upload failed' }));
+        toast(`${file.name}: ${error ?? 'Upload failed'}`);
+        continue;   // one bad page should not discard the ones that worked
+      }
+      const data = await res.json().catch(() => null);
+      const u = data?.url ?? data?.publicUrl ?? data?.path;
+      if (typeof u === 'string' && u) urls.push(u);
+      setUploading({ done: i + 1, total: list.length });
+    }
+    setUploading(null);
+    if (urls.length) { add(urls); toast(`${urls.length} page${urls.length > 1 ? 's' : ''} added`); }
+  };
+
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= pages.length) return;
+    const next = [...pages];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    setPages(next);
+  };
+
+  return (
+    <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          Images {pages.length > 0 && `· ${pages.length} page${pages.length > 1 ? 's' : ''}`}
+        </span>
+        {uploading && (
+          <span className="text-[11px]" style={{ color: GREEN }}>
+            Uploading {uploading.done}/{uploading.total}…
+          </span>
+        )}
+      </div>
+
+      {pages.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {pages.map((src, i) => (
+            <div key={src} className="relative rounded-lg overflow-hidden"
+              style={{ width: 68, height: 90, background: '#1f1f1c' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="" className="w-full h-full object-cover"
+                loading="lazy" decoding="async" />
+              {i === 0 && (
+                <span className="absolute top-0 inset-x-0 text-[9px] font-bold text-center py-0.5"
+                  style={{ background: GREEN, color: '#04140d' }}>COVER</span>
+              )}
+              <div className="absolute bottom-0 inset-x-0 flex justify-between"
+                style={{ background: 'rgba(0,0,0,0.6)' }}>
+                <button type="button" aria-label="Move earlier" onClick={() => move(i, i - 1)}
+                  className="px-1 text-[11px]" style={{ color: '#fff', opacity: i === 0 ? 0.25 : 1 }}>‹</button>
+                <button type="button" aria-label="Remove"
+                  onClick={() => setPages(pages.filter((_, j) => j !== i))}
+                  className="px-1 text-[11px]" style={{ color: '#FF6B6B' }}>×</button>
+                <button type="button" aria-label="Move later" onClick={() => move(i, i + 1)}
+                  className="px-1 text-[11px]" style={{ color: '#fff', opacity: i === pages.length - 1 ? 0.25 : 1 }}>›</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <label className="rounded-xl px-3 py-2 text-[11px] font-bold cursor-pointer"
+          style={{ background: GREEN_BG, color: GREEN, border: `1px solid ${GREEN}` }}>
+          Add images
+          <input type="file" accept="image/*" multiple className="hidden"
+            onChange={(e) => { void onFiles(e.target.files); e.currentTarget.value = ''; }} />
+        </label>
+        <input value={url} onChange={(e) => setUrl(e.target.value)}
+          placeholder="…or paste an image URL"
+          className="flex-1 min-w-[160px] rounded-xl px-3 py-2 text-sm outline-none"
+          style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: `1px solid ${BORDER}` }} />
+        <button type="button" disabled={!url.trim()}
+          onClick={() => { add([url.trim()]); setUrl(''); }}
+          className="rounded-xl px-3 py-2 text-[11px] font-bold disabled:opacity-40"
+          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}>Add</button>
+      </div>
+      <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.32)' }}>
+        First image is the grid tile and page one. Readers swipe the rest.
+      </p>
+    </div>
+  );
+}
+
 function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string) => void }) {
   const [channelId, setChannelId] = useState(channels[0]?.id ?? '');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
-  const [image, setImage] = useState('');
+  const [pages, setPages] = useState<string[]>([]);
   const [audioUrl, setAudioUrl] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -614,7 +733,7 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
     const res = await fetch('/api/admin/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channel_id: channelId, title, caption, image, audio_url: audioUrl, owner_email: ownerEmail }),
+      body: JSON.stringify({ channel_id: channelId, title, caption, images: pages, audio_url: audioUrl, owner_email: ownerEmail }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -623,7 +742,7 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
     }
     const { post } = await res.json();
     setPosts(prev => [post, ...prev]);
-    setTitle(''); setCaption(''); setImage(''); setAudioUrl(''); setOwnerEmail('');
+    setTitle(''); setCaption(''); setPages([]); setAudioUrl(''); setOwnerEmail('');
     toast('Post published ✓');
   };
 
@@ -647,7 +766,7 @@ function PostsTab({ channels, toast }: { channels: Channel[]; toast: (m: string)
           options={channels.map(c => ({ value: c.id, label: c.name }))} />
         <Input value={title} setValue={setTitle} placeholder="Title (optional)" />
         <Textarea value={caption} setValue={setCaption} placeholder="Caption / body (optional)" />
-        <Input value={image} setValue={setImage} placeholder="Image URL (optional)" />
+        <ImagePagesField pages={pages} setPages={setPages} toast={toast} />
         <Input value={audioUrl} setValue={setAudioUrl} placeholder="Audio URL (optional)" />
         <Input value={ownerEmail} setValue={setOwnerEmail} placeholder="Owner's email (optional)" />
         <p className="text-[11px] -mt-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
