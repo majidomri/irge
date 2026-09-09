@@ -42,6 +42,29 @@ import { isOptimizable, optimized } from '@/lib/img';
 /** Slides kept live either side of the current frame. */
 const WINDOW = 2;
 
+/**
+ * Widths the optimizer will actually serve — `images.deviceSizes` in
+ * next.config.ts, and nothing else.
+ *
+ * Next rejects any width outside that list with a 400; it does not round to
+ * the nearest. A hardcoded 1080 here is what made every slide a broken image:
+ * 1080 is a Next DEFAULT device size, but this project trimmed the list to
+ * four to keep the per-transformation bill down, and 1080 did not survive the
+ * cut. Verified against production: w=828, 1200 and 1920 answer 200, w=1080
+ * answers 400.
+ *
+ * Keep in step with next.config.ts. optimized()'s own doc comment says the
+ * same thing — it is worth following.
+ */
+const DEVICE_SIZES = [640, 828, 1200, 1920];
+
+/** The next configured width at or above what this viewport actually needs. */
+function slideWidth(): number {
+  if (typeof window === 'undefined') return 1200;
+  const wanted = window.innerWidth * (window.devicePixelRatio || 1);
+  return DEVICE_SIZES.find((w) => w >= wanted) ?? DEVICE_SIZES[DEVICE_SIZES.length - 1];
+}
+
 /** Telegram's own vertical-dismiss threshold (StorySlides: SWIPE_Y_THRESHOLD). */
 const SWIPE_Y_THRESHOLD = 50;
 
@@ -102,6 +125,12 @@ export default function StoryStack({
   const touch = useRef({ x: 0, y: 0, axis: '' as '' | 'x' | 'y' });
 
   const current = frames[index];
+
+  // Resolved once, in a lazy initialiser rather than an effect: a width that
+  // changed between renders would swap every slide's src and refetch the lot.
+  // Safe to touch `window` here — this only mounts inside a modal a tap opens,
+  // so it never runs during SSR and has no markup to mismatch.
+  const [width] = useState(slideWidth);
 
   // The live window. Everything outside it is unmounted, which is what keeps
   // a 93-listing channel from holding 93 decoded bitmaps.
@@ -226,7 +255,7 @@ export default function StoryStack({
       >
         {slides.map(({ frame, at }) => {
           const src = frame.url
-            ? (isOptimizable(frame.url) ? optimized(frame.url, 1080) : frame.url)
+            ? (isOptimizable(frame.url) ? optimized(frame.url, width) : frame.url)
             : null;
           // A parent-drawn slide has no bitmap to wait on.
           const isReady = src ? ready.has(src) : true;
