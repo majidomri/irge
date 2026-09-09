@@ -23,7 +23,7 @@ import { useChromeAutoHide } from '@/lib/hooks/useChromeAutoHide';
 import {
   LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
 } from '@/components/StoryIcons';
-import { isOptimizable, optimized } from '@/lib/img';
+import { fullBleedWidth, isOptimizable, optimized } from '@/lib/img';
 import StoryStack, { buildFrames } from '@/components/StoryStack';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
@@ -322,9 +322,11 @@ function PostModal({
   useEffect(() => {
     if (postIdx < 0 || typeof window === 'undefined') return;
 
-    const DEVICE_SIZES = [640, 750, 828, 1080, 1200, 1920, 2048, 3840];
-    const wanted = window.innerWidth * (window.devicePixelRatio || 1);
-    const width = DEVICE_SIZES.find((w) => w >= wanted) ?? DEVICE_SIZES[DEVICE_SIZES.length - 1];
+    // Was a copy of Next's DEFAULT device sizes, which this project does not
+    // use — so the widths it picked (750, 1080, 2048, 3840) were rejected 400
+    // by the optimizer and NOTHING was ever warmed. The fetches succeeded as
+    // far as the code could tell, which is why it went unnoticed.
+    const width = fullBleedWidth();
 
     // The window, in reading order: forward first because that is how people
     // move, then one back for the correction after overshooting.
@@ -751,7 +753,7 @@ function PostModal({
                   .find((v): v is string => Boolean(v));
                 if (!cover) return null;
                 /* eslint-disable-next-line @next/next/no-img-element */
-                return <img key={p.id} src={isOptimizable(cover) ? optimized(cover, 1080) : cover}
+                return <img key={p.id} src={isOptimizable(cover) ? optimized(cover, fullBleedWidth()) : cover}
                   alt="" decoding="async" loading="eager" fetchPriority="low" draggable={false} />;
               })}
           </div>

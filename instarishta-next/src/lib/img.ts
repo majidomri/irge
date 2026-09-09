@@ -60,6 +60,33 @@ export function isOptimizable(url: string | null | undefined): boolean {
  * A URL the optimizer may not fetch is returned unchanged, so a caller can
  * use this unconditionally.
  */
+/**
+ * Widths the optimizer will serve — `images.deviceSizes` in next.config.ts.
+ *
+ * This MUST mirror that list. Next validates the `w` parameter against it and
+ * answers 400 for anything else; it does not round to the nearest. The list is
+ * deliberately shorter than Next's default because every distinct width is a
+ * separate transformation and a separate line on the bill.
+ *
+ * It lives here because getting it wrong has now broken the feed twice, in two
+ * different places, in two different ways: the post viewer's warm-up carried a
+ * copy of Next's DEFAULT list (with 750, 1080, 2048, 3840 in it), so every
+ * warm-up request 400'd and nothing was ever actually warmed — the fetches
+ * looked healthy in code and did nothing; and the story viewer hardcoded 1080,
+ * so every slide was a broken image. One exported list, one picker, no copies.
+ */
+export const DEVICE_SIZES = [640, 828, 1200, 1920] as const;
+
+/**
+ * The configured width at or above what a full-bleed element needs on this
+ * screen. Falls back to the largest, never to an unconfigured value.
+ */
+export function fullBleedWidth(): number {
+  if (typeof window === 'undefined') return 1200;
+  const wanted = window.innerWidth * (window.devicePixelRatio || 1);
+  return DEVICE_SIZES.find((w) => w >= wanted) ?? DEVICE_SIZES[DEVICE_SIZES.length - 1];
+}
+
 export function optimized(url: string, width: number, quality = 75): string {
   if (!isOptimizable(url)) return url;
   if (url.startsWith('/_next/image')) return url;      // already rewritten
