@@ -242,6 +242,27 @@ export default function StoryStack({
               {src && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
+                ref={(el) => {
+                  /**
+                   * A cached image is already complete by the time React
+                   * attaches onLoad, so onLoad never fires — and the slide
+                   * would sit at opacity 0 forever, reading as a viewer that
+                   * refused to open.
+                   *
+                   * This is not a rare race. The neighbour warm-up puts these
+                   * exact URLs in cache before the reader opens anything, so
+                   * the cached path is the NORMAL one and the load event is
+                   * the exception.
+                   *
+                   * decode() rather than marking ready straight away: it is
+                   * async, so it cannot setState during render, and it still
+                   * guarantees the bitmap is paintable before the fade.
+                   */
+                  if (!el || !el.complete || el.naturalWidth === 0) return;
+                  const done = () => setReady(prev => prev.has(src) ? prev : new Set(prev).add(src));
+                  if (typeof el.decode === 'function') el.decode().then(done).catch(done);
+                  else queueMicrotask(done);
+                }}
                 src={src}
                 alt={frame.alt}
                 // Neighbours are fetched by the browser at its own priority —
@@ -261,6 +282,13 @@ export default function StoryStack({
                   const done = () => setReady(prev => prev.has(src) ? prev : new Set(prev).add(src));
                   if (typeof img.decode === 'function') img.decode().then(done).catch(done);
                   else done();
+                }}
+                onError={() => {
+                  // A broken URL fires neither onLoad nor the complete-check
+                  // above, and an invisible slide is worse than a broken-image
+                  // icon: it reads as the viewer being dead. Reveal it and let
+                  // the alt text do its job.
+                  setReady(prev => prev.has(src) ? prev : new Set(prev).add(src));
                 }}
                 className="max-h-full max-w-full object-contain"
                 style={{ opacity: isReady ? 1 : 0, transition: 'opacity 140ms ease' }}
