@@ -298,7 +298,7 @@ export default function PricingPage() {
         )}
 
         <p className="text-center text-[0.75rem] text-[rgba(0,0,0,0.58)] mt-6">
-          All prices inclusive of GST · Credits activate the moment you confirm payment<br />
+          All prices inclusive of applicable taxes · Credits activate the moment you confirm payment<br />
           No auto-renewal · All payments are final and non-refundable
         </p>
       </section>

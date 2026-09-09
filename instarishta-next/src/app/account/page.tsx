@@ -10,6 +10,7 @@ import { planLabel, TOPUP, TOPUP_BONUS_CREDITS } from '@/lib/plans';
 import MyInterests from './_components/MyInterests';
 import ProfessionVerification from './_components/ProfessionVerification';
 import PhoneLink from '@/components/PhoneLink';
+import RcsConsentToggle from '@/components/RcsConsentToggle';
 
 interface UsageSummary {
   email: string;
@@ -353,6 +354,10 @@ export default function AccountPage() {
         <p className="text-xs font-bold uppercase tracking-[0.08em] mb-3 mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
           Security
         </p>
+        {/* Sits with the other account switches, not buried in a settings
+            page: an opt-in nobody can find is not much of an opt-in. */}
+        <RcsConsentToggle />
+
         <button
           onClick={() => router.push('/account/devices')}
           className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 mb-6 transition-all hover:bg-white/[0.08]"

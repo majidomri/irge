@@ -36,6 +36,17 @@ interface LogRow {
 
 interface CapRow { phone: string; reachable: boolean | null; cached: boolean; error?: string }
 
+interface Member {
+  email: string; name: string | null; phone: string | null;
+  phone_verified: boolean; rcs_consent: boolean; consent_at: string | null; plan: string | null;
+}
+
+interface Audience {
+  members: Member[];
+  counts: { total: number; withPhone: number; verified: number; consented: number; addressable: number };
+  addressable: string[];
+}
+
 const STATUS_COLOR: Record<string, string> = {
   sent: GREEN, delivered: GREEN, read: GREEN,
   queued: AMBER, dry_run: FAINT,
@@ -73,6 +84,7 @@ export default function RcsTab({ toast }: { toast: (m: string) => void }) {
   const [imageUrl, setImageUrl]       = useState('');
 
   const [recipientsRaw, setRecipientsRaw] = useState('');
+  const [audience, setAudience] = useState<Audience | null>(null);
   const [caps, setCaps]       = useState<CapRow[] | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
@@ -139,6 +151,25 @@ export default function RcsTab({ toast }: { toast: (m: string) => void }) {
     });
     return { res, data: await res.json().catch(() => ({})) };
   }
+
+  const loadAudience = async () => {
+    if (busy) return;
+    setBusy('aud');
+    try {
+      const res = await fetch('/api/admin/rcs/audience');
+      const data = await res.json() as Audience & { error?: string };
+      if (data.error) { toast(data.error); return; }
+      setAudience(data);
+    } finally { setBusy(null); }
+  };
+
+  /** Replace the recipient box with everyone who may lawfully be messaged. */
+  const useAddressable = () => {
+    if (!audience?.addressable.length) return;
+    setRecipientsRaw(audience.addressable.join('\n'));
+    setCaps(null);
+    toast(`Loaded ${audience.addressable.length} consented members`);
+  };
 
   const runDryRun = async () => {
     if (busy) return;
@@ -269,6 +300,87 @@ export default function RcsTab({ toast }: { toast: (m: string) => void }) {
             labelling a promotion as transactional risks the agent&apos;s approval.
           </div>
         </div>
+      </div>
+
+      {/* ── Audience ──────────────────────────────────────────────────────────
+          A member is addressable only with BOTH a verified phone and consent.
+          The funnel is shown rather than just the final number, because
+          "17 members, 0 addressable" tells an admin where the audience is
+          being lost; "0" on its own looks like a bug. */}
+      <div style={CARD}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ fontWeight: 700 }}>Member audience</div>
+          <button type="button" onClick={loadAudience} disabled={busy !== null}
+            style={{ ...chip(false), marginLeft: 'auto', opacity: busy ? 0.5 : 1 }}>
+            {busy === 'aud' ? 'Loading…' : audience ? 'Refresh' : 'Load members'}
+          </button>
+        </div>
+
+        {!audience ? (
+          <div style={{ fontSize: 12, color: MUTED }}>
+            Load the member list to see who can lawfully receive a promotional message.
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+              {([
+                ['Members',    audience.counts.total,       MUTED],
+                ['With phone', audience.counts.withPhone,   MUTED],
+                ['Verified',   audience.counts.verified,    MUTED],
+                ['Consented',  audience.counts.consented,   audience.counts.consented ? GREEN : AMBER],
+                ['Addressable',audience.counts.addressable, audience.counts.addressable ? GREEN : AMBER],
+              ] as [string, number, string][]).map(([k, v, c]) => (
+                <div key={k} style={{
+                  background: SUBTLE, border: `1px solid ${BORDER}`, borderRadius: 8,
+                  padding: '8px 12px', minWidth: 92,
+                }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: c }}>{v}</div>
+                  <div style={{ fontSize: 10, color: FAINT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{k}</div>
+                </div>
+              ))}
+            </div>
+
+            <button type="button" onClick={useAddressable}
+              disabled={audience.counts.addressable === 0}
+              style={{
+                ...chip(false), border: `1px solid ${audience.counts.addressable ? GREEN : BORDER}`,
+                color: audience.counts.addressable ? GREEN : FAINT,
+                padding: '7px 14px', marginBottom: 10,
+                cursor: audience.counts.addressable ? 'pointer' : 'not-allowed',
+              }}>
+              Use {audience.counts.addressable} consented {audience.counts.addressable === 1 ? 'member' : 'members'}
+            </button>
+
+            <div style={{ maxHeight: 220, overflowY: 'auto', border: `1px solid ${BORDER}`, borderRadius: 8 }}>
+              {audience.members.map(m => {
+                const ok = m.phone_verified && m.rcs_consent && !!m.phone;
+                return (
+                  <div key={m.email} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                    borderBottom: `1px solid ${BORDER}`, fontSize: 12,
+                  }}>
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
+                                   whiteSpace: 'nowrap', color: ok ? TEXT : MUTED }}>
+                      {m.name || m.email}
+                    </span>
+                    <span style={{ color: m.phone_verified ? GREEN : FAINT, fontSize: 11 }}>
+                      {m.phone_verified ? 'phone ✓' : m.phone ? 'unverified' : 'no phone'}
+                    </span>
+                    <span style={{ color: m.rcs_consent ? GREEN : AMBER, fontSize: 11, minWidth: 76, textAlign: 'right' }}>
+                      {m.rcs_consent ? 'opted in' : 'no consent'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ fontSize: 11, color: FAINT, marginTop: 8, lineHeight: 1.6 }}>
+              Consent is granted by the member in their own account and cannot be set from here —
+              a flag an operator can tick is not consent. Promotional messages to anyone outside
+              this list are exactly what DLT scrubbing exists to catch.
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Recipients ────────────────────────────────────────────────────── */}

@@ -78,7 +78,7 @@ export interface Plan {
   name:            string;
   badge:           string;
   months:          number;
-  price:           number;   // ₹, inclusive of GST
+  price:           number;   // ₹, inclusive of any applicable tax — see /pricing
   monthlyCredits:  number;   // contact credits granted at the start of each cycle
   monthlyInterests: number;  // rolling 30-day interest allowance
   dailyInterests:  number;   // unadvertised fair-use burst cap
