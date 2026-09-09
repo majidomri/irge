@@ -10,7 +10,7 @@ const SECTIONS = [
   {
     id: '1',
     title: 'All Payments Are Final',
-    body: `InstaRishta memberships are sold on a strictly non-refundable basis. Once a payment is made and a membership is activated, it cannot be cancelled, refunded, transferred, exchanged, paused, or converted to credit — in whole or in part, and regardless of how much of the membership you use.\n\nThis applies to every paid item on InstaRishta: the Rishta 6 membership, the Rishta 12 membership, and one-time credit top-ups.\n\nPlease read this policy in full and choose carefully before you pay.`,
+    body: `InstaRishta memberships are sold on a strictly non-refundable basis. Once a payment is made and a membership is activated, it cannot be cancelled, refunded, transferred, exchanged, paused, or converted to credit — in whole or in part, and regardless of how much of the membership you use.\n\nThis applies to every paid item on InstaRishta: the 6 Months Plan membership, the 1 Year Plan membership, and one-time credit top-ups.\n\nPlease read this policy in full and choose carefully before you pay.`,
   },
   {
     id: '2',

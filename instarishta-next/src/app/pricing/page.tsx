@@ -73,7 +73,7 @@ const COMPARE_ROWS: { feature: string; cells: (string | boolean)[] }[] = [
 const FAQS = [
   {
     q: 'What does "credits refill monthly" mean?',
-    a: 'Your contact unlocks reset to the full monthly amount on the same date every month, for as long as your plan is active. On Rishta 12 that is 40 fresh unlocks each month — 480 across the year.',
+    a: 'Your contact unlocks reset to the full monthly amount on the same date every month, for as long as your plan is active. On the 1 Year Plan that is 40 fresh unlocks each month — 480 across the year.',
   },
   {
     q: 'Do unused credits carry over to the next month?',
@@ -81,7 +81,7 @@ const FAQS = [
   },
   {
     q: 'Which plan is better value?',
-    a: 'Rishta 12. You get 480 unlocks instead of 180, and each unlock costs ₹9.37 instead of ₹12.22 — about 23% cheaper per contact. Rishta 6 is the lighter commitment if you are just starting out.',
+    a: 'The 1 Year Plan. You get 480 unlocks instead of 180, and each unlock costs ₹9.37 instead of ₹12.22 — about 23% cheaper per contact. The 6 Months Plan is the lighter commitment if you are just starting out.',
   },
   {
     q: 'Does the plan renew automatically?',
@@ -93,7 +93,7 @@ const FAQS = [
   },
   {
     q: 'What is an "interest" and does it cost a credit?',
-    a: `Sending an interest is completely free — it uses no contact credit. You tap the heart, pick one of our ready-made messages (no typing), and we pass it privately to the family. It is never posted publicly on the profile. Free accounts get ${FREE_INTERESTS} interests a month, Rishta 6 gets 40, and Rishta 12 gets 60.`,
+    a: `Sending an interest is completely free — it uses no contact credit. You tap the heart, pick one of our ready-made messages (no typing), and we pass it privately to the family. It is never posted publicly on the profile. Free accounts get ${FREE_INTERESTS} interests a month, the 6 Months Plan gets 40, and the 1 Year Plan gets 60.`,
   },
   {
     q: 'When exactly is a contact credit used?',
@@ -109,7 +109,7 @@ const FAQS = [
   },
   {
     q: 'What if I run out before the month is up?',
-    a: `Members on Rishta 6 or Rishta 12 can buy a refill the moment their balance reaches zero — ${TOPUP_TOTAL_CREDITS} credits for ₹${TOPUP.price} (${TOPUP.credits} plus a ${TOPUP_BONUS_CREDITS}-credit bonus). It appears in your account as soon as you run out. Refill credits are permanent: they never reset and they stay with you even after your plan expires.`,
+    a: `Members on the 6 Months or 1 Year Plan can buy a refill the moment their balance reaches zero — ${TOPUP_TOTAL_CREDITS} credits for ₹${TOPUP.price} (${TOPUP.credits} plus a ${TOPUP_BONUS_CREDITS}-credit bonus). It appears in your account as soon as you run out. Refill credits are permanent: they never reset and they stay with you even after your plan expires.`,
   },
   {
     q: 'Can I try it free?',
@@ -264,7 +264,7 @@ export default function PricingPage() {
                       cursor:     busy !== null ? 'wait' : 'pointer',
                     }}
                   >
-                    {busy === plan.id ? 'Opening checkout…' : `Choose ${plan.name}`}
+                    {busy === plan.id ? 'Opening checkout…' : `Choose the ${plan.name}`}
                   </button>
                 </div>
               </div>

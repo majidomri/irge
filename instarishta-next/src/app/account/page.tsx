@@ -274,7 +274,7 @@ export default function AccountPage() {
                       ? refillNote(summary.credits_reset_at)
                       : summary.credits > 0
                         ? 'Welcome credits — these do not refill'
-                        : 'Contact details unlock with Rishta 6 or Rishta 12'
+                        : 'Contact details unlock with the 6 Months or 1 Year Plan'
                 }
               />
               {summary.bonus_credits > 0 && (

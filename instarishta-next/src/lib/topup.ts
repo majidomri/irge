@@ -2,7 +2,7 @@
  * When a member may buy a credit refill.
  *
  * ── The rule ─────────────────────────────────────────────────────────────────
- * There are two plans: Rishta 6 and Rishta 12. The refill is not a third one —
+ * There are two plans: the 6-month and the 1-year. The refill is not a third —
  * it is what an ACTIVE subscriber reaches for when their balance hits zero,
  * priced like usage rather than sold from a cold start. So:
  *
@@ -62,7 +62,7 @@ export function topupEligibility(profile: Refillable): TopupEligibility {
     return {
       eligible: false,
       reason:   'no_plan',
-      message:  'Refills are for members on Rishta 6 or Rishta 12. Choose a plan to get started.',
+      message:  'Refills are for members on the 6 Months or 1 Year Plan. Choose a plan to get started.',
     };
   }
 

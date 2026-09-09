@@ -10,6 +10,20 @@
  * is what actually funds an account. Change both together.
  */
 
+/**
+ * The plan ids are WIRE VALUES, not labels — do not rename them to match a
+ * display name.
+ *
+ * 'ir6' and 'ir12' are written into ir_orders.plan_id and ir_user_profiles.plan,
+ * matched by the CHECK constraint in migration 008, and branched on by
+ * ir_activate_plan in 005. Every order ever placed carries one of them.
+ *
+ * The names shown to members are `Plan.name` below, and they have already
+ * changed once: these were sold as "Rishta 6" and "Rishta 12", which said
+ * nothing about the term to someone reading a price card for the first time.
+ * That rename touched only the display string — the ids stayed, which is the
+ * entire reason it was a safe change to make.
+ */
 export type PlanId = 'ir6' | 'ir12';
 
 /** Plans no longer sold. Existing holders are grandfathered until expiry. */
@@ -75,7 +89,7 @@ export interface Plan {
 export const PLANS: readonly Plan[] = [
   {
     id:               'ir6',
-    name:             'Rishta 6',
+    name:             '6 Months Plan',
     badge:            'Starter',
     months:           6,
     price:            2199,
@@ -95,7 +109,7 @@ export const PLANS: readonly Plan[] = [
   },
   {
     id:               'ir12',
-    name:             'Rishta 12',
+    name:             '1 Year Plan',
     badge:            'Best Value',
     months:           12,
     price:            4499,
@@ -119,7 +133,7 @@ export const PLANS: readonly Plan[] = [
 /**
  * The credit refill — deliberately NOT a third plan.
  *
- * There are two plans, Rishta 6 and Rishta 12. This is what an ACTIVE
+ * There are two plans, the 6-month and the 1-year. This is what an ACTIVE
  * subscriber buys when their balance hits zero: priced like usage, unavailable
  * from a cold start. The eligibility rule lives in src/lib/topup.ts and is
  * enforced by POST /api/orders.
@@ -143,7 +157,8 @@ export function totalCredits(p: Plan): number {
 }
 
 /**
- * Cost per contact credit. This is the axis on which Rishta 12 beats Rishta 6
+ * Cost per contact credit. This is the axis on which the 1-year plan beats
+ * the 6-month one
  * (₹9.37 vs ₹12.22) — unlike cost-per-month, where the 6-month plan is cheaper
  * (₹366 vs ₹375). Show per-credit and total credits on the cards; do NOT show
  * an effective-monthly figure, it argues against the annual plan.
@@ -164,7 +179,7 @@ export function interestAllowance(planId: string | null | undefined): { monthly:
     : { monthly: FREE_INTERESTS, daily: FREE_INTERESTS_DAILY };
 }
 
-/** "Rishta 12" for a live plan id, "Free account" otherwise. */
+/** "1 Year Plan" for a live plan id, "Free account" otherwise. */
 export function planLabel(id: string | null | undefined): string {
   const plan = id ? getPlan(id) : undefined;
   if (plan) return plan.name;
