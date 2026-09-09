@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession, signOut } from '@/lib/auth-client';
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
-import { useRealtimeProfile } from '@/lib/hooks/useRealtimeProfile';
+import { useRealtimeProfile, type ProfileTick } from '@/lib/hooks/useRealtimeProfile';
 import GradientText from '@/components/ui/GradientText';
 import { planLabel, TOPUP, TOPUP_BONUS_CREDITS } from '@/lib/plans';
 import MyInterests from './_components/MyInterests';
@@ -161,9 +161,19 @@ export default function AccountPage() {
   useEffect(() => { if (user) loadSummary(); }, [user, loadSummary]);
 
   // True real-time credits/plan via the session-fabric bridge (sub-second).
+  // Both balances, kept apart: this page shows the cycle and the top-ups as
+  // separate tiles, so collapsing them here would put the wrong number under
+  // one of the two labels. bonus_credits used not to arrive at all, which left
+  // the top-up tile frozen at whatever the last full fetch had said.
   const { enabled: live } = useRealtimeProfile(
-    useCallback((credits: number, plan: string) =>
-      setSummary((s) => (s ? { ...s, credits, plan } : s)), []),
+    useCallback((next: ProfileTick) =>
+      setSummary((s) => (s ? {
+        ...s,
+        credits:       next.credits,
+        bonus_credits: next.bonus,
+        total_credits: next.total,
+        plan:          next.plan,
+      } : s)), []),
   );
   // Poll fallback only when realtime isn't available.
   useLiveRefresh(loadSummary, !!user && !live);

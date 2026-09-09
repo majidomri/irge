@@ -15,7 +15,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/lib/auth-client';
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
-import { useRealtimeProfile } from '@/lib/hooks/useRealtimeProfile';
+import { useRealtimeProfile, type ProfileTick } from '@/lib/hooks/useRealtimeProfile';
 
 /**
  * Why a spend was refused.
@@ -78,7 +78,13 @@ export function useContactCredits(): ContactCredits {
 
   // True real-time via the session-fabric bridge (sub-second). When the bridge
   // is off this is a no-op and the poll below covers it.
-  const { enabled: live } = useRealtimeProfile(useCallback((credits: number) => setRemaining(credits), []));
+  // `total`, not `credits`: the gate is about what can be spent, and spending
+  // drains the cycle balance before touching purchased top-ups. Taking the
+  // cycle figure here showed a member holding 17 top-ups as having 0 the
+  // moment any tick arrived, while the server kept letting them spend.
+  const { enabled: live } = useRealtimeProfile(
+    useCallback((next: ProfileTick) => setRemaining(next.total), []),
+  );
 
   // Fallback near-real-time: focus + interval poll. Skipped once realtime is live.
   useLiveRefresh(refresh, !!user && !live);

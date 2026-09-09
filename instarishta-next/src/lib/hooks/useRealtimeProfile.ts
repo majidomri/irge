@@ -33,7 +33,28 @@ async function fetchToken(): Promise<TokenResp | null> {
   } catch { return null; }
 }
 
-export function useRealtimeProfile(onChange: (credits: number, plan: string) => void): { enabled: boolean } {
+/**
+ * One realtime tick, with both balances kept apart.
+ *
+ * They are not interchangeable and the two consumers want different ones:
+ * /account renders `credits` and `bonus` as separate tiles, while the deck's
+ * contact gate cares only about `total`, because spending drains the cycle
+ * first and then the top-ups. Emitting a bare "credits" number meant whichever
+ * consumer wanted the other one silently got the wrong figure — the deck
+ * showed a member's 17 top-up credits as 0 the instant any tick landed, while
+ * the server went on letting them spend.
+ */
+export interface ProfileTick {
+  /** contact_credits — the monthly cycle balance. Overwritten at each refill. */
+  credits: number;
+  /** bonus_credits — purchased top-ups. Survive resets and plan expiry. */
+  bonus: number;
+  /** What the member can actually spend right now. */
+  total: number;
+  plan: string;
+}
+
+export function useRealtimeProfile(onChange: (next: ProfileTick) => void): { enabled: boolean } {
   const { data: session } = useSession();
   const user = session?.user;
   const [enabled, setEnabled] = useState(false);
@@ -70,8 +91,14 @@ export function useRealtimeProfile(onChange: (credits: number, plan: string) => 
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'ir_user_profiles', filter: `id=eq.${data.profileId}` },
           (payload) => {
-            const row = payload.new as { contact_credits?: number; plan?: string };
-            cbRef.current(row.contact_credits ?? 0, row.plan ?? 'none');
+            // The subscription has no column filter, so `new` is the whole
+            // row — bonus_credits was always here, just thrown away.
+            const row = payload.new as {
+              contact_credits?: number; bonus_credits?: number; plan?: string;
+            };
+            const credits = row.contact_credits ?? 0;
+            const bonus   = row.bonus_credits ?? 0;
+            cbRef.current({ credits, bonus, total: credits + bonus, plan: row.plan ?? 'none' });
           },
         )
         .subscribe();
