@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { CARD, PANEL, SUBTLE, BORDER, TEXT, MUTED, GREEN_BG, GREEN, NEUTRAL } from './theme';
 
 import { SOURCE_LABEL, type TrafficSource } from '@/lib/traffic-source';
 
@@ -48,18 +49,11 @@ type Stats = {
 
 const EVENTS = ['impression', 'view', 'click', 'listen', 'contact', 'share'] as const;
 
-const CARD: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #E8E4E0',
-  borderRadius: 12,
-  padding: 14,
-};
-
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div style={CARD}>
-      <div style={{ fontSize: 22, fontWeight: 700, color: '#141413' }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#767676', marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>{value}</div>
+      <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -165,8 +159,8 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
 
         <span style={{
           fontSize: 11, padding: '3px 9px', borderRadius: 999,
-          background: live ? 'rgba(0,168,107,0.12)' : 'rgba(0,0,0,0.06)',
-          color: live ? '#006241' : '#767676',
+          background: live ? GREEN_BG : SUBTLE,
+          color: live ? GREEN : MUTED,
         }}>
           {live ? `● live${pulse ? ` · ${pulse} in` : ''}` : '○ connecting'}
         </span>
@@ -176,14 +170,14 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
             <button key={d} type="button" onClick={() => setDays(d)}
               style={{
                 fontSize: 12, padding: '5px 11px', borderRadius: 999,
-                border: '1px solid #E8E4E0', cursor: 'pointer',
-                background: days === d ? '#006241' : '#fff',
-                color: days === d ? '#fff' : '#141413',
+                border: `1px solid ${BORDER}`, cursor: 'pointer',
+                background: days === d ? GREEN_BG : PANEL,
+                color: days === d ? GREEN : MUTED,
               }}>{d}d</button>
           ))}
           {entityId && (
             <button type="button" onClick={() => setEntityId(null)}
-              style={{ fontSize: 12, padding: '5px 11px', borderRadius: 999, border: '1px solid #E8E4E0', background: '#fff', cursor: 'pointer' }}>
+              style={{ fontSize: 12, padding: '5px 11px', borderRadius: 999, border: `1px solid ${BORDER}`, background: PANEL, cursor: 'pointer' }}>
               ← all
             </button>
           )}
@@ -191,7 +185,7 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
       </div>
 
       {stats?.note && (
-        <div style={{ ...CARD, color: '#767676', fontSize: 13 }}>{stats.note}</div>
+        <div style={{ ...CARD, color: MUTED, fontSize: 13 }}>{stats.note}</div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10 }}>
@@ -202,7 +196,7 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
       <div style={CARD}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Where they came from</div>
         {(stats?.sources ?? []).length === 0 && (
-          <div style={{ fontSize: 12, color: '#767676' }}>Nothing yet.</div>
+          <div style={{ fontSize: 12, color: MUTED }}>Nothing yet.</div>
         )}
         {(stats?.sources ?? []).map((s) => {
           const max = stats?.sources?.[0]?.count || 1;
@@ -211,11 +205,11 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
               <div style={{ width: 140, fontSize: 12 }}>
                 {SOURCE_LABEL[s.source as TrafficSource] ?? s.label}
               </div>
-              <div style={{ flex: 1, height: 8, background: '#F2F0EB', borderRadius: 999 }}>
+              <div style={{ flex: 1, height: 8, background: SUBTLE, borderRadius: 999 }}>
                 <div style={{
                   width: `${Math.max(3, (s.count / max) * 100)}%`,
                   height: '100%', borderRadius: 999,
-                  background: s.source === 'llm' ? '#00A86B' : '#617285',
+                  background: s.source === 'llm' ? GREEN : NEUTRAL,
                 }} />
               </div>
               <div style={{ width: 46, textAlign: 'right', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
@@ -230,7 +224,7 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
         <div style={{ ...CARD, padding: 0, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ background: '#FAFAF9', textAlign: 'left' }}>
+              <tr style={{ background: SUBTLE, textAlign: 'left' }}>
                 <th style={{ padding: 10 }}>Listing</th>
                 <th style={{ padding: 10 }}>Reach</th>
                 {EVENTS.map((e) => <th key={e} style={{ padding: 10 }}>{e}</th>)}
@@ -239,10 +233,10 @@ export function AnalyticsTab({ toast }: { toast: (m: string) => void }) {
             </thead>
             <tbody>
               {stats.listings.map((l) => (
-                <tr key={l.entityId} style={{ borderTop: '1px solid #F0EDE9' }}>
+                <tr key={l.entityId} style={{ borderTop: `1px solid ${BORDER}` }}>
                   <td style={{ padding: 10 }}>
                     <button type="button" onClick={() => setEntityId(l.entityId)}
-                      style={{ background: 'none', border: 'none', color: '#006241', cursor: 'pointer', fontWeight: 600, padding: 0 }}>
+                      style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: 600, padding: 0 }}>
                       {l.entityType} {l.entityId}
                     </button>
                   </td>

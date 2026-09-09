@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { CARD, BORDER, TEXT, MUTED, GREEN, AMBER, chip } from './theme';
 
 /**
  * Field Core Web Vitals, in /nizam.
@@ -31,10 +32,6 @@ type Vitals = {
   totalSamples: number;
   metrics: Metric[];
   note?: string;
-};
-
-const CARD: React.CSSProperties = {
-  background: '#fff', border: '1px solid #E8E4E0', borderRadius: 12, padding: 14,
 };
 
 const RANGES = [1, 7, 28, 90];
@@ -74,25 +71,22 @@ export function VitalsTab({ toast }: { toast: (m: string) => void }) {
         {RANGES.map((d) => (
           <button key={d} type="button" onClick={() => setDays(d)}
             style={{
-              fontSize: 12, padding: '5px 11px', borderRadius: 999, cursor: 'pointer',
-              border: '1px solid ' + (days === d ? '#141413' : '#E8E4E0'),
-              background: days === d ? '#141413' : '#fff',
-              color: days === d ? '#F3F0EE' : '#141413',
+              ...chip(days === d),
             }}>
             {d === 1 ? '24 hours' : `${d} days`}
           </button>
         ))}
         {data && (
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#767676' }}>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: MUTED }}>
             {data.totalSamples.toLocaleString('en-IN')} samples
           </span>
         )}
       </div>
 
       {data === null ? (
-        <div style={{ ...CARD, fontSize: 13, color: '#767676' }}>Loading vitals…</div>
+        <div style={{ ...CARD, fontSize: 13, color: MUTED }}>Loading vitals…</div>
       ) : data.note ? (
-        <div style={{ ...CARD, fontSize: 13, color: '#767676' }}>{data.note}</div>
+        <div style={{ ...CARD, fontSize: 13, color: MUTED }}>{data.note}</div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
           {data.metrics.map((m) => (
@@ -101,16 +95,16 @@ export function VitalsTab({ toast }: { toast: (m: string) => void }) {
                 <strong style={{ fontSize: 14 }}>{m.name}</strong>
                 <span style={{
                   fontSize: 22, fontWeight: 700,
-                  color: m.status === 'good' ? '#15803D' : m.status === 'needs-work' ? '#B45309' : '#141413',
+                  color: m.status === 'good' ? GREEN : m.status === 'needs-work' ? AMBER : TEXT,
                 }}>
                   {fmt(m.name, m.p75)}
                 </span>
                 {m.threshold != null && (
-                  <span style={{ fontSize: 12, color: '#767676' }}>
+                  <span style={{ fontSize: 12, color: MUTED }}>
                     p75 · good is under {fmt(m.name, m.threshold)}
                   </span>
                 )}
-                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#767676' }}>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: MUTED }}>
                   {m.samples.toLocaleString('en-IN')} samples
                 </span>
               </div>
@@ -119,13 +113,13 @@ export function VitalsTab({ toast }: { toast: (m: string) => void }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 10 }}>
                   <tbody>
                     {m.worstPaths.map((p) => (
-                      <tr key={p.path} style={{ borderTop: '1px solid #F5F2EF' }}>
+                      <tr key={p.path} style={{ borderTop: `1px solid ${BORDER}` }}>
                         <td style={{ padding: '6px 0' }}>{p.path}</td>
                         <td style={{ padding: '6px 0', textAlign: 'right', whiteSpace: 'nowrap',
-                          color: m.threshold != null && p.p75 > m.threshold ? '#B45309' : '#141413' }}>
+                          color: m.threshold != null && p.p75 > m.threshold ? AMBER : TEXT }}>
                           {fmt(m.name, p.p75)}
                         </td>
-                        <td style={{ padding: '6px 0 6px 14px', textAlign: 'right', color: '#767676', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '6px 0 6px 14px', textAlign: 'right', color: MUTED, whiteSpace: 'nowrap' }}>
                           {p.samples}
                         </td>
                       </tr>
@@ -134,7 +128,7 @@ export function VitalsTab({ toast }: { toast: (m: string) => void }) {
                 </table>
               )}
               {m.worstPaths.length === 0 && (
-                <div style={{ fontSize: 12, color: '#767676', marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: MUTED, marginTop: 8 }}>
                   No path has five samples yet, so a per-path p75 would be noise.
                 </div>
               )}

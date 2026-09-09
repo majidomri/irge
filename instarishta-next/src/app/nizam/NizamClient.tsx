@@ -214,11 +214,7 @@ interface UserProfile {
   phone_verified: boolean;
 }
 
-const BG       = '#0a1a14';
-const PANEL    = '#0f2419';
-const BORDER   = 'rgba(255,255,255,0.08)';
-const GREEN    = '#00A86B';
-const GREEN_BG = 'rgba(0,168,107,0.12)';
+import { BG, PANEL, BORDER, GREEN, GREEN_BG } from './theme';
 
 export default function NizamClient({
   adminEmail, adminName, initialChannels,

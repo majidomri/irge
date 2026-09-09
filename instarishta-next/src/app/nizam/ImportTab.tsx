@@ -25,11 +25,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { phashFromFile, hamming, textHash, looksLikeContact, PHASH_THRESHOLD } from '@/lib/phash';
 
-const PANEL  = '#0f2419';
-const BORDER = 'rgba(255,255,255,0.08)';
-const GREEN  = '#00A86B';
-const RED    = '#e5484d';
-const AMBER  = '#f5a524';
+import { PANEL, BORDER, GREEN, RED, AMBER } from './theme';
 const MUTED  = 'rgba(255,255,255,0.45)';
 
 /** Accepted items per network write. */

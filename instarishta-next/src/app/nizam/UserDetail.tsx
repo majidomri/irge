@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { CARD, PANEL, SUBTLE, BORDER, MUTED, RED_BG, RED } from './theme';
 
 /**
  * One member, everything at once.
@@ -49,10 +50,6 @@ type Detail = {
   failed: string[];
 };
 
-const CARD: React.CSSProperties = {
-  background: '#fff', border: '1px solid #E8E4E0', borderRadius: 12, padding: 14,
-};
-
 const rupees = (paise: number) => '₹' + (paise / 100).toLocaleString('en-IN');
 const when = (v: unknown) =>
   typeof v === 'string' ? new Date(v).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -60,21 +57,21 @@ const when = (v: unknown) =>
 function Section({ title, rows, cols }: { title: string; rows: Row[]; cols: string[] }) {
   return (
     <div style={{ ...CARD, padding: 0, overflowX: 'auto' }}>
-      <div style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, borderBottom: '1px solid #F0EDE9' }}>
-        {title} <span style={{ color: '#767676', fontWeight: 400 }}>({rows.length})</span>
+      <div style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, borderBottom: `1px solid ${BORDER}` }}>
+        {title} <span style={{ color: MUTED, fontWeight: 400 }}>({rows.length})</span>
       </div>
       {rows.length === 0 ? (
-        <div style={{ padding: 14, fontSize: 12, color: '#767676' }}>Nothing yet.</div>
+        <div style={{ padding: 14, fontSize: 12, color: MUTED }}>Nothing yet.</div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
-            <tr style={{ background: '#FAFAF9', textAlign: 'left' }}>
+            <tr style={{ background: SUBTLE, textAlign: 'left' }}>
               {cols.map((c) => <th key={c} style={{ padding: '8px 12px', fontWeight: 600 }}>{c}</th>)}
             </tr>
           </thead>
           <tbody>
             {rows.slice(0, 20).map((r, i) => (
-              <tr key={i} style={{ borderTop: '1px solid #F5F2EF' }}>
+              <tr key={i} style={{ borderTop: `1px solid ${BORDER}` }}>
                 {cols.map((c) => (
                   <td key={c} style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
                     {c.includes('_at') ? when(r[c])
@@ -123,7 +120,7 @@ export function UserDetail({
   }, [fetchDetail]);
 
   if (!data) {
-    return <div style={{ ...CARD, fontSize: 13, color: '#767676' }}>Loading member…</div>;
+    return <div style={{ ...CARD, fontSize: 13, color: MUTED }}>Loading member…</div>;
   }
 
   const p = data.profile as { email?: string; full_name?: string; created_at?: string };
@@ -133,23 +130,23 @@ export function UserDetail({
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" onClick={onClose}
-          style={{ fontSize: 12, padding: '5px 11px', borderRadius: 999, border: '1px solid #E8E4E0', background: '#fff', cursor: 'pointer' }}>
+          style={{ fontSize: 12, padding: '5px 11px', borderRadius: 999, border: `1px solid ${BORDER}`, background: PANEL, cursor: 'pointer' }}>
           ← all users
         </button>
         <strong style={{ fontSize: 15 }}>{p.full_name || p.email}</strong>
-        <span style={{ fontSize: 12, color: '#767676' }}>{p.email}</span>
+        <span style={{ fontSize: 12, color: MUTED }}>{p.email}</span>
         {s.banned && (
-          <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: 'rgba(200,0,0,0.1)', color: '#a00' }}>
+          <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: RED_BG, color: RED }}>
             blocked
           </span>
         )}
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#767676' }}>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: MUTED }}>
           joined {when(p.created_at)}
         </span>
       </div>
 
       {data.failed.length > 0 && (
-        <div style={{ ...CARD, fontSize: 12, color: '#a00' }}>
+        <div style={{ ...CARD, fontSize: 12, color: RED }}>
           Could not load: {data.failed.join(', ')}. Those sections are empty because the
           query failed, not because there is nothing there.
         </div>
@@ -173,7 +170,7 @@ export function UserDetail({
         ].map(([label, value]) => (
           <div key={String(label)} style={CARD}>
             <div style={{ fontSize: 20, fontWeight: 700 }}>{String(value)}</div>
-            <div style={{ fontSize: 12, color: '#767676', marginTop: 2 }}>{label}</div>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>{label}</div>
           </div>
         ))}
       </div>
@@ -181,7 +178,7 @@ export function UserDetail({
       {data.content && (
         <div style={{ ...CARD, fontSize: 13 }}>
           <strong>Content attributed to this account</strong>
-          <div style={{ marginTop: 6, color: '#767676' }}>
+          <div style={{ marginTop: 6, color: MUTED }}>
             {data.content.posts} post(s), {data.content.stories} story/stories ·{' '}
             {data.content.views} views · {data.content.likes} likes
           </div>

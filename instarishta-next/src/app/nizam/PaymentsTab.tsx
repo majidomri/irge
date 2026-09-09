@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { CARD, PANEL, SUBTLE, BORDER, MUTED, FAINT, GREEN_BG, GREEN, RED_BG, RED, AMBER, chip, FIELD } from './theme';
 
 /**
  * Payments, in /nizam.
@@ -47,15 +48,11 @@ const FILTERS: { key: OrderStatus | 'all'; label: string }[] = [
 ];
 
 const STATUS_COLOR: Record<OrderStatus, string> = {
-  created: '#767676',
-  pending_verification: '#B45309',
-  confirmed: '#15803D',
-  rejected: '#B91C1C',
-  expired: '#767676',
-};
-
-const CARD: React.CSSProperties = {
-  background: '#fff', border: '1px solid #E8E4E0', borderRadius: 12, padding: 14,
+  created: MUTED,
+  pending_verification: AMBER,
+  confirmed: GREEN,
+  rejected: RED,
+  expired: FAINT,
 };
 
 const when = (v: string | null) =>
@@ -140,10 +137,7 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
         {FILTERS.map((f) => (
           <button key={f.key} type="button" onClick={() => setFilter(f.key)}
             style={{
-              fontSize: 12, padding: '5px 11px', borderRadius: 999, cursor: 'pointer',
-              border: '1px solid ' + (filter === f.key ? '#141413' : '#E8E4E0'),
-              background: filter === f.key ? '#141413' : '#fff',
-              color: filter === f.key ? '#F3F0EE' : '#141413',
+              ...chip(filter === f.key),
             }}>
             {f.label}
           </button>
@@ -152,9 +146,9 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
           onSubmit={(e) => { e.preventDefault(); setQuery(q.trim()); }}>
           <input value={q} onChange={(e) => setQ(e.target.value)}
             placeholder="email, order id or UTR"
-            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, border: '1px solid #E8E4E0', minWidth: 190 }} />
+            style={{ ...FIELD, minWidth: 190 }} />
           <button type="submit"
-            style={{ fontSize: 12, padding: '5px 11px', borderRadius: 8, border: '1px solid #E8E4E0', background: '#fff', cursor: 'pointer' }}>
+            style={{ fontSize: 12, padding: '5px 11px', borderRadius: 8, border: `1px solid ${BORDER}`, background: PANEL, cursor: 'pointer' }}>
             Search
           </button>
         </form>
@@ -169,16 +163,16 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
       )}
 
       {orders === null ? (
-        <div style={{ ...CARD, fontSize: 13, color: '#767676' }}>Loading payments…</div>
+        <div style={{ ...CARD, fontSize: 13, color: MUTED }}>Loading payments…</div>
       ) : orders.length === 0 ? (
-        <div style={{ ...CARD, fontSize: 13, color: '#767676' }}>
+        <div style={{ ...CARD, fontSize: 13, color: MUTED }}>
           Nothing here{query ? ` for “${query}”` : ''}.
         </div>
       ) : (
         <div style={{ ...CARD, padding: 0, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ background: '#FAFAF9', textAlign: 'left' }}>
+              <tr style={{ background: SUBTLE, textAlign: 'left' }}>
                 {['Raised', 'Member', 'For', 'Amount', 'UTR', 'Status', ''].map((h) => (
                   <th key={h} style={{ padding: '8px 12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -186,7 +180,7 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
             </thead>
             <tbody>
               {orders.map((o) => (
-                <tr key={o.id} style={{ borderTop: '1px solid #F5F2EF' }}>
+                <tr key={o.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>{when(o.created_at)}</td>
                   <td style={{ padding: '8px 12px' }}>{o.email}</td>
                   <td style={{ padding: '8px 12px' }}>{o.description}</td>
@@ -195,12 +189,12 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', color: STATUS_COLOR[o.status] }}>
                     {o.status.replace(/_/g, ' ')}
                     {o.resolved_by && (
-                      <div style={{ color: '#767676', fontSize: 11 }}>
+                      <div style={{ color: MUTED, fontSize: 11 }}>
                         by {o.resolved_by}
                       </div>
                     )}
                     {o.note && (
-                      <div style={{ color: '#767676', fontSize: 11 }}>{o.note}</div>
+                      <div style={{ color: MUTED, fontSize: 11 }}>{o.note}</div>
                     )}
                   </td>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
@@ -210,7 +204,7 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
                           onClick={() => void settle(o, 'confirm')}
                           style={{
                             fontSize: 12, padding: '4px 10px', borderRadius: 8, cursor: 'pointer',
-                            border: '1px solid #15803D', background: '#15803D', color: '#fff',
+                            border: `1px solid ${GREEN}`, background: GREEN_BG, color: GREEN,
                             opacity: busy === o.id ? 0.5 : 1,
                           }}>
                           Confirm
@@ -219,7 +213,7 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
                           onClick={() => void settle(o, 'reject')}
                           style={{
                             fontSize: 12, padding: '4px 10px', borderRadius: 8, cursor: 'pointer',
-                            border: '1px solid #E8E4E0', background: '#fff', color: '#B91C1C',
+                            border: `1px solid ${BORDER}`, background: RED_BG, color: RED,
                             opacity: busy === o.id ? 0.5 : 1,
                           }}>
                           Reject

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { CARD, SUBTLE, BORDER, MUTED, GREEN_BG, GREEN, RED_BG, RED, AMBER, chip } from './theme';
 
 /**
  * Listing ownership review.
@@ -36,10 +37,6 @@ const FILTERS: { key: Claim['status'] | 'all'; label: string }[] = [
   { key: 'revoked', label: 'Revoked' },
   { key: 'all', label: 'All' },
 ];
-
-const CARD: React.CSSProperties = {
-  background: '#fff', border: '1px solid #E8E4E0', borderRadius: 12, padding: 14,
-};
 
 const when = (v: string | null) =>
   v ? new Date(v).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -107,31 +104,28 @@ export function ClaimsTab({ toast }: { toast: (m: string) => void }) {
         {FILTERS.map((f) => (
           <button key={f.key} type="button" onClick={() => setFilter(f.key)}
             style={{
-              fontSize: 12, padding: '5px 11px', borderRadius: 999, cursor: 'pointer',
-              border: '1px solid ' + (filter === f.key ? '#141413' : '#E8E4E0'),
-              background: filter === f.key ? '#141413' : '#fff',
-              color: filter === f.key ? '#F3F0EE' : '#141413',
+              ...chip(filter === f.key),
             }}>
             {f.label}
           </button>
         ))}
       </div>
 
-      <div style={{ ...CARD, fontSize: 12, color: '#767676' }}>
+      <div style={{ ...CARD, fontSize: 12, color: MUTED }}>
         Approving opens that listing&apos;s audience numbers to this member&apos;s account, and only
         one account can own a listing. Claims whose verified mobile already matches the number
         printed on the ad are approved automatically and never appear here.
       </div>
 
       {claims === null ? (
-        <div style={{ ...CARD, fontSize: 13, color: '#767676' }}>Loading claims…</div>
+        <div style={{ ...CARD, fontSize: 13, color: MUTED }}>Loading claims…</div>
       ) : claims.length === 0 ? (
-        <div style={{ ...CARD, fontSize: 13, color: '#767676' }}>Nothing here.</div>
+        <div style={{ ...CARD, fontSize: 13, color: MUTED }}>Nothing here.</div>
       ) : (
         <div style={{ ...CARD, padding: 0, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ background: '#FAFAF9', textAlign: 'left' }}>
+              <tr style={{ background: SUBTLE, textAlign: 'left' }}>
                 {['Filed', 'Listing', 'Member', 'Their verified number', 'Status', ''].map((h) => (
                   <th key={h} style={{ padding: '8px 12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -139,38 +133,38 @@ export function ClaimsTab({ toast }: { toast: (m: string) => void }) {
             </thead>
             <tbody>
               {claims.map((c) => (
-                <tr key={c.id} style={{ borderTop: '1px solid #F5F2EF' }}>
+                <tr key={c.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>{when(c.created_at)}</td>
                   <td style={{ padding: '8px 12px', fontWeight: 600 }}>#{c.profile_num}</td>
                   <td style={{ padding: '8px 12px' }}>{c.email}</td>
                   <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>
-                    {c.claimed_phone ?? <span style={{ color: '#B45309' }}>none verified</span>}
+                    {c.claimed_phone ?? <span style={{ color: AMBER }}>none verified</span>}
                   </td>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
                     {c.status}
-                    {c.proof && <div style={{ color: '#767676', fontSize: 11 }}>{c.proof}</div>}
-                    {c.reviewed_by && <div style={{ color: '#767676', fontSize: 11 }}>by {c.reviewed_by}</div>}
+                    {c.proof && <div style={{ color: MUTED, fontSize: 11 }}>{c.proof}</div>}
+                    {c.reviewed_by && <div style={{ color: MUTED, fontSize: 11 }}>by {c.reviewed_by}</div>}
                   </td>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
                     <span style={{ display: 'inline-flex', gap: 6 }}>
                       {c.status !== 'approved' && (
                         <button type="button" disabled={busy === c.id}
                           onClick={() => void act(c, 'approve')}
-                          style={{ ...btn('#15803D', '#fff', '#15803D'), opacity: busy === c.id ? 0.5 : 1 }}>
+                          style={{ ...btn(GREEN_BG, GREEN, GREEN), opacity: busy === c.id ? 0.5 : 1 }}>
                           Approve
                         </button>
                       )}
                       {c.status === 'pending' && (
                         <button type="button" disabled={busy === c.id}
                           onClick={() => void act(c, 'reject')}
-                          style={{ ...btn('#fff', '#B91C1C', '#E8E4E0'), opacity: busy === c.id ? 0.5 : 1 }}>
+                          style={{ ...btn(RED_BG, RED, BORDER), opacity: busy === c.id ? 0.5 : 1 }}>
                           Reject
                         </button>
                       )}
                       {c.status === 'approved' && (
                         <button type="button" disabled={busy === c.id}
                           onClick={() => void act(c, 'revoke')}
-                          style={{ ...btn('#fff', '#B91C1C', '#E8E4E0'), opacity: busy === c.id ? 0.5 : 1 }}>
+                          style={{ ...btn(RED_BG, RED, BORDER), opacity: busy === c.id ? 0.5 : 1 }}>
                           Revoke
                         </button>
                       )}

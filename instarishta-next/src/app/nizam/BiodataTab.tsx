@@ -2,9 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { normalizeSections, type BioSection } from '@/lib/biodata-schema';
 
-const PANEL  = '#0f2419';
-const BORDER = 'rgba(255,255,255,0.08)';
-const GREEN  = '#00A86B';
+import { PANEL, BORDER, GREEN } from './theme';
 const MUTED  = 'rgba(255,255,255,0.45)';
 
 type SectionType = BioSection['type'];
