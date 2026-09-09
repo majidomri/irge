@@ -28,7 +28,17 @@ type Order = {
   plan_id: string;
   amount_paise: number;
   amount: string;
-  description: string;
+  /**
+   * What was bought. /api/admin/orders returns describeOrder(plan_id), which
+   * is an OBJECT — this was typed as a string and rendered straight into a
+   * <td>, so React threw #31 ("objects are not valid as a React child") and
+   * took the whole tab down with it.
+   *
+   * It survived because the default filter is "Needs review", which is empty
+   * on a healthy queue: the crash needed a row to render, and the one view
+   * nobody opens by default was the only one that had any.
+   */
+  description: { label: string; detail: string };
   status: OrderStatus;
   utr: string | null;
   note: string | null;
@@ -183,7 +193,10 @@ export function PaymentsTab({ toast }: { toast: (m: string) => void }) {
                 <tr key={o.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>{when(o.created_at)}</td>
                   <td style={{ padding: '8px 12px' }}>{o.email}</td>
-                  <td style={{ padding: '8px 12px' }}>{o.description}</td>
+                  <td style={{ padding: '8px 12px' }}>
+                    {o.description.label}
+                    <div style={{ color: MUTED, fontSize: 11 }}>{o.description.detail}</div>
+                  </td>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', fontWeight: 600 }}>{o.amount}</td>
                   <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>{o.utr ?? '—'}</td>
                   <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', color: STATUS_COLOR[o.status] }}>
