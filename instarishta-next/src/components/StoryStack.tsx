@@ -73,6 +73,13 @@ export interface StoryStackProps {
   onIndexChange: (next: number) => void;
   /** Swipe down, or tap the backdrop. */
   onDismiss: () => void;
+  /**
+   * A move past either end of `frames`. Lets the stack render one listing's
+   * pages while the parent still owns moving between listings — so "next" runs
+   * off the last page into the next listing without the stack needing to know
+   * anything about listings.
+   */
+  onOverflow?: (direction: 1 | -1) => void;
   /** Called when the reader nears the end, so the parent can page in more. */
   onNeedMore?: () => void;
   /**
@@ -83,7 +90,7 @@ export interface StoryStackProps {
 }
 
 export default function StoryStack({
-  frames, index, onIndexChange, onDismiss, onNeedMore, renderSlide,
+  frames, index, onIndexChange, onDismiss, onNeedMore, renderSlide, onOverflow,
 }: StoryStackProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   // Frames whose bytes have decoded. A slide paints only once it is in here,
@@ -107,9 +114,13 @@ export default function StoryStack({
   }, [frames, index]);
 
   const go = useCallback((next: number) => {
-    if (next < 0 || next >= frames.length) return;
+    // Running off either end is not a no-op — it is the parent's cue to move
+    // to the neighbouring listing, which is what makes frames and listings
+    // read as one sequence rather than two axes.
+    if (next < 0) { onOverflow?.(-1); return; }
+    if (next >= frames.length) { onOverflow?.(1); return; }
     onIndexChange(next);
-  }, [frames.length, onIndexChange]);
+  }, [frames.length, onIndexChange, onOverflow]);
 
   // Page in more listings before the reader reaches the end, not on arrival.
   useEffect(() => {

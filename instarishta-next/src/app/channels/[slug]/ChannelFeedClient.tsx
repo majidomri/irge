@@ -24,6 +24,7 @@ import {
   LikeIcon, CommentIcon, ShareIcon, StoryActionButton,
 } from '@/components/StoryIcons';
 import { isOptimizable, optimized } from '@/lib/img';
+import StoryStack, { buildFrames } from '@/components/StoryStack';
 
 const MagicRings = dynamic(() => import('@/components/ui/MagicRings'), { ssr: false });
 const CommentDrawer = dynamic(() => import('@/components/CommentDrawer'), { ssr: false });
@@ -281,10 +282,12 @@ function PostModal({
   const hasImg  = imgs.length > 0;
 
   const [carIdx,  setCarIdx]  = useState(0);
+  // The stack renders pages of THIS listing; the parent still owns moving
+  // between listings, via onOverflow.
+  const stackFrames = useMemo(() => buildFrames([post]), [post]);
   const [commenting, setCommenting] = useState(false);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
-  const scrollRef   = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const swipeRef    = useRef({ x: 0, y: 0, inCar: false, onControl: false });
   const postIdx     = allPosts.indexOf(post);
@@ -418,14 +421,6 @@ function PostModal({
     };
   }, []);
 
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => setCarIdx(Math.round(el.scrollLeft / el.clientWidth));
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
-
   /**
    * Where a new post opens.
    *
@@ -440,7 +435,6 @@ function PostModal({
     const last = landOnLast.current ? imgs.length - 1 : 0;
     landOnLast.current = false;
     setCarIdx(last);
-    scrollRef.current?.scrollTo({ left: last * (scrollRef.current?.clientWidth ?? 0) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post.id]);
 
@@ -456,11 +450,7 @@ function PostModal({
    * input asks for slide n, and this is the one thing that goes there.
    */
   const goToSlide = useCallback((i: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const next = Math.max(0, Math.min(i, imgs.length - 1));
-    el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
-    setCarIdx(next);
+    setCarIdx(Math.max(0, Math.min(i, imgs.length - 1)));
   }, [imgs.length]);
 
 
@@ -716,47 +706,26 @@ function PostModal({
           // left rather than the whole frame -- it must END above the icons,
           // not run under them.
           style={isAudio ? { height: '32dvh' } : { minHeight: '40dvh' }}>
-          <div ref={scrollRef}
-            className="ir-no-scrollbar absolute inset-0 flex overflow-x-auto snap-x snap-mandatory"
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              scrollBehavior: 'smooth',
-              // A sideways swipe belongs to the carousel; without this it
-              // chains to the page and, on iOS, to the back gesture.
-              overscrollBehaviorX: 'contain',
-            } as React.CSSProperties}>
-            {imgs.map((url, i) => (
-              <div key={i} className="min-w-full h-full snap-center relative overflow-hidden">
-                {/* No per-slide blurred copy here any more. Every slide was
-                    painting a blur-2xl of a 1080x1920 image at full size, and
-                    the compositor redrew all of them through a drag -- which
-                    is most of why the carousel felt sticky. The ambient blur
-                    behind the whole modal already fills the frame, and it
-                    follows `carIdx`, so nothing is lost but the jank. */}
-                {/* Full-bleed, so it asks for the viewport width -- and gets
-                    AVIF where the browser takes it. `object-contain` keeps
-                    the whole biodata visible; the optimizer only changes the
-                    bytes, never the framing. */}
-                <Image
-                  src={url}
-                  // "Photo 2" describes nothing. These are frames of one
-                  // listing, so the listing's own title is the description,
-                  // and the position only matters when there is more than one.
-                  alt={
-                    imgs.length > 1
-                      ? `${post.title ?? 'Rishta listing'} — image ${i + 1} of ${imgs.length}`
-                      : (post.title ?? 'Rishta listing')
-                  }
-                  fill
-                  sizes="100vw"
-                  className="object-contain select-none"
-                  priority={i === 0}
-                  style={{ pointerEvents: 'none' }}
-                  draggable={false}
-                  unoptimized={!isOptimizable(url)} />
-              </div>
-            ))}
-          </div>
+          {/* ── The frames ───────────────────────────────────────────────────
+              Was a `scroll-snap-type: x mandatory` scroller. Snap refuses any
+              position that is not a snap point, so a short or slow swipe
+              sprang back instead of advancing — the stickiness this file's own
+              comments describe — and every drag ran through the scroller's
+              layout on the main thread.
+
+              StoryStack moves a windowed track with one translate3d, which the
+              compositor handles, and holds a frame transparent until decode()
+              resolves so an advance never reveals a half-drawn biodata. It
+              renders this listing's pages; running off either end calls
+              onOverflow, which is how frames and listings stay one sequence.
+              See src/components/StoryStack.tsx. */}
+          <StoryStack
+            frames={stackFrames}
+            index={Math.min(carIdx, Math.max(0, stackFrames.length - 1))}
+            onIndexChange={setCarIdx}
+            onOverflow={(dir) => (dir === 1 ? goNext() : (landOnLast.current = true, goPrev()))}
+            onDismiss={onClose}
+          />
 
           {/* ── Neighbour decode ──────────────────────────────────────────────
               The warm-up above puts the next covers in the HTTP cache and
