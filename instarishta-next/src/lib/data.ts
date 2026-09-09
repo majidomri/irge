@@ -10,16 +10,6 @@
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * The Cloudflare relay in front of jsdata.json. Exported so the admin
- * force-refresh route (/api/admin/profiles/refresh) can reach the worker's
- * own cache — purging Next's tag alone is not enough, the worker holds a
- * separate 5-minute KV cache behind it.
- */
-export const PROFILE_WORKER_BASE = 'https://instarishta-profile-relay.instarishtalead.workers.dev';
-
-const WORKER_URL = `${PROFILE_WORKER_BASE}/api/profiles`;
-
 // In next dev, unstable_cache doesn't persist between requests.
 // This module-level Map fills that gap so dev reloads are instant after first fetch.
 const _dev = new Map<string, { v: unknown; exp: number }>();
@@ -51,12 +41,6 @@ export type ProfilePlacement = 'home' | 'channels' | 'profiles' | 'all';
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
 // ISR: 30 min cache, tag 'profiles' for on-demand purge via POST /api/revalidate.
-//
-// The Cloudflare worker enforces an Origin allowlist to block browser-based
-// scrapers. Server-side fetches don't get an Origin attached automatically, so
-// we send our production origin explicitly — the worker's check is a browser
-// gate, not a real auth boundary, so this is the standard pattern.
-const WORKER_ORIGIN = 'https://instarishta.me';
 
 /**
  * Every loader below degrades to an empty result rather than throwing, so a
@@ -93,24 +77,52 @@ async function orEmpty<T>(source: string, fallback: T, run: () => Promise<T>): P
   }
 }
 
+/**
+ * The whole catalogue, in feed order.
+ *
+ * This used to fetch jsdata.json from GitHub through a Cloudflare relay. It
+ * now reads ir_profile_ads (migration 032) — the listings are hosted here, and
+ * the relay, its KV cache and the GitHub CDN are all out of the path.
+ *
+ * /profiles no longer calls this: it asks lib/profile-ads.ts for one filtered,
+ * counted, paginated page instead of pulling 500 rows to render 48. What is
+ * left are the consumers that genuinely want every listing — sitemap.ts, the
+ * /l/[id] permalink and its OG image, markdown-view, and the admin lists — so
+ * the full read stays, and stays cached.
+ *
+ * The `.limit()` is explicit because PostgREST caps a request at 1000 rows by
+ * default and would silently truncate a larger catalogue rather than error.
+ * Raise it here and in the check below together.
+ */
+const CATALOGUE_LIMIT = 5000;
+
 const cachedProfiles = unstable_cache(
   async () => devCached('profiles', 120_000, async () => {
-    const res = await fetch(WORKER_URL, {
-      cache: 'no-store',
-      headers: { 'Origin': WORKER_ORIGIN, 'Referer': WORKER_ORIGIN + '/' },
-    });
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    const { data, error } = await sb
+      .from('ir_profile_ads')
+      .select('id, title, body, gender, phone, whatsapp, age_declared, education, priority, audio_url, instagram_post_id')
+      .eq('hidden', false)
+      .order('seq', { ascending: true })
+      .limit(CATALOGUE_LIMIT);
+
     // Every failure below throws rather than returning [], so that the empty
     // result never becomes the cached answer. See orEmpty.
-    if (!res.ok) throw new Error(`worker responded ${res.status} ${res.statusText}`);
+    if (error) throw new Error(error.message);
+    // An empty catalogue is not a plausible state for a site with 500
+    // listings, and caching it blanks every page that reads this. Treated as
+    // a failure so the next request asks again — the same guard the worker
+    // version had, and for the same reason.
+    if (!data || data.length === 0) throw new Error('ir_profile_ads returned an empty catalogue');
 
-    const data = await res.json() as unknown;
-    if (!Array.isArray(data)) throw new Error('worker payload was not an array');
-    // An empty array from a healthy worker is not a plausible state for a
-    // catalogue of 500 listings, and caching it blanks the site. Treated as a
-    // failure so the next request asks again.
-    if (data.length === 0) throw new Error('worker returned an empty catalogue');
-
-    return data;
+    // `age_declared` is the column name; every consumer reads `age`. Renamed
+    // here rather than in the table, because `age` alongside the derived
+    // `age_years` would be two fields with one obvious name and no way to tell
+    // which one a filter meant.
+    return data.map(({ age_declared, ...rest }) => ({ ...rest, age: age_declared }));
   }),
   ['ir-profiles'],
   { revalidate: 1800, tags: ['profiles'] },

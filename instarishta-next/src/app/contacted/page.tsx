@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getContacts, consumeRevealedNumbers, maskNumber, type ContactEntry } from '@/lib/contact-log';
+import { fetchContacts, maskNumber, type ContactEntry } from '@/lib/contact-log';
 
 function fmt(iso: string) {
   const d    = new Date(iso);
@@ -31,11 +31,16 @@ export default function ContactedPage() {
   const [mounted,  setMounted]  = useState(false);
 
   useEffect(() => {
-    // consumeRevealedNumbers: reads entries, flips revealed→false, returns freshIds for this render
-    const { entries: all, freshIds: fresh } = consumeRevealedNumbers();
-    setEntries(all);
-    setFreshIds(fresh);
-    setMounted(true);
+    // One request: the server flips revealed→false and returns the ids it
+    // flipped, so the "show in full once" set cannot be claimed by two tabs.
+    let live = true;
+    fetchContacts().then(({ entries: all, freshIds: fresh }) => {
+      if (!live) return;
+      setEntries(all);
+      setFreshIds(fresh);
+      setMounted(true);
+    });
+    return () => { live = false; };
   }, []);
 
   const waCount        = entries.filter(e => e.type === 'whatsapp').length;

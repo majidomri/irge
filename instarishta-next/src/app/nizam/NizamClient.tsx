@@ -253,15 +253,49 @@ export default function NizamClient({
   };
 
   /*
-   * Force /profiles to re-read jsdata.json from GitHub.
+   * Drop the cached copy of the catalogue.
    *
-   * The profile ads deliberately stay in the repo behind the Cloudflare
-   * relay, so an edit normally takes up to ~35 minutes to appear (GitHub's
-   * CDN, then the worker's 5-minute KV cache, then Next's 30-minute tag).
-   * This collapses that to one click. The secret lives server-side in
-   * /api/admin/profiles/refresh — nothing sensitive is in this component.
+   * /profiles queries ir_profile_ads per request and never needs this — the
+   * three-cache stack it used to clear (GitHub's CDN, the Cloudflare worker's
+   * KV, Next's tag) is down to the last one. What still reads through the tag
+   * is everything that wants the WHOLE catalogue: the sitemap, /l/[id] and its
+   * OG image, the admin lists.
    */
   const [refreshing, setRefreshing] = useState(false);
+
+  /*
+   * Pull the listings in from jsdata.json.
+   *
+   * This is the one-time move off GitHub, and the bulk path after it. Prune is
+   * deliberately not offered here: deleting every row absent from a payload is
+   * the kind of thing that should be asked for explicitly, through the API,
+   * rather than sitting one mis-click away from emptying the catalogue.
+   */
+  const [importing, setImporting] = useState(false);
+
+  const importProfiles = async () => {
+    if (importing) return;
+    setImporting(true);
+    try {
+      const res  = await fetch('/api/admin/profile-ads/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error ?? 'Import failed'); return; }
+      const skipped = Array.isArray(data.skipped) ? data.skipped.length : 0;
+      showToast(
+        skipped
+          ? `Imported ${data.upserted} — ${skipped} skipped`
+          : `Imported ${data.upserted} listings`,
+      );
+    } catch {
+      showToast('Import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const refreshProfiles = async () => {
     if (refreshing) return;
@@ -309,8 +343,15 @@ export default function NizamClient({
         </nav>
 
         <div className="px-3 pb-4 border-t pt-3" style={{ borderColor: BORDER }}>
+          <button onClick={importProfiles} disabled={importing}
+            title="Load listings from jsdata.json into the database, updating existing ones by id"
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 mb-2 rounded-xl text-sm font-medium disabled:opacity-50"
+            style={{ background: GREEN_BG, color: GREEN, border: 'none' }}>
+            <span>{importing ? '⏳' : '⬇️'}</span>
+            <span>{importing ? 'Importing…' : 'Import listings'}</span>
+          </button>
           <button onClick={refreshProfiles} disabled={refreshing}
-            title="Re-read jsdata.json from GitHub now, skipping every cache"
+            title="Drop the cached catalogue so the sitemap and permalinks pick up edits now"
             className="w-full flex items-center gap-2.5 px-4 py-2.5 mb-2 rounded-xl text-sm font-medium disabled:opacity-50"
             style={{ background: GREEN_BG, color: GREEN, border: 'none' }}>
             <span>{refreshing ? '⏳' : '🔄'}</span>

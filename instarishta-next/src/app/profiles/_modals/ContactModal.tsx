@@ -36,7 +36,8 @@ export default function ContactModal({
   const isFemale = profile.gender === 'female';
 
   function handleWA() {
-    logContact({ type: 'whatsapp', number: BUSINESS_WA, profileNum: num, profileTitle: profile.title });
+    logContact({ type: 'whatsapp', number: BUSINESS_WA, profileNum: num,
+                profileTitle: profile.title, profileId: profile.id ?? null });
     fetch('/api/telegram-notify', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },

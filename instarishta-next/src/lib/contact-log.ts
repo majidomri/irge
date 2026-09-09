@@ -1,24 +1,38 @@
+/**
+ * The contacted history, as the browser sees it.
+ *
+ * ── What changed ─────────────────────────────────────────────────────────────
+ * This module used to BE the storage: a JSON array in localStorage under
+ * 'ir_contact_log_v1', capped at 300 entries. That put a member's whole record
+ * of what they had spent credits on inside one browser — invisible on their
+ * phone, and destroyed by clearing site data, with nothing on the server to
+ * restore it from. ir_user_usage recorded only `feature: 'contact'`: no
+ * profile, no number, no receipt.
+ *
+ * The rows now live in ir_contact_log (migration 033) and this file is a thin
+ * client over /api/account/contacts. The exported shape is deliberately close
+ * to the old one so the page rendering it did not have to change with it.
+ *
+ * ── The old key is not read ──────────────────────────────────────────────────
+ * There is no import of 'ir_contact_log_v1' into the server. It cannot be
+ * trusted — anyone can type any history into their own localStorage, and this
+ * table is meant to be evidence of what was actually spent. Existing entries
+ * stay visible in that browser only until it is cleared, and nothing new is
+ * written there.
+ */
+
 export interface ContactEntry {
   id:           string;
   type:         'whatsapp' | 'call';
   number:       string;
+  /** Upstream feed id — stable across feed edits, unlike profileNum. */
+  profileId?:   number | null;
+  /** Catalogue position as shown at the time. */
   profileNum:   number;
   profileTitle: string;
   timestamp:    string;
-  revealed:     boolean; // true = full number shown once, then permanently masked
+  revealed:     boolean;
 }
-
-/**
- * Versioned, so a change to ContactEntry cannot poison an existing browser.
- *
- * The shape stored here is parsed straight back into ContactEntry with a cast
- * and no validation. Add or rename a field and every returning visitor reads
- * yesterday's shape as today's type — a silent, per-browser failure that
- * never reproduces on a fresh profile, which is the worst kind to debug.
- * Bumping the suffix abandons the old key instead; browsers evict it.
- */
-const KEY = 'ir_contact_log_v1';
-const MAX = 300;
 
 /** Mask number — show only last 4 digits. e.g. +918886667121 → +91XXXXXXX7121 */
 export function maskNumber(number: string): string {
@@ -29,40 +43,44 @@ export function maskNumber(number: string): string {
   return `${prefix}${masked}${visible}`;
 }
 
-export function logContact(entry: Omit<ContactEntry, 'id' | 'timestamp' | 'revealed'>): void {
-  try {
-    const existing = getContacts();
-    const next: ContactEntry = {
-      ...entry,
-      id:        Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      timestamp: new Date().toISOString(),
-      revealed:  true, // full number visible exactly once on next page load
-    };
-    localStorage.setItem(KEY, JSON.stringify([next, ...existing].slice(0, MAX)));
-  } catch { /* storage full or unavailable */ }
-}
-
-export function getContacts(): ContactEntry[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '[]') as ContactEntry[];
-  } catch {
-    return [];
-  }
+/**
+ * Record one contact reveal.
+ *
+ * Fire-and-forget, exactly as the localStorage write was: the member is being
+ * sent to WhatsApp in the same gesture, and a failed log must not hold that up
+ * or surface an error over it. The failure is logged, not shown.
+ */
+export function logContact(
+  entry: Pick<ContactEntry, 'type' | 'number' | 'profileNum' | 'profileTitle'> & { profileId?: number | null },
+): void {
+  fetch('/api/account/contacts', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(entry),
+    keepalive: true,   // the tap opens a new tab; the request must outlive it
+  }).catch((err) => console.error('[contact-log] failed to record contact:', err));
 }
 
 /**
- * Mark all currently-revealed entries as masked and return two lists:
- * - freshIds: IDs that were revealed (show full number this render)
- * - entries:  all entries (already saved back with revealed=false)
+ * The member's history, with the entries whose number should be shown in full
+ * exactly once on this render.
+ *
+ * Both halves come from a single request: the server flips the reveal flags in
+ * one `UPDATE ... RETURNING` and hands back the ids it flipped, so two tabs
+ * opening /contacted at once cannot both claim to be the first — which the
+ * three-step localStorage version could.
  */
-export function consumeRevealedNumbers(): { entries: ContactEntry[]; freshIds: Set<string> } {
-  const entries  = getContacts();
-  const freshIds = new Set(entries.filter(e => e.revealed).map(e => e.id));
-
-  if (freshIds.size > 0) {
-    const updated = entries.map(e => e.revealed ? { ...e, revealed: false } : e);
-    try { localStorage.setItem(KEY, JSON.stringify(updated)); } catch { /* ignore */ }
-    return { entries: updated, freshIds };
+export async function fetchContacts(): Promise<{ entries: ContactEntry[]; freshIds: Set<string> }> {
+  try {
+    const res = await fetch('/api/account/contacts', { cache: 'no-store' });
+    if (!res.ok) return { entries: [], freshIds: new Set() };
+    const data = await res.json() as { entries?: ContactEntry[]; freshIds?: string[] };
+    return {
+      entries:  data.entries ?? [],
+      freshIds: new Set(data.freshIds ?? []),
+    };
+  } catch (err) {
+    console.error('[contact-log] failed to load history:', err);
+    return { entries: [], freshIds: new Set() };
   }
-  return { entries, freshIds };
 }

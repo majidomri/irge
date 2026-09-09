@@ -4,6 +4,7 @@
 // src/lib, because shared code needs them and shared code must not import from
 // app/. They are re-exported here so the route's own files keep one import.
 import type { Profile, DeckProfile } from '@/types/profile';
+import type { ProfileAdFilters } from '@/lib/profile-ads';
 
 export type { Profile, DeckProfile };
 export {
@@ -119,14 +120,14 @@ export const SORT_OPTIONS = [
 // just pushes URL changes — Remix-style, server is the source of truth.
 
 /**
- * Listings per page.
+ * Listings per page, and the filter shape — both re-exported from lib.
  *
- * The grid used to render every match — 500 cards, 18,175 DOM elements, which
- * is what Lighthouse's dom-size audit and most of the page's blocking time
- * were measuring. 48 fills three full rows on the widest grid and keeps the
- * document an order of magnitude smaller.
+ * PAGE_SIZE is what the SQL query is handed as its LIMIT, so it has to be one
+ * value rather than a page-side copy that can drift from the paginator; and
+ * shared code must not import from app/, so lib cannot read them from here.
  */
-export const PAGE_SIZE = 48;
+export { PAGE_SIZE } from '@/lib/profile-ads';
+export type FilterParams = ProfileAdFilters;
 
 /** 1-based, clamped. Anything unparseable is page 1. */
 export function parsePage(raw: string | string[] | undefined): number {
@@ -135,19 +136,6 @@ export function parsePage(raw: string | string[] | undefined): number {
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
-export interface FilterParams {
-  search:     string;
-  idFilter:   string;
-  gender:     string;        // 'all' | 'male' | 'female'
-  urgentOnly: boolean;
-  education:  string;
-  marital:    string;
-  state:      string;
-  community:  string;
-  ageMin:     number;
-  ageMax:     number;
-  sort:       string;        // 'default' | 'urgent' | 'male' | 'female'
-}
 
 export const DEFAULT_FILTERS: FilterParams = {
   search: '', idFilter: '', gender: 'all', urgentOnly: false,

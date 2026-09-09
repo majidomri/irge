@@ -3,8 +3,9 @@
  * shown back to that member.
  *
  * Audience numbers for "my ad" exist only where the member has proven the ad
- * is theirs. The catalogue is an external read-only feed with no owner field
- * (see PROFILE_WORKER_BASE in lib/data.ts), so ownership comes from
+ * is theirs. The catalogue (ir_profile_ads) carries no owner field — the ads
+ * are transcribed from an incoming feed, not authored by members — so
+ * ownership comes from
  * ir_profile_claims — migration 031 — and only an approved claim opens the
  * events for that listing. Without that gate this endpoint would be reporting
  * the whole site's traffic to whoever asked.

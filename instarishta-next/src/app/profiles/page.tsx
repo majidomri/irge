@@ -1,8 +1,8 @@
 import ProfilesClient from './ProfilesClient';
 import { WebMcpTools } from '@/components/WebMcpTools';
-import { getProfiles, getFeatured, getBiodata } from '@/lib/data';
-import { hiddenSet, withoutHidden } from '@/lib/moderation';
-import { applyFilters, parseFilterParams, parsePage, isUrgent, PAGE_SIZE, type Profile } from './_shared';
+import { getFeatured, getBiodata } from '@/lib/data';
+import { searchProfileAds } from '@/lib/profile-ads';
+import { parseFilterParams, parsePage } from './_shared';
 
 export const metadata = {
   title: 'Browse Profiles – InstaRishta Muslim Matrimony',
@@ -15,46 +15,49 @@ export const metadata = {
   alternates: { canonical: '/profiles' },
 };
 
-// Remix-style loader: searchParams drive the filter state, server applies all
-// filters and ships the full matched set in the SSR HTML. Mirrors the original
-// vanilla-JS renderer (js/app/modules/renderer.js) — render all, no paginator.
+/**
+ * Remix-style loader: searchParams drive the filter state and the server
+ * decides everything the visitor sees.
+ *
+ * The filtering itself now happens in Postgres rather than here. It used to
+ * pull all 500 listings across the network from a Cloudflare relay in front of
+ * jsdata.json on GitHub, then run nine regex passes over the array to produce
+ * 48 cards. searchProfileAds() asks an indexed query for the page, the total
+ * and the counts in one round trip — see lib/profile-ads.ts and migration 032.
+ *
+ * Moderation moved with it: `hidden` is a column on ir_profile_ads, excluded
+ * inside the query before `_num` is assigned, which is the same ordering
+ * withoutHidden() enforced here — a hidden listing is not one that failed a
+ * filter, it is one that was never in the set, including in the counts and in
+ * what WebMcpTools can search.
+ */
 export default async function ProfilesPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [params, allProfiles, featured, biodata, hidden] = await Promise.all([
-    searchParams,
-    getProfiles() as Promise<Profile[]>,
+  const params  = await searchParams;
+  const filters = parseFilterParams(params);
+
+  const [result, featured, biodata] = await Promise.all([
+    searchProfileAds(filters, parsePage(params.page)),
     getFeatured('profiles'),
     getBiodata(),
-    hiddenSet('profile'),
   ]);
 
-  const filters  = parseFilterParams(params);
-
-  // Moderation runs before the visitor's own filters: a hidden listing is not
-  // a listing that failed a filter, it is one that should not be in the set at
-  // all — including in the counts and in what WebMcpTools can search.
-  const visible  = withoutHidden(allProfiles, hidden, p => p.id);
-  const filtered = applyFilters(visible, filters);
+  const { profiles: pageItems, page, pageCount } = result;
 
   /**
    * Stats count every match, not the page — "312 profiles found" has to stay
-   * true regardless of which slice is on screen.
+   * true regardless of which slice is on screen. The query computes them over
+   * the same filtered set it pages, so they cannot disagree with the grid.
    */
   const stats = {
-    total:  filtered.length,
-    male:   filtered.filter(p => p.gender === 'male').length,
-    female: filtered.filter(p => p.gender === 'female').length,
-    urgent: filtered.filter(p => isUrgent(p.body)).length,
+    total:  result.total,
+    male:   result.male,
+    female: result.female,
+    urgent: result.urgent,
   };
-
-  // Paginate on the server: the document then carries one page of cards
-  // instead of every match, which is where the DOM size came from.
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const page      = Math.min(parsePage(params.page), pageCount);
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   /**
    * Biodata for the profiles on this page, and no others.
@@ -86,7 +89,7 @@ export default async function ProfilesPage({
       <WebMcpTools profiles={pageItems} />
       <ProfilesClient
       profiles={pageItems}
-      totalCount={filtered.length}
+      totalCount={result.total}
       page={page}
       pageCount={pageCount}
       stats={stats}
