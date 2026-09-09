@@ -39,12 +39,30 @@ const ZuckStories = dynamic(() => import('@/components/ZuckStories'), { ssr: fal
  *
  * WARM_AHEAD is the window; WARM_IMMEDIATE is how many of it race the current
  * post at high priority. The rest are fetched during idle in WARM_BATCH-sized
- * groups at low priority, which is what keeps a thirty-deep window from
- * competing with the image the visitor is looking at.
+ * groups at low priority.
+ *
+ * ── Why this went from thirty to three ──────────────────────────────────────
+ * Thirty was tuned on desktop wifi, where it is free. On a phone it is the
+ * cause of the stall it was meant to cure: thirty requests — at 1920px wide,
+ * because the width is picked from innerWidth x devicePixelRatio and a modern
+ * phone lands on the 1920 bucket — is megabytes of contention against the one
+ * image the reader is actually waiting on. Low priority tells the browser the
+ * ORDER to start them in; it does not give the connection back.
+ *
+ * Telegram's own story viewer (telegram-tt, StorySlides) does no manual
+ * preloading at all. It keeps a window of slides in the DOM — index-4 to
+ * index+5 — and lets the browser fetch, decode and rasterise the neighbours on
+ * its own schedule, because they are real <img> elements in the tree. That is
+ * strictly better than fetch(): the bytes arrive AND the bitmap is decoded, so
+ * arriving at the next post is a compositor swap rather than a decode.
+ *
+ * Three is the interim: enough to cover a normal tap-ahead, small enough not
+ * to saturate a mobile connection. src/components/StoryStack.tsx implements
+ * the real fix — the windowed DOM track — and replaces this entirely.
  */
-const WARM_AHEAD = 30;
-const WARM_IMMEDIATE = 3;
-const WARM_BATCH = 5;
+const WARM_AHEAD = 3;
+const WARM_IMMEDIATE = 2;
+const WARM_BATCH = 2;
 
 /**
  * URLs already fetched, module-level on purpose: navigating back to a post
@@ -738,6 +756,35 @@ function PostModal({
                   unoptimized={!isOptimizable(url)} />
               </div>
             ))}
+          </div>
+
+          {/* ── Neighbour decode ──────────────────────────────────────────────
+              The warm-up above puts the next covers in the HTTP cache and
+              stops there, which is deliberate — thirty decoded bitmaps was
+              what produced green banding on this machine. But cached bytes
+              still have to be decoded when the real <img> is created on
+              arrival, and that decode is what is felt on a phone.
+
+              Two real <img> elements, one either side, closes that gap: the
+              browser fetches AND decodes them while the reader is on the
+              current post, so moving is a swap rather than a decode. Two is
+              cheap where thirty was not.
+
+              Not `display:none` — a hidden image is not guaranteed to be
+              decoded. 1px, clipped, aria-hidden: in the tree and off the
+              page. */}
+          <div aria-hidden className="absolute w-px h-px overflow-hidden opacity-0 pointer-events-none"
+            style={{ left: -9999, top: 0 }}>
+            {[allPosts[postIdx - 1], allPosts[postIdx + 1]]
+              .filter((p): p is IPost => Boolean(p))
+              .map((p) => {
+                const cover = [p.image, ...(Array.isArray(p.images) ? p.images : [])]
+                  .find((v): v is string => Boolean(v));
+                if (!cover) return null;
+                /* eslint-disable-next-line @next/next/no-img-element */
+                return <img key={p.id} src={isOptimizable(cover) ? optimized(cover, 1080) : cover}
+                  alt="" decoding="async" loading="eager" fetchPriority="low" draggable={false} />;
+              })}
           </div>
 
           {/* Dots — overlaid on the image so they are visible without
