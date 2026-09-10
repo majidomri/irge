@@ -10,6 +10,7 @@
  * A pre-ticked box is not consent either, which is why nothing here starts on.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { ENTITY } from '@/lib/entity';
 
 export default function RcsConsentToggle() {
   const [consent, setConsent] = useState<boolean | null>(null);   // null = still loading
@@ -62,10 +63,11 @@ export default function RcsConsentToggle() {
   if (consent === null) return null;
 
   return (
+    <div className="mb-3">
     <button
       onClick={toggle}
       disabled={busy}
-      className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 mb-3 text-left transition-all hover:bg-white/[0.08]"
+      className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 text-left transition-all hover:bg-white/[0.08]"
       style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', opacity: busy ? 0.6 : 1 }}
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -94,5 +96,14 @@ export default function RcsConsentToggle() {
         <span style={{ width: 16, height: 16, borderRadius: 999, background: '#fff' }} />
       </span>
     </button>
+
+      {/* Who is actually sending. TRAI requires the registered principal entity
+          to be identifiable at the point of consent, and RCS brand verification
+          checks that the sender named here matches the DLT filing. */}
+      <p className="text-[11px] leading-relaxed mt-2 px-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        Alerts are sent by {ENTITY.legalName}, the registered principal entity for InstaRishta, over
+        RCS, SMS or WhatsApp. You can turn them off here at any time.
+      </p>
+    </div>
   );
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ENTITY } from '@/lib/entity';
+import { PURCHASE_BONUS_CREDITS } from '@/lib/plans';
 
 export const metadata: Metadata = {
   title: 'No-Refund Policy — InstaRishta',
@@ -10,7 +12,7 @@ const SECTIONS = [
   {
     id: '1',
     title: 'All Payments Are Final',
-    body: `InstaRishta memberships are sold on a strictly non-refundable basis. Once a payment is made and a membership is activated, it cannot be cancelled, refunded, transferred, exchanged, paused, or converted to credit — in whole or in part, and regardless of how much of the membership you use.\n\nThis applies to every paid item on InstaRishta: the 6 Months Plan membership, the 1 Year Plan membership, and one-time credit top-ups.\n\nPlease read this policy in full and choose carefully before you pay.`,
+    body: `InstaRishta memberships are sold on a strictly non-refundable basis. Once a payment is made and a membership is activated, it cannot be cancelled, refunded, transferred, exchanged, paused, or converted to credit — in whole or in part, and regardless of how much of the membership you use.\n\nThis applies to every paid item on InstaRishta: the 6 Months Plan membership, the 1 Year Plan membership, and one-time credit top-ups.\n\nPlease read this policy in full and choose carefully before you pay.\n\nAll payments on InstaRishta are collected by ${ENTITY.legalName}, ${ENTITY.address}, which is the merchant of record for every transaction on this platform.`,
   },
   {
     id: '2',
@@ -20,7 +22,7 @@ const SECTIONS = [
   {
     id: '3',
     title: 'Free Before You Pay',
-    body: `You are never required to pay to evaluate InstaRishta. The following are free, permanently:\n\n— Browsing all profiles and biodatas\n— Browsing channels and playing profile audio\n— Submitting your own biodata\n— Creating an account, including welcome contact credits\n\nWe strongly encourage you to use the free tier first and satisfy yourself that the platform suits your requirements before making any payment. If you are unsure which membership fits your needs, contact us on WhatsApp before you pay and we will advise you.`,
+    body: `You are never required to pay to evaluate InstaRishta. The following are free, permanently:\n\n— Browsing all profiles and biodatas\n— Browsing channels and playing profile audio\n— Submitting your own biodata\n— Creating an account\n\nA free account does not include contact credits. Revealing contact details requires a paid membership or a one-time top-up; your first purchase adds ${PURCHASE_BONUS_CREDITS} bonus credits on top of the plan allowance.\n\nWe strongly encourage you to use the free tier first and satisfy yourself that the platform suits your requirements before making any payment. If you are unsure which membership fits your needs, contact us on WhatsApp before you pay and we will advise you.`,
   },
   {
     id: '4',
@@ -88,7 +90,7 @@ const SECTIONS = [
   {
     id: '11',
     title: 'Contact',
-    body: `Payment queries — please contact us BEFORE paying if you are unsure:\n\nEmail: support@instarishta.me\nWhatsApp: +91 888 666 7121\nHours: Monday – Saturday, 10am – 6pm IST`,
+    body: `Payment queries — please contact us BEFORE paying if you are unsure:\n\nMerchant: ${ENTITY.legalName}\nEmail: ${ENTITY.supportEmail}\nWhatsApp: ${ENTITY.whatsapp}\nRegistered address: ${ENTITY.address}\nHours: Monday – Saturday, 10am – 6pm IST`,
   },
 ];
 
