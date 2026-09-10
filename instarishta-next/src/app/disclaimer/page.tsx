@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ENTITY } from '@/lib/entity';
 
 export const metadata: Metadata = { title: 'Disclaimer & User Agreement' };
 
@@ -11,6 +12,23 @@ export default function DisclaimerPage() {
 
         <h1 className="text-3xl font-extrabold tracking-[-0.02em] mb-2" style={{ color: '#141413' }}>Disclaimer & User Agreement</h1>
         <p className="text-base mb-10" style={{ color: '#696969' }}>Matrimonial & Matchmaking Bureau Disclaimer, User Agreement, and End User Consent</p>
+
+        <section className="mb-10 pb-10 border-b" style={{ borderColor: '#edebe9' }}>
+          <h2 className="text-xl font-bold mb-4" style={{ color: '#141413' }}>Who Operates This Service</h2>
+          <div className="flex flex-col gap-4 text-sm leading-relaxed" style={{ color: '#696969' }}>
+            <p>
+              InstaRishta (instarishta.me) is owned and operated by{' '}
+              <strong style={{ color: '#141413' }}>{ENTITY.legalName}</strong>, a business registered in
+              India with its place of business at {ENTITY.address}. The same entity also operates
+              Xavio (xavio.in).
+            </p>
+            <p>
+              {ENTITY.shortName} is the registered principal entity for all commercial communication
+              sent from this platform over SMS, RCS or WhatsApp. Reach us at {ENTITY.supportEmail} or{' '}
+              {ENTITY.whatsapp}.
+            </p>
+          </div>
+        </section>
 
         <section className="mb-10 pb-10 border-b" style={{ borderColor: '#edebe9' }}>
           <h2 className="text-xl font-bold mb-4" style={{ color: '#141413' }}>Disclaimer</h2>
@@ -39,7 +57,7 @@ export default function DisclaimerPage() {
             <p>I grant InstaRishta Marriage Bureau the authority to utilize the information for matrimonial purposes within the scope of the service. I undertake to maintain the confidentiality of any information provided to me by InstaRishta Marriage Bureau.</p>
             <p>I agree to notify InstaRishta Marriage Bureau promptly upon the occurrence of a marriage.</p>
             <p>In the event of any failure to arrange a matrimonial alliance, I absolve InstaRishta Marriage Bureau of any responsibility or liability. By submitting this form, I consent to undergoing a comprehensive criminal and background check conducted by InstaRishta Marriage Bureau.</p>
-            <p>Enclosed herewith is a payment of <strong style={{ color: '#141413' }}>₹500</strong> towards my registration, which is <strong style={{ color: '#141413' }}>non-refundable</strong>.&rdquo;</p>
+            <p>I understand that registration and browsing are free, that contact details are unlocked only through a paid membership or top-up, and that <strong style={{ color: '#141413' }}>all payments are final and non-refundable</strong>.&rdquo;</p>
           </div>
         </section>
 

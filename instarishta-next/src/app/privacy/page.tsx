@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ENTITY } from '@/lib/entity';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — InstaRishta',
@@ -10,7 +11,7 @@ const SECTIONS = [
   {
     id: '1',
     title: 'Who We Are',
-    body: `InstaRishta ("we," "our," or "us") is a Muslim matrimonial and matchmaking platform operated from Hyderabad, India. We connect serious Muslim men, women, and families seeking halal marriage proposals through a safe, family-first digital platform. Our website is https://www.instarishta.me and you can contact us at privacy@instarishta.me.`,
+    body: `InstaRishta ("we," "our," or "us") is a Muslim matrimonial and matchmaking platform operated from Hyderabad, India. We connect serious Muslim men, women, and families seeking halal marriage proposals through a safe, family-first digital platform. Our website is https://www.instarishta.me and you can contact us at privacy@instarishta.me.\n\nThe data controller responsible for your personal data is ${ENTITY.legalName}, a business registered in India with its place of business at ${ENTITY.address}. ${ENTITY.shortName} operates InstaRishta (instarishta.me) and Xavio (xavio.in), and is the registered principal entity for any SMS, RCS or WhatsApp message we send you.`,
   },
   {
     id: '2',
@@ -126,7 +127,7 @@ const SECTIONS = [
   {
     id: '15',
     title: 'Contact Us',
-    body: `For privacy-related queries, requests, or complaints:\n\nEmail: privacy@instarishta.me\nWhatsApp: +91 888 666 7121\nAddress: InstaRishta, Hyderabad, Telangana, India\n\nWe aim to respond to all privacy enquiries within 30 days.`,
+    body: `For privacy-related queries, requests, or complaints:\n\nData controller: ${ENTITY.legalName}\nEmail: ${ENTITY.privacyEmail}\nWhatsApp: ${ENTITY.whatsapp}\nRegistered address: ${ENTITY.address}\n\nWe aim to respond to all privacy enquiries within 30 days.`,
   },
 ];
 

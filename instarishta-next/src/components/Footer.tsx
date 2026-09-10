@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ENTITY, OPERATOR_LINE } from '@/lib/entity';
 
 const FOOTER_LINKS = [
   { href: '/privacy',       label: 'Privacy'       },
@@ -39,10 +40,20 @@ export default function Footer() {
           </nav>
         </div>
 
+        {/* Operator disclosure — DLT / RCS verifiers look for this on every page. */}
+        <div className="pt-6 pb-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
+          <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.60)' }}>
+            {OPERATOR_LINE}
+          </p>
+          <p className="text-xs leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            Registered address: {ENTITY.address} &nbsp;·&nbsp; {ENTITY.supportEmail} &nbsp;·&nbsp; {ENTITY.whatsapp}
+          </p>
+        </div>
+
         {/* Bottom row */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-6">
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
-            © {new Date().getFullYear()} InstaRishta. All rights reserved.
+            © {new Date().getFullYear()} {ENTITY.shortName}. All rights reserved.
           </p>
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
             Built for the Muslim Ummah · Family-first matchmaking
