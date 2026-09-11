@@ -42,6 +42,21 @@ export const revalidate = 600;
  */
 export const dynamicParams = true;
 
+/**
+ * How many share permalinks to prerender at build time.
+ *
+ * These are nano-id share links, opened one at a time from a WhatsApp or
+ * Instagram message — not browsed as a list. Prerendering 5000 of them cost
+ * 76 MB per deployment to pre-empt a render that only ever happens once per
+ * link, and only if that link is ever opened at all.
+ *
+ * `dynamicParams` stays true and `revalidate` is 10 minutes, so any slug not
+ * in this set still renders on first request and is cached after. A freshly
+ * shared link was never in the build output anyway — that is the case the
+ * comment below on dynamicParams is about.
+ */
+const PRERENDER_LIMIT = 25;
+
 export async function generateStaticParams() {
   // The article's own advice: skip this in development so `next dev` does not
   // pay for a full listing on every start.
@@ -51,7 +66,7 @@ export async function generateStaticParams() {
     .from('ir_nano_ids')
     .select('slug')
     .in('entity_type', ['profile', 'post'])
-    .limit(5000);
+    .limit(PRERENDER_LIMIT);
 
   // A failure here must not fail the build: with no params every page simply
   // renders on demand, which is exactly the behaviour we had before.

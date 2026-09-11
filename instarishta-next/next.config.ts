@@ -21,8 +21,8 @@ import path from "path";
  * The alternative is per-request nonces, and Next's own guidance is explicit
  * that "to use a nonce, your page must be dynamically rendered... static pages
  * are generated at build time, when no request or response headers exist — so
- * no nonce can be injected". This app prerenders 191 pages; adopting nonces
- * would mean giving that up. Keeping 'unsafe-inline' still blocks the main
+ * no nonce can be injected". This app prerenders pages at build time;
+ * adopting nonces would mean giving that up. Keeping 'unsafe-inline' still blocks the main
  * delivery route for injected script — loading it from somebody else's origin
  * — which is what matters here, since no user-supplied HTML is ever rendered.
  *
