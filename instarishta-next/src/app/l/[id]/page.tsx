@@ -57,13 +57,34 @@ function summarise(p: Profile): string {
   ].filter(Boolean).join(' · ');
 }
 
+/**
+ * How many listings to prerender at build time.
+ *
+ * Prerendering the whole feed cost 310 MB of build output per deployment —
+ * 500 listings x ~620 KB of HTML and RSC segments each — and it was paid again
+ * on every single deploy. That is storage spent to save the *first* visitor of
+ * each page a render, for pages that mostly never get a first visitor before
+ * the next deploy replaces them.
+ *
+ * The rest are not lost: `dynamicParams` is true and `revalidate` is an hour,
+ * so an unprerendered listing renders on its first request and is cached from
+ * then on. The only cost is that one visitor's slower first byte.
+ *
+ * getProfiles() is ordered by `seq`, which is the order the feed itself
+ * browses in, so these are the listings most likely to be opened.
+ */
+const PRERENDER_LIMIT = 50;
+
 export async function generateStaticParams() {
   // Skipped in development so `next dev` does not pay for the whole feed.
   if (process.env.NODE_ENV === 'development') return [];
 
   try {
     const all = (await getProfiles()) as Profile[];
-    return all.filter((p) => p.id).map((p) => ({ id: String(p.id) }));
+    return all
+      .filter((p) => p.id)
+      .slice(0, PRERENDER_LIMIT)
+      .map((p) => ({ id: String(p.id) }));
   } catch {
     // Never fail the build over the feed; every page still renders on demand.
     return [];
