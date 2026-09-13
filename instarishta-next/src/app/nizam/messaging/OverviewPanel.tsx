@@ -15,7 +15,7 @@ export interface Overview {
 type Go = (s: 'overview' | 'setup' | 'templates' | 'test' | 'campaigns' | 'log' | 'audience') => void;
 
 const GO_FOR: Record<string, Parameters<Go>[0]> = {
-  entity: 'setup', sms_sender: 'setup', rcs_sender: 'setup', tests: 'setup',
+  entity: 'setup', ctas: 'setup', sms_sender: 'setup', rcs_sender: 'setup', tests: 'setup',
   sms_tpl: 'templates', rcs_tpl: 'templates', provider: 'setup', webhook: 'setup',
 };
 

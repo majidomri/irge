@@ -14,10 +14,21 @@
  * The time window and the daily cap are checked by the runner at send time, not
  * here: a campaign built at 8pm and sent at 10am must be judged at 10am.
  */
-import { needsConsent } from './dlt';
+import { ctaViolations, needsConsent, type Cta } from './dlt';
 import type { Sender, Settings, Template } from './types';
 
-export function templateProblems(t: Template, sender: Sender | null, s: Settings): string[] {
+/**
+ * Links and call-back numbers in the text that DLT has not whitelisted.
+ *
+ * SMS only: CTA whitelisting is part of the operators' DLT scrubbing. Checked
+ * on the RENDERED text, because a URL can arrive through a variable as easily
+ * as through the approved wording.
+ */
+export function textProblems(t: Template, text: string, ctas: Cta[]): string[] {
+  return t.channel === 'sms' ? ctaViolations(text, ctas) : [];
+}
+
+export function templateProblems(t: Template, sender: Sender | null, s: Settings, ctas?: Cta[]): string[] {
   const p: string[] = [];
 
   if (t.status !== 'approved') p.push(`Template is ${t.status}, not approved`);
@@ -40,6 +51,9 @@ export function templateProblems(t: Template, sender: Sender | null, s: Settings
   if (t.channel === 'sms') {
     if (!s.dlt_entity_id)   p.push('DLT entity ID is not set (Settings)');
     if (!t.dlt_template_id) p.push('Template has no DLT template ID');
+    // The fixed wording, with the slots blanked out. A CTA that was
+    // deactivated after the template was approved stops it here, mid-campaign.
+    if (ctas) p.push(...ctaViolations(t.body.replace(/\{#var#\}/gi, ' '), ctas));
   }
 
   return p;

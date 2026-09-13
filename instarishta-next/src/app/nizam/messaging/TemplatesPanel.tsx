@@ -8,7 +8,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AMBER, BORDER, FAINT, GREEN, MUTED, RED, SUBTLE, TEXT } from '../theme';
-import { countSlots, DEFAULT_VAR_MAX, measureSms, renderTemplate, type TemplateVariable } from '@/lib/messaging/dlt';
+import { countSlots, ctaViolations, DEFAULT_VAR_MAX, measureSms, renderTemplate, type TemplateVariable } from '@/lib/messaging/dlt';
+import { useCtas } from './CtaSection';
 import { api, Button, Card, CATEGORY_LABEL, ConfirmButton, Field, input, mono, Pill, Problems, Table, td, type Toast } from './ui';
 
 export interface TemplateRow {
@@ -31,6 +32,7 @@ export default function TemplatesPanel({ toast, onChange }: { toast: Toast; onCh
   const [edit, setEdit] = useState<typeof BLANK | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const ctas = useCtas();
 
   const load = useCallback(async () => {
     const [t, s] = await Promise.all([
@@ -74,8 +76,9 @@ export default function TemplatesPanel({ toast, onChange }: { toast: Toast; onCh
   const preview = useMemo(() => {
     if (!edit) return null;
     const r = renderTemplate(edit.body, edit.variables, {}, { name: 'Ayesha Khan' }, { useSamples: true });
-    return { ...r, seg: measureSms(r.text) };
-  }, [edit]);
+    const cta = edit.channel === 'sms' ? ctaViolations(r.text, ctas) : [];
+    return { ...r, problems: [...r.problems, ...cta], seg: measureSms(r.text) };
+  }, [edit, ctas]);
 
   const save = async () => {
     if (!edit) return;

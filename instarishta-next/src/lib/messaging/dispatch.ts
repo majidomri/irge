@@ -14,10 +14,10 @@ import 'server-only';
 
 import type { AdminDb } from '@/lib/admin-route';
 import { measureSms, nextPromoWindow, parseNumbers, renderTemplate } from './dlt';
-import { recipientDecision, templateProblems } from './compliance';
+import { recipientDecision, templateProblems, textProblems } from './compliance';
 import { ingestEvents } from './events';
 import { activeProvider } from './providers';
-import { loadMembers, loadOptouts, loadSettings, loadTemplate } from './store';
+import { loadCtas, loadMembers, loadOptouts, loadSettings, loadTemplate } from './store';
 import type { MessageRow, Settings, SubmitRequest, Template } from './types';
 
 export type Audience =
@@ -82,11 +82,13 @@ export async function buildCampaign(db: AdminDb, campaignId: string): Promise<Bu
   if (!loaded) return { ok: false, problems: ['Template not found'], ...empty };
   const { template, sender } = loaded;
 
-  const problems = templateProblems(template, sender, settings);
+  const ctas = await loadCtas(db);
+  const problems = templateProblems(template, sender, settings, ctas);
   // Render once with samples to catch template-wide faults (slot count, a
-  // static value over the limit) before writing thousands of rows.
+  // static value over the limit, a link that is not a whitelisted CTA) before
+  // writing thousands of rows.
   const probe = renderTemplate(template.body, template.variables, c.variables ?? {}, { name: 'Sample Name' });
-  problems.push(...probe.problems);
+  problems.push(...probe.problems, ...textProblems(template, probe.text, ctas));
   if (problems.length) return { ok: false, problems, ...empty };
 
   const { targets, invalid } = await resolveTargets(db, c.audience as Audience, settings);
@@ -215,7 +217,7 @@ export async function runCampaignBatch(db: AdminDb, campaignId: string, size = 5
   if (!loaded) return stop(db, campaignId, 'Template was deleted');
   const { template, sender } = loaded;
 
-  const problems = templateProblems(template, sender, settings);
+  const problems = templateProblems(template, sender, settings, await loadCtas(db));
   if (problems.length) return pause(db, campaignId, problems[0]);
 
   const provider = activeProvider().readiness();
@@ -317,7 +319,8 @@ export async function testSend(db: AdminDb, opts: {
   if (strangers.length) problems.push(`Not in the test numbers list (Settings): ${strangers.join(', ')}`);
 
   const r = renderTemplate(template.body, template.variables, opts.variables, { name: 'Test' }, { useSamples: true });
-  problems.push(...r.problems);
+  const ctas = await loadCtas(db);
+  problems.push(...r.problems, ...textProblems(template, r.text, ctas));
 
   const provider = activeProvider();
   const ready = provider.readiness();

@@ -194,6 +194,74 @@ export const DLT_ID = /^\d{19}$/;
  */
 export const SMS_HEADER = /^[A-Z0-9]{3,11}$/;
 
+// ── CTA whitelist ─────────────────────────────────────────────────────────────
+
+export interface Cta {
+  cta_type: 'url' | 'phone' | 'apk' | 'other';
+  sub_type: 'static' | 'dynamic';
+  value:    string;
+  status:   'active' | 'inactive';
+}
+
+/**
+ * TLDs a link in an SMS plausibly ends in. A list rather than "any letters
+ * after a dot", because "Solutions.Thanks" in running text is not a URL and a
+ * false positive here blocks a legitimate send.
+ */
+const TLDS = 'me|in|com|org|net|co|io|app|ly|gl|link|page|site|online|xyz|info|biz|shop|store|ai|to|cc|us|uk|gov|edu|ac';
+const URL_RE   = new RegExp(`(?:https?:\\/\\/)?(?:[a-z0-9-]+\\.)+(?:${TLDS})\\b(?:\\/[^\\s]*)?`, 'gi');
+const PHONE_RE = /(?<!\d)(?:\+?91[\s-]?|0)?(?:[6-9]\d{4}[\s-]?\d{5}|1800[\s-]?\d{3}[\s-]?\d{4})(?!\d)/g;
+
+/** Scheme stripped, host lower-cased, trailing slash and sentence punctuation dropped. */
+export function normalizeUrl(u: string): string {
+  const s = u.trim().replace(/[.,;:!?)\]'"]+$/, '').replace(/^https?:\/\//i, '');
+  const slash = s.indexOf('/');
+  const host = (slash === -1 ? s : s.slice(0, slash)).toLowerCase();
+  const path = slash === -1 ? '' : s.slice(slash);
+  return (host + path).replace(/\/+$/, '');
+}
+
+const digits10 = (p: string) => p.replace(/\D/g, '').slice(-10);
+
+export function extractCtas(text: string): { urls: string[]; phones: string[] } {
+  const urls = [...new Set((text.match(URL_RE) ?? []).map(u => u.replace(/[.,;:!?)\]'"]+$/, '')))];
+  const phones = [...new Set((text.match(PHONE_RE) ?? []).map(p => p.trim()))];
+  return { urls, phones };
+}
+
+/**
+ * Every link or call-back number in `text` that is not on the whitelist.
+ *
+ * Literal on purpose: the operator's scrubber does not know that the bare
+ * domain redirects to www, so neither does this.
+ */
+export function ctaViolations(text: string, ctas: Cta[]): string[] {
+  const active = ctas.filter(c => c.status === 'active');
+  const { urls, phones } = extractCtas(text);
+  const out: string[] = [];
+
+  const urlCtas = active.filter(c => c.cta_type === 'url' || c.cta_type === 'apk');
+  for (const u of urls) {
+    const n = normalizeUrl(u);
+    const ok = urlCtas.some(c => {
+      const v = normalizeUrl(c.value);
+      return c.sub_type === 'dynamic' ? n === v || n.startsWith(v + '/') || n.startsWith(v + '?') : n === v;
+    });
+    if (!ok) {
+      const hint = urlCtas.length ? ` Whitelisted: ${urlCtas.map(c => c.value).join(', ')}` : ' No URLs are whitelisted yet.';
+      out.push(`Link “${u}” is not a whitelisted CTA — the operator will block this SMS.${hint}`);
+    }
+  }
+
+  const phoneCtas = active.filter(c => c.cta_type === 'phone').map(c => digits10(c.value));
+  for (const p of phones) {
+    if (!phoneCtas.includes(digits10(p))) {
+      out.push(`Number “${p}” is not a whitelisted call-back CTA — the operator will block this SMS.`);
+    }
+  }
+  return out;
+}
+
 // ── Time window ───────────────────────────────────────────────────────────────
 
 /** The current hour in India, 0–23. */
