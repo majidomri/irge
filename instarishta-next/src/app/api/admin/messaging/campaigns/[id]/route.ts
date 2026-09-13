@@ -20,7 +20,7 @@ import { withAdmin, type AdminDb } from '@/lib/admin-route';
 import { buildCampaign, runCampaignBatch } from '@/lib/messaging/dispatch';
 import { templateProblems } from '@/lib/messaging/compliance';
 import { activeProvider } from '@/lib/messaging/providers';
-import { loadSettings, loadTemplate } from '@/lib/messaging/store';
+import { loadCtas, loadSettings, loadTemplate } from '@/lib/messaging/store';
 
 export const runtime = 'nodejs';
 
@@ -90,7 +90,7 @@ export const PATCH = withAdmin(async (_req, { db, params, body }) => {
 
       const settings = await loadSettings(db);
       const loaded = await loadTemplate(db, c.template_id);
-      const problems = loaded ? templateProblems(loaded.template, loaded.sender, settings) : ['Template not found'];
+      const problems = loaded ? templateProblems(loaded.template, loaded.sender, settings, await loadCtas(db)) : ['Template not found'];
       const ready = activeProvider().readiness();
       if (!ready.ready) problems.push(`Provider not ready: ${[...ready.missing, ...ready.notes].join('; ')}`);
       if (problems.length) return NextResponse.json({ error: problems[0], problems }, { status: 400 });

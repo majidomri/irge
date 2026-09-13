@@ -4,7 +4,7 @@
 import 'server-only';
 
 import type { AdminDb } from '@/lib/admin-route';
-import type { Sender, Settings, Template } from './types';
+import type { CtaRow, Sender, Settings, Template } from './types';
 
 export async function loadSettings(db: AdminDb): Promise<Settings> {
   const { data, error } = await db.from('ir_msg_settings').select('*').eq('id', 1).maybeSingle();
@@ -27,6 +27,12 @@ export async function loadTemplate(db: AdminDb, id: string): Promise<{ template:
     sender = (s as Sender | null) ?? null;
   }
   return { template, sender };
+}
+
+export async function loadCtas(db: AdminDb): Promise<CtaRow[]> {
+  const { data, error } = await db.from('ir_msg_ctas').select('*').eq('status', 'active');
+  if (error) throw new Error(`ctas: ${error.message}`);
+  return (data ?? []) as CtaRow[];
 }
 
 export async function loadOptouts(db: AdminDb, phones?: string[]): Promise<Set<string>> {

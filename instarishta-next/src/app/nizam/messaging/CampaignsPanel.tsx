@@ -9,7 +9,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AMBER, BORDER, FAINT, GREEN, MUTED, RED, SUBTLE, TEXT } from '../theme';
-import { measureSms, parseNumbers, renderTemplate } from '@/lib/messaging/dlt';
+import { ctaViolations, measureSms, parseNumbers, renderTemplate } from '@/lib/messaging/dlt';
+import { useCtas } from './CtaSection';
 import type { Overview } from './OverviewPanel';
 import type { TemplateRow } from './TemplatesPanel';
 import {
@@ -102,6 +103,7 @@ function NewCampaign({ toast, overview, onCancel, onCreated }: {
   const [pasted, setPasted] = useState('');
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const ctas = useCtas();
 
   useEffect(() => {
     let live = true;
@@ -116,8 +118,9 @@ function NewCampaign({ toast, overview, onCancel, onCreated }: {
   const preview = useMemo(() => {
     if (!template) return null;
     const r = renderTemplate(template.body, template.variables, values, { name: 'Ayesha Khan' });
-    return { ...r, seg: measureSms(r.text) };
-  }, [template, values]);
+    const cta = template.channel === 'sms' ? ctaViolations(r.text, ctas) : [];
+    return { ...r, problems: [...r.problems, ...cta], seg: measureSms(r.text) };
+  }, [template, values, ctas]);
 
   const create = async () => {
     setBusy(true); setProblems([]);

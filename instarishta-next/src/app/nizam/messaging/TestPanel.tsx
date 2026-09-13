@@ -8,7 +8,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AMBER, BORDER, FAINT, MUTED, RED, SUBTLE, TEXT } from '../theme';
-import { measureSms, renderTemplate } from '@/lib/messaging/dlt';
+import { ctaViolations, measureSms, renderTemplate } from '@/lib/messaging/dlt';
+import { useCtas } from './CtaSection';
 import type { Overview } from './OverviewPanel';
 import type { TemplateRow } from './TemplatesPanel';
 import { api, Banner, Button, Card, Field, input, mono, Pill, Problems, Table, td, when, type Toast } from './ui';
@@ -25,6 +26,7 @@ export default function TestPanel({ toast, overview }: { toast: Toast; overview:
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<Sent[]>([]);
   const [status, setStatus] = useState<Record<string, LogMsg>>({});
+  const ctas = useCtas();
 
   useEffect(() => {
     let live = true;
@@ -40,8 +42,9 @@ export default function TestPanel({ toast, overview }: { toast: Toast; overview:
   const preview = useMemo(() => {
     if (!template) return null;
     const r = renderTemplate(template.body, template.variables, values, { name: 'Test' }, { useSamples: true });
-    return { ...r, seg: measureSms(r.text) };
-  }, [template, values]);
+    const cta = template.channel === 'sms' ? ctaViolations(r.text, ctas) : [];
+    return { ...r, problems: [...r.problems, ...cta], seg: measureSms(r.text) };
+  }, [template, values, ctas]);
 
   /** Re-read the rows just sent, so receipts appear as they arrive. */
   const poll = useCallback(async (ids: string[]) => {

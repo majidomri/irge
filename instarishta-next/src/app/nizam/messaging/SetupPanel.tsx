@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { AMBER, FAINT, MUTED } from '../theme';
+import CtaSection from './CtaSection';
 import { api, Banner, Button, Card, CATEGORY_LABEL, ConfirmButton, Field, input, mono, Problems, Table, td, type Toast } from './ui';
 
 interface Settings {
@@ -198,6 +199,8 @@ export default function SetupPanel({ toast, onChange }: { toast: Toast; onChange
         <Problems list={senderProblems} />
         <Button tone="primary" onClick={addSender} disabled={!form.sender_code.trim()}>Add sender</Button>
       </Card>
+
+      <CtaSection toast={toast} onChange={onChange} />
 
       <Card title="Server environment" right={<span style={{ fontSize: 11, color: AMBER }}>Set in Vercel — never pasted here</span>}>
         <Table head={['Variable', 'What it holds']}>

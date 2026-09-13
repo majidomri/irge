@@ -5,7 +5,14 @@
  * webhook — so that swapping aggregators (or adding a second for failover) is a
  * new file in providers/, not a change to campaigns, compliance or the UI.
  */
-import type { Category, Channel, TemplateVariable } from './dlt';
+import type { Category, Channel, Cta, TemplateVariable } from './dlt';
+
+export interface CtaRow extends Cta {
+  id:         string;
+  dlt_cta_id: string | null;
+  name:       string;
+  notes:      string | null;
+}
 import type { RcsPayload } from '@/lib/rcs/messages';
 
 export interface Settings {
