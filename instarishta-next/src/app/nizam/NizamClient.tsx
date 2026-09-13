@@ -29,7 +29,7 @@ const UserDetail = dynamic(
 import BiodataTab from './BiodataTab';
 import ImportTab from './ImportTab';
 import SecurityTab from './SecurityTab';
-import RcsTab from './RcsTab';
+import MessagingTab from './messaging/MessagingTab';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
@@ -111,7 +111,7 @@ interface Interest {
   created_at: string;
 }
 
-type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata' | 'security' | 'analytics' | 'payments' | 'vitals' | 'claims' | 'rcs';
+type Tab = 'channels' | 'posts' | 'import' | 'stories' | 'featured' | 'users' | 'interests' | 'reports' | 'comments' | 'verification' | 'professions' | 'biodata' | 'security' | 'analytics' | 'payments' | 'vitals' | 'claims' | 'messaging';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'analytics', label: 'Analytics', icon: '📈' },
@@ -125,7 +125,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'featured', label: 'Featured', icon: '⭐' },
   { key: 'interests', label: 'Interests', icon: '💚' },
   { key: 'comments', label: 'Comments', icon: '💬' },
-  { key: 'rcs',      label: 'RCS',      icon: '📡' },
+  { key: 'messaging', label: 'Messaging', icon: '📨' },
   { key: 'verification', label: 'Verify', icon: '✅' },
   { key: 'professions', label: 'Professions', icon: '🎓' },
   { key: 'biodata', label: 'Biodata', icon: '📋' },
@@ -399,7 +399,7 @@ export default function NizamClient({
         {tab === 'posts' && (
           <PostsTab channels={channels} toast={showToast} />
         )}
-        {tab === 'rcs' && <RcsTab toast={showToast} />}
+        {tab === 'messaging' && <MessagingTab toast={showToast} />}
         {tab === 'import' && (
           <ImportTab channels={channels} toast={showToast} />
         )}
