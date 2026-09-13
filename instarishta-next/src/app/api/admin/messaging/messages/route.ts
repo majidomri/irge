@@ -16,7 +16,7 @@ export const GET = withAdmin(async (req, { db }) => {
   const page = Math.max(0, Number(u.get('page') ?? 0));
 
   let q = db.from('ir_msg_messages')
-    .select('id, campaign_id, channel, category, sender_code, phone, email, body, status, skip_reason, error, error_code, mode, provider, provider_message_id, segments, sent_by, created_at, submitted_at, delivered_at, read_at, campaign:ir_msg_campaigns(name)', { count: 'exact' })
+    .select('id, campaign_id, channel, category, sender_code, phone, email, body, status, skip_reason, error, error_code, mode, provider, provider_message_id, segments, sent_by, created_at, submitted_at, delivered_at, read_at, source, external_campaign, sent_at, gateway, cost, campaign:ir_msg_campaigns(name)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(page * PAGE, page * PAGE + PAGE - 1);
 

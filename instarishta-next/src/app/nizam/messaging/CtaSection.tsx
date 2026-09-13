@@ -70,9 +70,9 @@ export default function CtaSection({ toast, onChange }: { toast: Toast; onChange
   return (
     <Card title="Whitelisted CTAs" right={<span style={{ fontSize: 11, color: FAINT }}>Links & call-back numbers approved on DLT</span>}>
       <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.6 }}>
-        An SMS containing a link or number that is not whitelisted is blocked by the operator. Matching is exact:
-        <code> www.instarishta.me</code> and <code>instarishta.me</code> are different. A <em>static</em> URL matches only itself;
-        a <em>dynamic</em> URL also matches paths under it.
+        An SMS containing a link or number that is not whitelisted is blocked by the operator. A leading <code>www.</code> is
+        ignored (SMS saying <code>instarishta.me</code> were delivered against the www entry). A <em>static</em> URL matches only
+        itself; a <em>dynamic</em> URL also matches paths under it.
       </div>
 
       <Table head={['Name', 'Type', 'Value', 'DLT CTA ID', 'Status', '']}

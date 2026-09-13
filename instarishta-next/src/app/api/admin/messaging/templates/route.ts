@@ -13,16 +13,18 @@
 import { NextResponse } from 'next/server';
 
 import { withAdmin, type AdminDb } from '@/lib/admin-route';
-import { CATEGORIES, countSlots, DEFAULT_VAR_MAX, DLT_ID, type TemplateVariable } from '@/lib/messaging/dlt';
+import { CATEGORIES, countSlots, DEFAULT_VAR_MAX, DLT_ID, slotTypes, type TemplateVariable } from '@/lib/messaging/dlt';
 import { validatePayload, type RcsPayload } from '@/lib/rcs/messages';
 
 export const runtime = 'nodejs';
 
 const STATUSES = ['draft', 'pending', 'approved', 'rejected', 'paused'];
 
-function cleanVariables(raw: unknown): { vars: TemplateVariable[]; problems: string[] } {
+/** Variables, with each one's type taken from its {#…#} slot in the body. */
+function cleanVariables(raw: unknown, body: string): { vars: TemplateVariable[]; problems: string[] } {
   const problems: string[] = [];
   if (!Array.isArray(raw)) return { vars: [], problems };
+  const types = slotTypes(body);
   const seen = new Set<string>();
   const vars = raw.map((v, i) => {
     const o = (v ?? {}) as Record<string, unknown>;
@@ -36,6 +38,7 @@ function cleanVariables(raw: unknown): { vars: TemplateVariable[]; problems: str
       label:  String(o.label ?? '').trim() || `Variable ${i + 1}`,
       sample: String(o.sample ?? '').trim() || undefined,
       max,
+      type:   types[i] ?? 'var',
     };
   });
   return { vars, problems };
@@ -53,10 +56,14 @@ async function validate(db: AdminDb, row: Record<string, unknown>) {
 
   const vars = row.variables as TemplateVariable[];
   const slots = countSlots(body);
-  if (slots !== vars.length) problems.push(`Text has ${slots} {#var#} slot(s) but ${vars.length} variable(s) are defined`);
+  if (slots !== vars.length) problems.push(`Text has ${slots} {#…#} slot(s) but ${vars.length} variable(s) are defined`);
 
+  // Required to SEND, so required to be approved. A template can be registered
+  // here as pending and given its ID when the portal issues it.
   const dlt = String(row.dlt_template_id ?? '');
-  if (row.channel === 'sms' && !dlt) problems.push('SMS templates need the DLT template ID');
+  if (row.channel === 'sms' && !dlt && row.status === 'approved') {
+    problems.push('Approved SMS templates need the DLT template ID — save as pending until you have it');
+  }
   if (dlt && !DLT_ID.test(dlt)) problems.push('DLT template ID must be 19 digits');
 
   if (row.sender_id) {
@@ -93,7 +100,7 @@ export const GET = withAdmin(async (_req, { db }) => {
 });
 
 export const POST = withAdmin(async (_req, { db, body, email }) => {
-  const { vars, problems: vp } = cleanVariables(body.variables);
+  const { vars, problems: vp } = cleanVariables(body.variables, String(body.body ?? ''));
   const row = { status: 'approved', ...pick(body), variables: vars };
   const problems = [...vp, ...(await validate(db, row))];
   if (problems.length) return NextResponse.json({ error: problems[0], problems }, { status: 400 });
@@ -111,7 +118,7 @@ export const PATCH = withAdmin(async (_req, { db, body }) => {
   const patch = pick(body);
   let vp: string[] = [];
   if ('variables' in body) {
-    const c = cleanVariables(body.variables);
+    const c = cleanVariables(body.variables, String(body.body ?? existing.body));
     patch.variables = c.vars; vp = c.problems;
   }
   const merged = { ...existing, ...patch };

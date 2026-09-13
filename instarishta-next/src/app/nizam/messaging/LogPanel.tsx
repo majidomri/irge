@@ -13,6 +13,7 @@ interface Msg {
   provider_message_id: string | null; segments: number | null; sent_by: string;
   created_at: string; submitted_at: string | null; delivered_at: string | null; read_at: string | null;
   campaign: { name: string } | null;
+  source: string; external_campaign: string | null; sent_at: string | null; cost: number | null; gateway: string | null;
 }
 interface Evt { message_id: string; event_type: string; error: string | null; text: string | null; created_at: string }
 
@@ -53,7 +54,7 @@ export default function LogPanel({ toast }: { toast: Toast }) {
           <option value="">Test + live</option><option value="test">Test</option><option value="live">Live</option>
         </select>
         <select value={f.campaign} onChange={e => set('campaign', e.target.value)} aria-label="Source" style={{ ...input, width: 'auto' }}>
-          <option value="">Campaigns + tests</option><option value="none">Test sends only</option>
+          <option value="">All sources</option><option value="none">Test sends & Nexus imports</option>
         </select>
         <input value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="Search number" aria-label="Search number" style={{ ...input, width: 160 }} />
       </div>
@@ -79,11 +80,11 @@ function FragmentRow({ m, open, onToggle, events }: { m: Msg; open: boolean; onT
   return (
     <>
       <tr onClick={onToggle} style={{ cursor: 'pointer' }}>
-        <td style={{ ...td, color: MUTED, whiteSpace: 'nowrap' }}>{when(m.created_at)}</td>
+        <td style={{ ...td, color: MUTED, whiteSpace: 'nowrap' }}>{when(m.sent_at ?? m.created_at)}</td>
         <td style={{ ...td, ...mono }}>{m.phone}</td>
         <td style={{ ...td, textTransform: 'uppercase', color: MUTED }}>{m.channel}</td>
         <td style={{ ...td, color: MUTED }}>
-          {m.campaign?.name ?? 'Test send'}
+          {m.campaign?.name ?? (m.source === 'import' ? (m.external_campaign ? `Nexus · ${m.external_campaign}` : 'Nexus import') : 'Test send')}
           <span style={{ color: m.mode === 'live' ? TEXT : FAINT, fontSize: 11 }}> · {m.mode}</span>
         </td>
         <td style={td}><Pill status={m.status} /></td>
@@ -97,6 +98,8 @@ function FragmentRow({ m, open, onToggle, events }: { m: Msg; open: boolean; onT
               <div style={{ color: MUTED, lineHeight: 1.7 }}>
                 {m.sender_code && <>From <code>{m.sender_code}</code> · </>}
                 {m.segments && <>{m.segments} part{m.segments === 1 ? '' : 's'} · </>}
+                {m.cost !== null && <>cost ₹{m.cost} · </>}
+                {m.gateway && <>gateway {m.gateway} · </>}
                 provider <code>{m.provider ?? '—'}</code>
                 {m.provider_message_id && <> · id <code>{m.provider_message_id}</code></>}
                 {m.error_code && <> · code <code>{m.error_code}</code></>}

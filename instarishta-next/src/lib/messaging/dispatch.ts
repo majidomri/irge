@@ -13,19 +13,23 @@
 import 'server-only';
 
 import type { AdminDb } from '@/lib/admin-route';
-import { measureSms, nextPromoWindow, parseNumbers, renderTemplate } from './dlt';
+import { measureSms, nextPromoWindow, parseNumbers, renderTemplate, toE164 } from './dlt';
 import { recipientDecision, templateProblems, textProblems } from './compliance';
 import { ingestEvents } from './events';
 import { activeProvider } from './providers';
 import { loadCtas, loadMembers, loadOptouts, loadSettings, loadTemplate } from './store';
 import type { MessageRow, Settings, SubmitRequest, Template } from './types';
 
+export interface UploadRow { mobile: string; name?: string; cols?: Record<string, string> }
+
 export type Audience =
   | { kind: 'consented_members' }
   | { kind: 'numbers'; numbers: string[] }
-  | { kind: 'test_numbers' };
+  | { kind: 'test_numbers' }
+  /** A recipient file in Nexus's upload format; extra columns feed {col:…} variables. */
+  | { kind: 'upload'; filename?: string; rows: UploadRow[] };
 
-interface Target { phone: string; email: string | null; name: string | null; consented: boolean }
+interface Target { phone: string; email: string | null; name: string | null; consented: boolean; cols?: Record<string, string> }
 
 async function resolveTargets(db: AdminDb, audience: Audience, settings: Settings): Promise<{ targets: Target[]; invalid: string[] }> {
   const members = await loadMembers(db);
@@ -46,6 +50,22 @@ async function resolveTargets(db: AdminDb, audience: Audience, settings: Setting
   }
   if (audience.kind === 'test_numbers') {
     return { targets: settings.test_numbers.map(toTarget), invalid: [] };
+  }
+  if (audience.kind === 'upload') {
+    const invalid: string[] = [];
+    const seen = new Set<string>();
+    const targets: Target[] = [];
+    for (const r of audience.rows) {
+      const phone = toE164(r.mobile);
+      if (!phone) { invalid.push(r.mobile); continue; }
+      if (seen.has(phone)) continue;
+      seen.add(phone);
+      const t = toTarget(phone);
+      // A member's verified name wins over whatever the file says; the file's
+      // name is used for everyone else.
+      targets.push({ ...t, name: t.name ?? (r.name?.trim() || null), cols: r.cols });
+    }
+    return { targets, invalid };
   }
   const { valid, invalid } = parseNumbers(audience.numbers.join('\n'));
   return { targets: valid.map(toTarget), invalid };
@@ -87,7 +107,11 @@ export async function buildCampaign(db: AdminDb, campaignId: string): Promise<Bu
   // Render once with samples to catch template-wide faults (slot count, a
   // static value over the limit, a link that is not a whitelisted CTA) before
   // writing thousands of rows.
-  const probe = renderTemplate(template.body, template.variables, c.variables ?? {}, { name: 'Sample Name' });
+  // File-column variables are probed with the file's first row; without a file
+  // they resolve empty, which is the right error ("{col:var1}" needs an upload).
+  const audience = c.audience as Audience;
+  const firstCols = audience.kind === 'upload' ? audience.rows[0]?.cols : undefined;
+  const probe = renderTemplate(template.body, template.variables, c.variables ?? {}, { name: 'Sample Name', cols: firstCols });
   problems.push(...probe.problems, ...textProblems(template, probe.text, ctas));
   if (problems.length) return { ok: false, problems, ...empty };
 
@@ -111,7 +135,7 @@ export async function buildCampaign(db: AdminDb, campaignId: string): Promise<Bu
 
   for (const t of targets) {
     const decision = recipientDecision(template, settings, { phone: t.phone, consented: t.consented, optedOut: optouts.has(t.phone) });
-    const r = renderTemplate(template.body, template.variables, c.variables ?? {}, { name: t.name });
+    const r = renderTemplate(template.body, template.variables, c.variables ?? {}, { name: t.name, cols: t.cols });
     const ok = decision.ok && r.ok;
     const reason = !decision.ok ? decision.reason : !r.ok ? r.problems[0] : null;
     if (reason) reasons[reason] = (reasons[reason] ?? 0) + 1;

@@ -53,7 +53,7 @@ export function templateProblems(t: Template, sender: Sender | null, s: Settings
     if (!t.dlt_template_id) p.push('Template has no DLT template ID');
     // The fixed wording, with the slots blanked out. A CTA that was
     // deactivated after the template was approved stops it here, mid-campaign.
-    if (ctas) p.push(...ctaViolations(t.body.replace(/\{#var#\}/gi, ' '), ctas));
+    if (ctas) p.push(...ctaViolations(t.body.replace(/\{#[a-z]+#\}/gi, ' '), ctas));
   }
 
   return p;

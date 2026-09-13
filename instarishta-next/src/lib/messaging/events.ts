@@ -15,7 +15,7 @@ import type { AdminDb } from '@/lib/admin-route';
 import type { MessageStatus, NormalizedEvent } from './types';
 
 /** Higher wins. Terminal failures sit beside delivery, not above it. */
-const RANK: Record<MessageStatus, number> = {
+export const RANK: Record<MessageStatus, number> = {
   dry_run: 0, skipped: 0, queued: 1, submitted: 2, sent: 3,
   failed: 4, unreachable: 4, delivered: 5, read: 6,
 };
