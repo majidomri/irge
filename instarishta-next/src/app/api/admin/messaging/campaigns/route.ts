@@ -19,6 +19,17 @@ function parseAudience(raw: unknown): Audience | null {
   if (a.kind === 'consented_members') return { kind: 'consented_members' };
   if (a.kind === 'test_numbers')      return { kind: 'test_numbers' };
   if (a.kind === 'numbers' && Array.isArray(a.numbers)) return { kind: 'numbers', numbers: a.numbers.map(String).slice(0, 20_000) };
+  if (a.kind === 'upload' && Array.isArray(a.rows)) {
+    // Stored on the campaign, so bounded and stripped to strings: this is a
+    // file an admin uploaded, and the jsonb column is not a place for anything else.
+    const rows = a.rows.slice(0, 10_000).map(r => {
+      const o = (r ?? {}) as Record<string, unknown>;
+      const cols = Object.fromEntries(Object.entries((o.cols ?? {}) as Record<string, unknown>)
+        .slice(0, 20).map(([k, v]) => [String(k).toLowerCase().slice(0, 40), String(v ?? '').slice(0, 200)]));
+      return { mobile: String(o.mobile ?? '').slice(0, 20), name: String(o.name ?? '').slice(0, 80), cols };
+    });
+    return { kind: 'upload', filename: String(a.filename ?? '').slice(0, 120), rows };
+  }
   return null;
 }
 

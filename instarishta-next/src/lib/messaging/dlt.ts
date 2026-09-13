@@ -6,7 +6,7 @@
  * disagrees with the send path on the one message where it matters.
  *
  * ── The rule this file exists to enforce ────────────────────────────────────
- * An approved DLT template is fixed text with `{#var#}` slots. What goes out
+ * An approved DLT template is fixed text with `{#…#}` slots. What goes out
  * must be that text with only the slots different. The operator's scrubber
  * compares them, and a mismatch is not bounced back as an error — it is
  * dropped, and the provider may still report it "submitted". So the only safe
@@ -34,34 +34,71 @@ export interface TemplateVariable {
   label:  string;
   /** Filled in previews and test sends when nothing else is given. */
   sample?: string;
-  /** Characters allowed in this slot. DLT's default for {#var#} is 30. */
+  /** Characters allowed in this slot. DLT's default is 30. */
   max?:   number;
+  /** The placeholder kind from the approved text: var, alp, num, url, cbn… */
+  type?:  string;
 }
 
 /** DLT's per-variable ceiling, unless the template was approved with more. */
 export const DEFAULT_VAR_MAX = 30;
 
-const SLOT = /\{#var#\}/gi;
+/**
+ * Every DLT placeholder form, not just `{#var#}`.
+ *
+ * Templates are approved with TYPED slots — the first InstaRishta template came
+ * back as `{#alp#}` and `{#num#}` — and the operator checks the value against
+ * the type. A number in an `{#alp#}` slot, or letters in `{#num#}`, is a
+ * mismatch, and a message sent with the placeholder left literally in it was
+ * refused with error 321 (Nexus delivery report, 2026-09-12).
+ */
+const SLOT_SOURCE = String.raw`\{#([a-z]+)#\}`;
+const slotRe = () => new RegExp(SLOT_SOURCE, 'gi');
 
-/** How many `{#var#}` slots the approved text has. */
+/** Human label and value check for each placeholder type. */
+export const SLOT_TYPES: Record<string, { label: string; test?: RegExp; hint: string }> = {
+  var:          { label: 'Any text',     hint: 'Any characters' },
+  alp:          { label: 'Alphanumeric', test: /^[\p{L}\p{N} .,'&-]+$/u, hint: 'Letters, digits and spaces' },
+  alphanumeric: { label: 'Alphanumeric', test: /^[\p{L}\p{N} .,'&-]+$/u, hint: 'Letters, digits and spaces' },
+  num:          { label: 'Number',       test: /^[\d.,]+$/, hint: 'Digits only' },
+  numeric:      { label: 'Number',       test: /^[\d.,]+$/, hint: 'Digits only' },
+  url:          { label: 'URL',          test: /^\S+\.\S+$/, hint: 'A whitelisted link' },
+  urlott:       { label: 'URL',          test: /^\S+\.\S+$/, hint: 'A whitelisted link' },
+  cbn:          { label: 'Call-back no.', test: /^\+?[\d\s-]{10,15}$/, hint: 'A whitelisted number' },
+  email:        { label: 'Email',        test: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, hint: 'An email address' },
+};
+
+/** The slot types in order of appearance, e.g. ['alp', 'num']. */
+export function slotTypes(body: string): string[] {
+  return [...body.matchAll(slotRe())].map(m => m[1].toLowerCase());
+}
+
+/** How many `{#…#}` slots the approved text has. */
 export function countSlots(body: string): number {
-  return (body.match(SLOT) ?? []).length;
+  return slotTypes(body).length;
 }
 
 /**
  * Tokens that resolve per recipient, when a campaign variable is set to one.
- * Everything else is used literally.
+ * `{col:<header>}` reads a column of an uploaded audience file.
  */
 export const RECIPIENT_TOKENS = ['{first_name}', '{name}'] as const;
 
 export interface RecipientContext {
   name?: string | null;
+  /** Extra columns from an uploaded audience file, by lower-cased header. */
+  cols?: Record<string, string>;
 }
+
+const isRecipientToken = (v: string | undefined) =>
+  !!v && (RECIPIENT_TOKENS.includes(v as typeof RECIPIENT_TOKENS[number]) || /^\{col:[^}]+\}$/.test(v));
 
 function resolveToken(value: string, r: RecipientContext | undefined): string {
   const name = (r?.name ?? '').trim();
   if (value === '{name}')       return name || 'Member';
   if (value === '{first_name}') return name.split(/\s+/)[0] || 'Member';
+  const col = /^\{col:([^}]+)\}$/.exec(value);
+  if (col) return (r?.cols?.[col[1].trim().toLowerCase()] ?? '').trim();
   return value;
 }
 
@@ -87,34 +124,66 @@ export function renderTemplate(
   opts: { useSamples?: boolean } = {},
 ): RenderResult {
   const problems: string[] = [];
-  const slots = countSlots(body);
+  const types = slotTypes(body);
 
-  if (slots !== variables.length) {
-    problems.push(`The approved text has ${slots} {#var#} slot${slots === 1 ? '' : 's'} but ${variables.length} variable${variables.length === 1 ? ' is' : 's are'} defined`);
+  if (types.length !== variables.length) {
+    problems.push(`The approved text has ${types.length} {#…#} slot${types.length === 1 ? '' : 's'} but ${variables.length} variable${variables.length === 1 ? ' is' : 's are'} defined`);
   }
 
-  const values = variables.map((v) => {
+  const values = variables.map((v, i) => {
     let raw = given[v.key];
     if ((raw === undefined || raw === '') && opts.useSamples) raw = v.sample ?? '';
     raw = resolveToken(String(raw ?? ''), recipient);
 
     const max = v.max ?? DEFAULT_VAR_MAX;
-    // A recipient's own name is the one value an admin cannot see in advance.
-    // Trimming it is better than skipping that member for having a long name.
-    if (raw.length > max && RECIPIENT_TOKENS.includes(given[v.key] as typeof RECIPIENT_TOKENS[number])) {
-      raw = raw.slice(0, max);
-    }
+    // A value the admin cannot see in advance (a member's name, a file column)
+    // is trimmed to fit rather than skipping that recipient.
+    if (raw.length > max && isRecipientToken(given[v.key])) raw = raw.slice(0, max).trim();
 
-    if (!raw.trim())          problems.push(`“${v.label}” is empty`);
-    if (raw.length > max)     problems.push(`“${v.label}” is ${raw.length} characters; the approved limit is ${max}`);
-    if (/[\r\n]/.test(raw))   problems.push(`“${v.label}” contains a line break, which changes the approved text`);
+    const type = SLOT_TYPES[types[i] ?? v.type ?? 'var'];
+    if (!raw.trim())                      problems.push(`“${v.label}” is empty`);
+    else if (type?.test && !type.test.test(raw)) problems.push(`“${v.label}” must be ${type.hint.toLowerCase()} ({#${types[i]}#}) — got “${raw}”`);
+    if (raw.length > max)                 problems.push(`“${v.label}” is ${raw.length} characters; the approved limit is ${max}`);
+    if (/[\r\n]/.test(raw))               problems.push(`“${v.label}” contains a line break, which changes the approved text`);
+    if (/\{#[a-z]+#\}/i.test(raw))        problems.push(`“${v.label}” still contains a placeholder`);
     return raw;
   });
 
   let i = 0;
-  const text = body.replace(SLOT, () => values[i++] ?? '');
+  const text = body.replace(slotRe(), () => values[i++] ?? '');
 
   return { ok: problems.length === 0, text, values, problems };
+}
+
+// ── Matching sent text back to a template ─────────────────────────────────────
+
+const collapse = (s: string) => s.replace(/\s+/g, ' ').trim();
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export interface TemplateMatch<T> { template: T; values: string[] }
+
+/**
+ * Which template a piece of sent text came from, and its slot values.
+ *
+ * Used on imported gateway reports: a message that matches no approved
+ * template is exactly the kind the operator refuses, so "no match" is worth
+ * showing even when the gateway said nothing. Whitespace runs are collapsed
+ * on both sides; everything else must be identical.
+ */
+export function matchTemplate<T extends { body: string; variables: TemplateVariable[] }>(
+  text: string, templates: T[],
+): TemplateMatch<T> | null {
+  const target = collapse(text);
+  if (/\{#[a-z]+#\}/i.test(target)) return null;     // placeholders left in: matches nothing
+  for (const t of templates) {
+    const parts = collapse(t.body).split(slotRe());
+    // split() with a capture group interleaves the slot types; keep the literal parts.
+    const literals = parts.filter((_, idx) => idx % 2 === 0);
+    const pattern = '^' + literals.map(escapeRe).join('(.+?)') + '$';
+    const m = new RegExp(pattern, 's').exec(target);
+    if (m) return { template: t, values: m.slice(1) };
+  }
+  return null;
 }
 
 // ── Segments ──────────────────────────────────────────────────────────────────
@@ -232,8 +301,10 @@ export function extractCtas(text: string): { urls: string[]; phones: string[] } 
 /**
  * Every link or call-back number in `text` that is not on the whitelist.
  *
- * Literal on purpose: the operator's scrubber does not know that the bare
- * domain redirects to www, so neither does this.
+ * Literal except for a leading `www.`: SMS saying "instarishta.me" were
+ * delivered against the whitelisted https://www.instarishta.me/ (Nexus
+ * delivery report, 2026-09-12), so the operator treats the two as one host.
+ * Paths are still exact for a static CTA.
  */
 export function ctaViolations(text: string, ctas: Cta[]): string[] {
   const active = ctas.filter(c => c.status === 'active');
@@ -242,9 +313,9 @@ export function ctaViolations(text: string, ctas: Cta[]): string[] {
 
   const urlCtas = active.filter(c => c.cta_type === 'url' || c.cta_type === 'apk');
   for (const u of urls) {
-    const n = normalizeUrl(u);
+    const n = normalizeUrl(u).replace(/^www\./, '');
     const ok = urlCtas.some(c => {
-      const v = normalizeUrl(c.value);
+      const v = normalizeUrl(c.value).replace(/^www\./, '');
       return c.sub_type === 'dynamic' ? n === v || n.startsWith(v + '/') || n.startsWith(v + '?') : n === v;
     });
     if (!ok) {

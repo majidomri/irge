@@ -2,13 +2,13 @@
 /**
  * The template registry.
  *
- * Paste the approved text exactly as the DLT portal shows it, {#var#} and all.
+ * Paste the approved text exactly as the DLT portal shows it, {#…#} and all.
  * The variable rows follow the slots automatically, and the preview underneath
  * is rendered by the same function the send path uses (lib/messaging/dlt).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AMBER, BORDER, FAINT, GREEN, MUTED, RED, SUBTLE, TEXT } from '../theme';
-import { countSlots, ctaViolations, DEFAULT_VAR_MAX, measureSms, renderTemplate, type TemplateVariable } from '@/lib/messaging/dlt';
+import { ctaViolations, DEFAULT_VAR_MAX, measureSms, renderTemplate, SLOT_TYPES, slotTypes, type TemplateVariable } from '@/lib/messaging/dlt';
 import { useCtas } from './CtaSection';
 import { api, Button, Card, CATEGORY_LABEL, ConfirmButton, Field, input, mono, Pill, Problems, Table, td, type Toast } from './ui';
 
@@ -50,11 +50,14 @@ export default function TemplatesPanel({ toast, onChange }: { toast: Toast; onCh
 
   const reload = async () => { const { t, s } = await load(); setRows(t); setSenders(s); };
 
-  /** Keep one variable row per {#var#} slot, preserving what was typed. */
+  /** Keep one variable row per {#…#} slot, preserving what was typed; the type follows the slot. */
   const setBody = (body: string) => {
     if (!edit) return;
-    const n = countSlots(body);
-    const vars = Array.from({ length: n }, (_, i) => edit.variables[i] ?? { key: `var${i + 1}`, label: `Variable ${i + 1}`, sample: '', max: DEFAULT_VAR_MAX });
+    const types = slotTypes(body);
+    const vars = types.map((type, i) => ({
+      ...(edit.variables[i] ?? { key: `var${i + 1}`, label: `Variable ${i + 1}`, sample: '', max: DEFAULT_VAR_MAX }),
+      type,
+    }));
     setEdit({ ...edit, body, variables: vars });
   };
 
@@ -176,9 +179,9 @@ export default function TemplatesPanel({ toast, onChange }: { toast: Toast; onCh
             </Field>
           </div>
 
-          <Field name="Approved text" hint={<>Paste it exactly as approved — spacing and punctuation included. Use <code>{'{#var#}'}</code> for each variable.</>}>
+          <Field name="Approved text" hint={<>Paste it exactly as approved — spacing and punctuation included. Keep each placeholder as approved: <code>{'{#var#}'}</code>, <code>{'{#alp#}'}</code>, <code>{'{#num#}'}</code>, <code>{'{#url#}'}</code>…</>}>
             <textarea value={edit.body} onChange={e => setBody(e.target.value)} rows={4}
-              placeholder="Dear {#var#}, a new rishta matching your preferences is waiting on InstaRishta: {#var#} -PrimeConnect"
+              placeholder={'Assalamu Alaikum {#alp#}, find your Rishta on InstaRishta. {#num#} verified Muslim profiles are live.\nCreate your free profile at instarishta.me\n\nIRSTA'}
               style={{ ...input, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }} />
           </Field>
 
@@ -188,7 +191,7 @@ export default function TemplatesPanel({ toast, onChange }: { toast: Toast; onCh
               <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
                 {edit.variables.map((v, i) => (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px repeat(auto-fit, minmax(120px, 1fr))', gap: 6, alignItems: 'center' }}>
-                    <span style={{ color: FAINT, fontSize: 12 }}>#{i + 1}</span>
+                    <span style={{ color: FAINT, fontSize: 11 }} title={SLOT_TYPES[v.type ?? 'var']?.hint}>#{i + 1}<br /><code>{v.type ?? 'var'}</code></span>
                     <input value={v.label} onChange={e => setVar(i, { label: e.target.value })} placeholder="Label" aria-label={`Variable ${i + 1} label`} style={input} />
                     <input value={v.key} onChange={e => setVar(i, { key: e.target.value })} placeholder="key" aria-label={`Variable ${i + 1} key`} style={{ ...input, ...mono }} />
                     <input value={v.sample ?? ''} onChange={e => setVar(i, { sample: e.target.value })} placeholder="Sample value" aria-label={`Variable ${i + 1} sample`} style={input} />

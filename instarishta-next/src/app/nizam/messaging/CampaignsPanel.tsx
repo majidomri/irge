@@ -10,6 +10,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AMBER, BORDER, FAINT, GREEN, MUTED, RED, SUBTLE, TEXT } from '../theme';
 import { ctaViolations, measureSms, parseNumbers, renderTemplate } from '@/lib/messaging/dlt';
+import { csvObjects, parseCsv } from '@/lib/messaging/csv';
+
+interface UploadRow { mobile: string; name: string; cols: Record<string, string> }
 import { useCtas } from './CtaSection';
 import type { Overview } from './OverviewPanel';
 import type { TemplateRow } from './TemplatesPanel';
@@ -35,7 +38,13 @@ const AUDIENCES = [
   { value: 'consented_members', label: 'Members who opted in', hint: 'Verified phone + marketing consent, minus opt-outs.' },
   { value: 'test_numbers',      label: 'Test numbers',         hint: 'Your own phones from Setup.' },
   { value: 'numbers',           label: 'Pasted numbers',       hint: 'Promotional templates still require each number’s consent.' },
+  { value: 'upload',            label: 'Upload a file',        hint: 'Nexus CSV format; extra columns can fill variables. Consent rules still apply.' },
 ];
+
+const chipStyle = (on: boolean): React.CSSProperties => ({
+  fontSize: 10, padding: '2px 7px', borderRadius: 999, cursor: 'pointer', fontFamily: 'ui-monospace, monospace',
+  border: `1px solid ${on ? GREEN : BORDER}`, background: 'transparent', color: on ? GREEN : FAINT,
+});
 
 export default function CampaignsPanel({ toast, overview, onChange }: { toast: Toast; overview: Overview | null; onChange: () => void }) {
   const [list, setList] = useState<CampaignRow[]>([]);
@@ -115,18 +124,43 @@ function NewCampaign({ toast, overview, onCancel, onCreated }: {
 
   const template = templates.find(t => t.id === templateId) ?? null;
   const parsed = useMemo(() => parseNumbers(pasted), [pasted]);
+  const [upload, setUpload] = useState<{ filename: string; headers: string[]; rows: UploadRow[]; ignored: string[] } | null>(null);
+
+  const first = kind === 'upload' ? upload?.rows[0] : undefined;
   const preview = useMemo(() => {
     if (!template) return null;
-    const r = renderTemplate(template.body, template.variables, values, { name: 'Ayesha Khan' });
+    const who = first ? { name: first.name || 'Member', cols: first.cols } : { name: 'Ayesha Khan' };
+    const r = renderTemplate(template.body, template.variables, values, who);
     const cta = template.channel === 'sms' ? ctaViolations(r.text, ctas) : [];
-    return { ...r, problems: [...r.problems, ...cta], seg: measureSms(r.text) };
-  }, [template, values, ctas]);
+    return { ...r, who: who.name, problems: [...r.problems, ...cta], seg: measureSms(r.text) };
+  }, [template, values, ctas, first]);
+
+  /**
+   * A recipient file in Nexus's upload format (mobile,name,var1,var2…).
+   * Columns other than mobile and name become {col:…} values; a `message`
+   * column is ignored on purpose — the text always comes from the approved
+   * template, never from a spreadsheet cell.
+   */
+  const readUpload = async (file: File | undefined) => {
+    if (!file) return;
+    const { headers, records } = csvObjects(parseCsv(await file.text()));
+    if (!headers.includes('mobile')) { setProblems(['The file needs a “mobile” column (Nexus upload format)']); return; }
+    const ignored = headers.filter(h => ['message', 'schedule_date', 'schedule_time'].includes(h));
+    const extra = headers.filter(h => !['mobile', 'name', ...ignored].includes(h));
+    const rows = records.slice(0, 10_000).map(r => ({
+      mobile: r.mobile, name: r.name ?? '', cols: Object.fromEntries(extra.map(h => [h, r[h] ?? ''])),
+    }));
+    setProblems([]);
+    setUpload({ filename: file.name, headers: extra, rows, ignored });
+  };
 
   const create = async () => {
     setBusy(true); setProblems([]);
+    const audience = kind === 'numbers' ? { kind, numbers: parsed.valid }
+      : kind === 'upload' ? { kind, filename: upload?.filename, rows: upload?.rows ?? [] }
+      : { kind };
     const r = await api<{ id: string }>('/api/admin/messaging/campaigns', 'POST', {
-      name, templateId, variables: values,
-      audience: kind === 'numbers' ? { kind, numbers: parsed.valid } : { kind },
+      name, templateId, variables: values, audience,
     });
     setBusy(false);
     if (!r.ok) { setProblems(r.data.problems ?? [r.data.error ?? 'Could not create']); return; }
@@ -157,8 +191,14 @@ function NewCampaign({ toast, overview, onCancel, onCreated }: {
       {template && template.variables.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           {template.variables.map(v => (
-            <Field key={v.key} name={v.label} hint={<>Up to {v.max ?? 30} chars. Use <code>{'{first_name}'}</code> or <code>{'{name}'}</code> to personalise.</>}>
+            <Field key={v.key} name={`${v.label} · {#${v.type ?? 'var'}#}`} hint={<>Up to {v.max ?? 30} chars. Personalise with <code>{'{first_name}'}</code>{kind === 'upload' && upload?.headers.length ? <> or a file column</> : null}.</>}>
               <input value={values[v.key] ?? ''} placeholder={v.sample ?? ''} onChange={e => setValues({ ...values, [v.key]: e.target.value })} style={input} />
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                {['{first_name}', ...(kind === 'upload' ? (upload?.headers ?? []).map(h => `{col:${h}}`) : [])].map(tok => (
+                  <button key={tok} type="button" onClick={() => setValues({ ...values, [v.key]: tok })}
+                    style={{ ...chipStyle(values[v.key] === tok) }}>{tok}</button>
+                ))}
+              </div>
             </Field>
           ))}
         </div>
@@ -167,7 +207,7 @@ function NewCampaign({ toast, overview, onCancel, onCreated }: {
       {preview && (
         <div style={{ background: SUBTLE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: FAINT, marginBottom: 6 }}>
-            Example for “Ayesha Khan”{template?.channel === 'sms' && ` · ${preview.seg.segments} SMS part${preview.seg.segments === 1 ? '' : 's'} each`}
+            Example for “{preview.who}”{template?.channel === 'sms' && ` · ${preview.seg.segments} SMS part${preview.seg.segments === 1 ? '' : 's'} each`}
           </div>
           <div style={{ fontSize: 13, color: TEXT, whiteSpace: 'pre-wrap' }}>{preview.text}</div>
           {preview.problems.length > 0 && <div style={{ color: RED, fontSize: 11, marginTop: 6 }}>{preview.problems.join(' · ')}</div>}
@@ -192,8 +232,25 @@ function NewCampaign({ toast, overview, onCancel, onCreated }: {
         </Field>
       )}
 
+      {kind === 'upload' && (
+        <Field name="Recipient file" hint="Nexus upload format: mobile,name,var1,var2… (up to 10,000 rows).">
+          <label style={{ display: 'block', border: `1px dashed ${BORDER}`, borderRadius: 10, padding: '14px 12px', background: SUBTLE, cursor: 'pointer', fontSize: 12, color: MUTED }}>
+            <input type="file" accept=".csv,text/csv" style={{ display: 'none' }}
+              onChange={e => { void readUpload(e.target.files?.[0]); e.target.value = ''; }} />
+            {upload
+              ? <>{upload.filename} · <strong style={{ color: TEXT }}>{upload.rows.length}</strong> rows · columns: {upload.headers.join(', ') || 'none besides mobile/name'} — choose another</>
+              : 'Choose a .csv file'}
+          </label>
+          {upload && upload.ignored.length > 0 && (
+            <div style={{ fontSize: 11, color: AMBER, marginTop: 4 }}>
+              Ignored: {upload.ignored.join(', ')}. The text always comes from the approved template, and scheduling is set on the campaign.
+            </div>
+          )}
+        </Field>
+      )}
+
       <Problems list={problems} />
-      <Button tone="primary" busy={busy} disabled={!name.trim() || !template || (preview?.problems.length ?? 0) > 0} onClick={create}>
+      <Button tone="primary" busy={busy} disabled={!name.trim() || !template || (kind === 'upload' && !upload?.rows.length) || (preview?.problems.length ?? 0) > 0} onClick={create}>
         Build campaign
       </Button>
       <span style={{ fontSize: 11, color: FAINT, marginLeft: 10 }}>Nothing is sent yet — you review the audience next.</span>
@@ -240,6 +297,20 @@ function CampaignDetail({ id, toast, overview, onBack }: { id: string; toast: To
       toast(b.stopped ? b.stopped : b.waitUntil ? `Outside promotional hours — resumes ${when(b.waitUntil)}` : `Sent ${b.processed}, ${b.remaining} left`);
     } else toast('Done');
     const x = await fetchDetail(); if (x) setD(x);
+  };
+
+  const download = async (format: string) => {
+    setBusy(`export-${format}`);
+    try {
+      const res = await fetch(`/api/admin/messaging/campaigns/${id}/export?format=${format}`, { cache: 'no-store' });
+      if (!res.ok) { toast((await res.json().catch(() => ({}))).error ?? 'Export failed'); return; }
+      const blob = await res.blob();
+      const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? `campaign_${format}.csv`;
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: name });
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } finally { setBusy(null); }
   };
 
   const remove = async () => {
@@ -319,6 +390,21 @@ function CampaignDetail({ id, toast, overview, onBack }: { id: string; toast: To
             <ConfirmButton busy={busy === 'cancel'} onConfirm={() => act('cancel')} confirmText="Cancel for good?">Cancel campaign</ConfirmButton>
           )}
         </div>
+
+        {queued > 0 && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+            <div style={{ fontSize: 12, color: MUTED, marginBottom: 8, lineHeight: 1.6 }}>
+              <strong style={{ color: TEXT }}>Send through the Nexus panel instead:</strong> download the {queued} queued recipients in
+              Nexus’s upload format, create a Nexus campaign named <code>{c.name}</code>, then import its delivery report under
+              Import reports — rows are matched back by campaign name and number.
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {([['variables', 'CSV · mobile, name, var1…'], ['message', 'CSV · full message'], ['schedule', 'CSV · with schedule']] as const).map(([fmt, label]) => (
+                <Button key={fmt} busy={busy === `export-${fmt}`} onClick={() => download(fmt)}>{label}</Button>
+              ))}
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card title="Messages" right={

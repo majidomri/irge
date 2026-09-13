@@ -19,9 +19,10 @@ import TemplatesPanel from './TemplatesPanel';
 import TestPanel from './TestPanel';
 import CampaignsPanel from './CampaignsPanel';
 import LogPanel from './LogPanel';
+import ImportsPanel from './ImportsPanel';
 import AudiencePanel from './AudiencePanel';
 
-type Section = 'overview' | 'setup' | 'templates' | 'test' | 'campaigns' | 'log' | 'audience';
+type Section = 'overview' | 'setup' | 'templates' | 'test' | 'campaigns' | 'log' | 'imports' | 'audience';
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'overview',  label: 'Overview' },
@@ -30,6 +31,7 @@ const SECTIONS: { key: Section; label: string }[] = [
   { key: 'test',      label: 'Test send' },
   { key: 'campaigns', label: 'Campaigns' },
   { key: 'log',       label: 'Log' },
+  { key: 'imports',   label: 'Import reports' },
   { key: 'audience',  label: 'Audience & opt-outs' },
 ];
 
@@ -89,6 +91,7 @@ export default function MessagingTab({ toast }: { toast: Toast }) {
       {section === 'test'      && <TestPanel toast={toast} overview={overview} />}
       {section === 'campaigns' && <CampaignsPanel toast={toast} overview={overview} onChange={refresh} />}
       {section === 'log'       && <LogPanel toast={toast} />}
+      {section === 'imports'   && <ImportsPanel toast={toast} onChange={refresh} />}
       {section === 'audience'  && <AudiencePanel toast={toast} />}
     </div>
   );
