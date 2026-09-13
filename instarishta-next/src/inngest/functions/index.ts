@@ -5,8 +5,11 @@
  * it will not appear in the dashboard and its cron will never fire. This is
  * the one file to touch when adding a job.
  */
+import { messagingCampaignRun, messagingScheduler } from './messaging-campaign';
 import { ordersSweep } from './orders-sweep';
 
 export const functions = [
   ordersSweep,
+  messagingCampaignRun,
+  messagingScheduler,
 ];

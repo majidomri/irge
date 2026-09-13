@@ -101,5 +101,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your profile is not set up yet. Please reload and try again.' }, { status: 404 });
   }
 
+  // Keep the messaging opt-out list in step with the member's own switch.
+  // Turning it off blocks the number outright (so it is protected even from a
+  // campaign that targets pasted numbers); turning it on lifts only blocks the
+  // member placed — a STOP reply or this switch — never an admin's. Only a
+  // verified number is touched; opting in already required one above.
+  if (phone && hasVerifiedPhone(session.user)) {
+    const db = serviceClient();
+    if (consent) {
+      await db.from('ir_msg_optouts').delete().eq('phone', phone).in('source', ['reply', 'member']);
+    } else {
+      await db.from('ir_msg_optouts').upsert(
+        { phone, source: 'member', reason: 'Turned off in account settings' },
+        { onConflict: 'phone', ignoreDuplicates: true },
+      );
+    }
+  }
+
   return NextResponse.json({ ok: true, consent, phone: consent ? phone : null });
 }

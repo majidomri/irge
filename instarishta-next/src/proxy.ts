@@ -169,6 +169,11 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
   // would rather have recorded the first time.
   if (pathname === '/api/rcs/webhook') return NextResponse.next();
 
+  // The aggregator's delivery reports, same reasoning again: each provider's
+  // handler authenticates the request itself (lib/messaging/providers), and a
+  // campaign's receipts arrive as a burst.
+  if (pathname.startsWith('/api/messaging/webhook/')) return NextResponse.next();
+
   const ip = clientIp(req.headers);
 
   // Keep the admin-managed denylist warm. Not awaited: the first request after
