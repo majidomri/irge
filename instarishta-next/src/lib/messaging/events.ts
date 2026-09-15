@@ -12,6 +12,7 @@
 import 'server-only';
 
 import type { AdminDb } from '@/lib/admin-route';
+import { isOptOut, isResubscribe } from './keywords';
 import type { MessageStatus, NormalizedEvent } from './types';
 
 /** Higher wins. Terminal failures sit beside delivery, not above it. */
@@ -20,10 +21,8 @@ export const RANK: Record<MessageStatus, number> = {
   failed: 4, unreachable: 4, delivered: 5, read: 6,
 };
 
-const STOP_WORDS = /^\s*(stop|unsubscribe|optout|opt[\s-]?out|cancel|end|quit)\b/i;
-
 export async function ingestEvents(db: AdminDb, provider: string, events: NormalizedEvent[]) {
-  let stored = 0, duplicates = 0, applied = 0, optouts = 0;
+  let stored = 0, duplicates = 0, applied = 0, optouts = 0, resubscribes = 0;
 
   for (const e of events) {
     // Resolve our row: by our id when echoed, otherwise by the provider's id.
@@ -50,14 +49,26 @@ export async function ingestEvents(db: AdminDb, provider: string, events: Normal
     if (error) throw new Error(`event insert: ${error.message}`);
     stored++;
 
-    // A STOP reply withdraws consent for that number, whichever channel it came on.
-    if (e.type === 'reply' && e.phone && e.text && STOP_WORDS.test(e.text)) {
+    // Keyword replies (lib/messaging/keywords.ts — the lists filed with Google).
+    if (e.type === 'reply' && e.phone && e.text) {
       const phone = e.phone.startsWith('+') ? e.phone : `+${e.phone.replace(/^0+/, '')}`;
-      await db.from('ir_msg_optouts').upsert(
-        { phone, source: 'reply', reason: e.text.slice(0, 80) },
-        { onConflict: 'phone', ignoreDuplicates: true },
-      );
-      optouts++;
+
+      if (isOptOut(e.text)) {
+        // Withdraws consent for that number, whichever channel it came on.
+        await db.from('ir_msg_optouts').upsert(
+          { phone, source: 'reply', reason: e.text.slice(0, 80) },
+          { onConflict: 'phone', ignoreDuplicates: true },
+        );
+        optouts++;
+      } else if (isResubscribe(e.text)) {
+        // START lifts only an opt-out the number gave by reply. A block an admin
+        // placed, or one the member set in their account, is not the reply's to
+        // undo. It also grants nothing: promotional sends still need the
+        // member's own consent from /account — this only removes the STOP.
+        const { data: lifted } = await db.from('ir_msg_optouts')
+          .delete().eq('phone', phone).eq('source', 'reply').select('phone');
+        if (lifted?.length) resubscribes++;
+      }
     }
 
     if (!messageId) continue;
@@ -86,5 +97,5 @@ export async function ingestEvents(db: AdminDb, provider: string, events: Normal
     applied++;
   }
 
-  return { stored, duplicates, applied, optouts };
+  return { stored, duplicates, applied, optouts, resubscribes };
 }
