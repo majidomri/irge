@@ -350,13 +350,17 @@ export default function AccountPage() {
           <span style={{ color: 'rgba(255,255,255,0.4)' }}>›</span>
         </Link>
 
-        {/* Security */}
+        {/* Notifications — its own heading, not filed under Security: an
+            opt-in nobody can find is not much of an opt-in. */}
         <p className="text-xs font-bold uppercase tracking-[0.08em] mb-3 mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          Notifications
+        </p>
+        <RcsConsentToggle refreshKey={`${summary?.phone?.number ?? ''}:${summary?.phone?.verified ?? ''}`} />
+
+        {/* Security */}
+        <p className="text-xs font-bold uppercase tracking-[0.08em] mb-3 mt-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
           Security
         </p>
-        {/* Sits with the other account switches, not buried in a settings
-            page: an opt-in nobody can find is not much of an opt-in. */}
-        <RcsConsentToggle />
 
         <button
           onClick={() => router.push('/account/devices')}
