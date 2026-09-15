@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ENTITY } from '@/lib/entity';
 
 export const metadata: Metadata = {
   title: 'Child Safety Policy — InstaRishta',
@@ -105,7 +106,7 @@ export default function ChildSafetyPage() {
               <div className="flex flex-col gap-3">
                 {[
                   { label: 'Emergency email', value: 'safety@instarishta.me', note: 'Response within 2 hours' },
-                  { label: 'WhatsApp', value: '+91 888 666 7121', note: 'For urgent reports' },
+                  { label: 'WhatsApp', value: ENTITY.whatsapp, note: 'For urgent reports' },
                   { label: 'National Cybercrime Portal (India)', value: 'cybercrime.gov.in', note: 'Government reporting for CSAM' },
                   { label: 'NCMEC CyberTipline (global)', value: 'missingkids.org/gethelpnow/cybertipline', note: 'For international reports' },
                 ].map((item) => (

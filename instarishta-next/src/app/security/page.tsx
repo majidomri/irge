@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ENTITY } from '@/lib/entity';
 
 export const metadata: Metadata = {
   title: 'Security & Safety — InstaRishta',
@@ -86,7 +87,7 @@ export default function SecurityPage() {
             <a href="mailto:safety@instarishta.me" className="btn-ghost inline-flex items-center gap-2">
               🚨 safety@instarishta.me
             </a>
-            <a href="https://wa.me/918886667121" target="_blank" rel="noopener noreferrer" className="btn-ghost inline-flex items-center gap-2">
+            <a href={ENTITY.whatsappUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost inline-flex items-center gap-2">
               💬 WhatsApp
             </a>
           </div>

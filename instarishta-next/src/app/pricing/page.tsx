@@ -8,6 +8,7 @@ import {
   entitlementsFor, fmtAllowance, totalCredits, pricePerCredit,
 } from '@/lib/plans';
 import type { OrderPlanId } from '@/lib/orders';
+import { ENTITY } from '@/lib/entity';
 
 /**
  * Two terms, not four packages. Cards deliberately lead with TOTAL CREDITS and
@@ -356,7 +357,7 @@ export default function PricingPage() {
 
         <div className="mt-6 p-4 rounded-xl border border-[rgba(0,168,107,0.2)] text-[0.8rem] text-[rgba(0,0,0,0.6)] leading-relaxed" style={{ background: 'rgba(0,168,107,0.04)' }}>
           <strong className="text-[#006241]">Need help choosing?</strong> WhatsApp us at{' '}
-          <a href="https://wa.me/918886667121" className="text-[#006241] font-semibold underline">+91 888 666 7121</a>{' '}
+          <a href={ENTITY.whatsappUrl} className="text-[#006241] font-semibold underline">{ENTITY.whatsapp}</a>{' '}
           and our team will guide you before you pay.
         </div>
       </section>
