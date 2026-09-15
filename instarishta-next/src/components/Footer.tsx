@@ -8,6 +8,7 @@ const FOOTER_LINKS = [
   { href: '/security',      label: 'Security'      },
   { href: '/child-safety',  label: 'Child Safety'  },
   { href: '/report',        label: 'Report Abuse'  },
+  { href: '/alerts',        label: 'Alerts'        },
   { href: '/biodata',       label: 'Bio Data'      },
   { href: '/channels',      label: 'Channels'      },
 ];
@@ -46,7 +47,10 @@ export default function Footer() {
             {OPERATOR_LINE}
           </p>
           <p className="text-xs leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Registered address: {ENTITY.address} &nbsp;·&nbsp; {ENTITY.supportEmail} &nbsp;·&nbsp; {ENTITY.whatsapp}
+            Registered address: {ENTITY.address} &nbsp;·&nbsp; Udyam: {ENTITY.udyam}
+          </p>
+          <p className="text-xs leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            {ENTITY.supportEmail} &nbsp;·&nbsp; {ENTITY.whatsapp}
           </p>
         </div>
 
