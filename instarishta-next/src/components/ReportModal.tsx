@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { REPORT_CATEGORIES, type ReportCategory, type ReportEntityType } from '@/lib/report-categories';
+import { ENTITY } from '@/lib/entity';
 
 /**
  * Report misuse or abuse on a specific listing, member, post, or story.
@@ -139,7 +140,7 @@ export default function ReportModal({
             <p className="text-[10px] text-center" style={{ color: '#A0A0A0' }}>
               In immediate danger, or reporting a child-safety concern? Email{' '}
               <a href="mailto:safety@instarishta.me" style={{ color: '#006241' }}>safety@instarishta.me</a>{' '}
-              or WhatsApp <a href="https://wa.me/918886667121" style={{ color: '#006241' }}>+91 888 666 7121</a>.
+              or WhatsApp <a href={ENTITY.whatsappUrl} style={{ color: '#006241' }}>{ENTITY.whatsapp}</a>.
             </p>
           </form>
         )}

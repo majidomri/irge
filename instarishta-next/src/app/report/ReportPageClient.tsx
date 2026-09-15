@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { REPORT_CATEGORIES, type ReportCategory } from '@/lib/report-categories';
+import { ENTITY } from '@/lib/entity';
 
 /**
  * Full-page report form for when there's no specific card/member open to
@@ -120,7 +121,7 @@ export default function ReportPageClient() {
       <p className="text-xs text-center mt-4" style={{ color: '#A0A0A0' }}>
         In immediate danger, or reporting a child-safety concern? Email{' '}
         <a href="mailto:safety@instarishta.me" style={{ color: '#006241' }}>safety@instarishta.me</a> or WhatsApp{' '}
-        <a href="https://wa.me/918886667121" style={{ color: '#006241' }}>+91 888 666 7121</a>.
+        <a href={ENTITY.whatsappUrl} style={{ color: '#006241' }}>{ENTITY.whatsapp}</a>.
       </p>
     </form>
   );

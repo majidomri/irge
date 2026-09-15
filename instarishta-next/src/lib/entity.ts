@@ -27,7 +27,9 @@ export const ENTITY = {
   supportEmail: 'support@instarishta.me',
   safetyEmail: 'safety@instarishta.me',
   privacyEmail: 'privacy@instarishta.me',
-  whatsapp: '+91 888 666 7121',
+  /** Support line shown on the site and on the RCS agent. Not the listing relay (NEXT_PUBLIC_BUSINESS_WHATSAPP). */
+  whatsapp: '+91 97697 65086',
+  whatsappUrl: 'https://wa.me/919769765086',
 } as const;
 
 /** One-line operator disclosure. Used in the footer and on every legal page. */
