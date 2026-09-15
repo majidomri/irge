@@ -9,13 +9,21 @@
  * the Terms, the Privacy Policy and the refund page.
  */
 export const ENTITY = {
-  /** Exactly as it appears on the GST certificate. Do not reword. */
+  /**
+   * As registered: Udyam certificate UDYAM-TS-02-0206425 names the enterprise
+   * "PRIMECONNECT SOLUTIONS" (one word), organisation type Proprietary. There
+   * is no GSTIN, so the Udyam certificate is the document reviewers match
+   * against. Do not reword.
+   */
   legalName: 'PrimeConnect Solutions (Sole Proprietorship)',
   /** Short form, for running prose where the full string reads badly. */
   shortName: 'PrimeConnect Solutions',
   /** Brands operated by this entity — DLT filings list both. */
   brands: ['InstaRishta (instarishta.me)', 'Xavio (xavio.in)'],
-  address: 'Hyderabad, Telangana — 500001, India',
+  /** The official address on the Udyam certificate, verbatim apart from casing. */
+  address: 'HNO 18-13-8/M/6, Mohammed Nagar, Bandlaguda, Hyderabad, Telangana 500005, India',
+  /** MSME Udyam registration — the business-verification document for DLT and RCS. */
+  udyam: 'UDYAM-TS-02-0206425',
   supportEmail: 'support@instarishta.me',
   safetyEmail: 'safety@instarishta.me',
   privacyEmail: 'privacy@instarishta.me',

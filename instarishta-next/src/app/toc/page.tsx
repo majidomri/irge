@@ -113,7 +113,7 @@ const SECTIONS = [
   {
     id: '16',
     title: 'Contact Information',
-    body: `For all Terms-related queries:\n\nEntity: ${ENTITY.legalName}\nEmail: ${ENTITY.supportEmail}\nWhatsApp: ${ENTITY.whatsapp}\nRegistered address: ${ENTITY.address}\n\nFor urgent safety concerns: ${ENTITY.safetyEmail}`,
+    body: `For all Terms-related queries:\n\nEntity: ${ENTITY.legalName}\nUdyam registration: ${ENTITY.udyam}\nEmail: ${ENTITY.supportEmail}\nWhatsApp: ${ENTITY.whatsapp}\nRegistered address: ${ENTITY.address}\n\nFor urgent safety concerns: ${ENTITY.safetyEmail}`,
   },
 ];
 
